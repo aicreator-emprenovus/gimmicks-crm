@@ -1,0 +1,132 @@
+{
+  "design_system": {
+    "identity": {
+      "name": "Gimmicks CRM",
+      "archetype": "Corporate Precision",
+      "vibe": "Professional, High-Contrast, Efficient",
+      "logo_url": "https://images.unsplash.com/photo-1724167954496-a5c4befea483?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzOTB8MHwxfHNlYXJjaHwzfHxtaW5pbWFsaXN0JTIwYWJzdHJhY3QlMjBnZW9tZXRyaWMlMjBsb2dvJTIwYmxhY2slMjBhbmQlMjB3aGl0ZXxlbnwwfHx8fDE3Njk1NTY1MDV8MA&ixlib=rb-4.1.0&q=85",
+      "logo_alt": "Gimmicks Logo Placeholder"
+    },
+    "typography": {
+      "font_family": {
+        "headings": "Manrope, sans-serif",
+        "body": "Inter, sans-serif",
+        "mono": "JetBrains Mono, monospace"
+      },
+      "imports": [
+        "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Manrope:wght@400;600;700;800&display=swap"
+      ],
+      "scale": {
+        "h1": "text-4xl md:text-5xl font-bold tracking-tight",
+        "h2": "text-3xl font-semibold tracking-tight",
+        "h3": "text-2xl font-semibold",
+        "body": "text-base leading-relaxed",
+        "small": "text-sm text-muted-foreground"
+      }
+    },
+    "colors": {
+      "palette": {
+        "primary": {
+          "DEFAULT": "#10b981",
+          "foreground": "#ffffff",
+          "hover": "#059669",
+          "description": "Vibrant Emerald/Teal for primary actions (Buttons, Active States)"
+        },
+        "background": {
+          "DEFAULT": "#09090b",
+          "layer_2": "#18181b",
+          "description": "Deep Zinc Black for the main app frame/body"
+        },
+        "card": {
+          "DEFAULT": "#ffffff",
+          "foreground": "#09090b",
+          "description": "Pure white for content cards to create high contrast against dark bg"
+        },
+        "sidebar": {
+          "DEFAULT": "#09090b",
+          "foreground": "#a1a1aa",
+          "active": "#ffffff",
+          "border": "#27272a"
+        },
+        "muted": {
+          "DEFAULT": "#f4f4f5",
+          "foreground": "#71717a"
+        },
+        "border": "#e4e4e7"
+      },
+      "gradients": {
+        "subtle_glow": "radial-gradient(circle at center, rgba(16, 185, 129, 0.15) 0%, transparent 70%)"
+      }
+    },
+    "layout": {
+      "spacing": {
+        "container_padding": "p-6 md:p-8",
+        "section_gap": "gap-8",
+        "component_gap": "gap-4"
+      },
+      "radius": {
+        "default": "rounded-lg",
+        "card": "rounded-xl",
+        "button": "rounded-md"
+      },
+      "structure": {
+        "dashboard_mode": "floating_panel",
+        "description": "The app body is Dark (#09090b). The Sidebar is Dark. The Main Content Area is a large White Card with rounded corners, creating a 'floating' effect."
+      }
+    },
+    "components": {
+      "buttons": {
+        "primary": "bg-[#10b981] hover:bg-[#059669] text-white font-medium shadow-lg shadow-emerald-900/20 transition-all active:scale-95",
+        "secondary": "bg-white border border-zinc-200 text-zinc-900 hover:bg-zinc-50",
+        "ghost": "text-zinc-400 hover:text-white hover:bg-zinc-800"
+      },
+      "cards": {
+        "style": "bg-white text-zinc-900 border border-zinc-100 shadow-sm rounded-xl",
+        "hover": "hover:shadow-md transition-shadow duration-200"
+      },
+      "inputs": {
+        "style": "bg-white border-zinc-200 text-zinc-900 focus:ring-2 focus:ring-[#10b981] focus:border-transparent rounded-md placeholder:text-zinc-400"
+      },
+      "status_badges": {
+        "new": "bg-blue-100 text-blue-700 border-blue-200",
+        "contacted": "bg-yellow-100 text-yellow-700 border-yellow-200",
+        "closed": "bg-emerald-100 text-emerald-700 border-emerald-200",
+        "lost": "bg-red-100 text-red-700 border-red-200"
+      }
+    },
+    "assets": {
+      "images": {
+        "logo_placeholder": "https://images.unsplash.com/photo-1724167954496-a5c4befea483?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzOTB8MHwxfHNlYXJjaHwzfHxtaW5pbWFsaXN0JTIwYWJzdHJhY3QlMjBnZW9tZXRyaWMlMjBsb2dvJTIwYmxhY2slMjBhbmQlMjB3aGl0ZXxlbnwwfHx8fDE3Njk1NTY1MDV8MA&ixlib=rb-4.1.0&q=85",
+        "user_avatar_1": "https://images.unsplash.com/photo-1568585105565-e372998a195d?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzV8MHwxfHNlYXJjaHwzfHxwcm9mZXNzaW9uYWwlMjBjb3Jwb3JhdGUlMjBoZWFkc2hvdCUyMHBvcnRyYWl0fGVufDB8fHx8MTc2OTU1NjUwN3ww&ixlib=rb-4.1.0&q=85",
+        "user_avatar_2": "https://images.unsplash.com/photo-1762522926984-e721bff0d6c6?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzV8MHwxfHNlYXJjaHw0fHxwcm9mZXNzaW9uYWwlMjBjb3Jwb3JhdGUlMjBoZWFkc2hvdCUyMHBvcnRyYWl0fGVufDB8fHx8MTc2OTU1NjUwN3ww&ixlib=rb-4.1.0&q=85",
+        "product_placeholder": "https://images.unsplash.com/photo-1760225529221-841ebb8e7867?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzB8MHwxfHNlYXJjaHwxfHxtb2Rlcm4lMjB0ZWNoJTIwcHJvZHVjdCUyMHBhY2thZ2luZyUyMGJveHxlbnwwfHx8fDE3Njk1NTY1MDl8MA&ixlib=rb-4.1.0&q=85"
+      },
+      "icons": "Use 'lucide-react' for all UI icons. Use 'fa-brands' (FontAwesome) for social icons if needed."
+    },
+    "motion": {
+      "transitions": "transition-all duration-200 ease-in-out",
+      "hover_lift": "hover:-translate-y-1",
+      "page_enter": "animate-in fade-in slide-in-from-bottom-4 duration-500"
+    },
+    "accessibility": {
+      "contrast_check": "Ensure text on Teal buttons is White. Ensure text on White cards is Zinc-900.",
+      "focus_states": "focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#10b981]"
+    }
+  },
+  "instructions_to_main_agent": [
+    "1. SETUP: Install 'lucide-react' and 'recharts' immediately.",
+    "2. THEME: Configure 'tailwind.config.js' to use the specific colors defined above. Override the default 'zinc' palette if necessary to match the #09090b background.",
+    "3. LAYOUT: Implement the 'Floating Dashboard' layout. The Sidebar should be fixed on the left (Dark). The Main Content should be a scrollable White Card area to the right.",
+    "4. LOGIN: The Login page must be a centered White Card on a Dark (#09090b) background. Use the Logo Placeholder at the top.",
+    "5. WHATSAPP: For the Inbox, use a 2-column layout. Left: List of chats (White bg). Right: Active chat (Light Gray bg). User messages: Green (#10b981). System/Lead messages: White.",
+    "6. COMPONENTS: Use Shadcn UI components but style them to match the 'Rounded + High Contrast' aesthetic. Remove default 'slate' borders and use 'zinc-200'.",
+    "7. DATA-TESTID: Add 'data-testid' to all buttons, inputs, and navigation items."
+  ],
+  "universal_guidelines": [
+    "Do not use gradients for backgrounds, use solid colors.",
+    "Use 'Manrope' for all headings (h1-h3).",
+    "Use 'Inter' for all body text.",
+    "Ensure all interactive elements have a hover state.",
+    "Use 'sonner' for toast notifications."
+  ]
+}
