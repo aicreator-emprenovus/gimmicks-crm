@@ -9,12 +9,13 @@ import Inbox from "@/pages/Inbox";
 import Leads from "@/pages/Leads";
 import Inventory from "@/pages/Inventory";
 import Settings from "@/pages/Settings";
+import Users from "@/pages/Users";
 import Layout from "@/components/Layout";
 
 // Auth Context
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 
-function ProtectedRoute({ children }) {
+function ProtectedRoute({ children, adminOnly = false }) {
   const { user, loading } = useAuth();
   
   if (loading) {
@@ -28,11 +29,21 @@ function ProtectedRoute({ children }) {
   if (!user) {
     return <Navigate to="/login" replace />;
   }
+
+  // Check admin-only routes
+  if (adminOnly && user.role !== "admin") {
+    return <Navigate to="/inbox" replace />;
+  }
   
   return children;
 }
 
 function AppRoutes() {
+  const { user } = useAuth();
+  
+  // Determine default route based on role
+  const defaultRoute = user?.role === "admin" ? "/dashboard" : "/inbox";
+  
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
@@ -44,12 +55,29 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       >
-        <Route index element={<Navigate to="/dashboard" replace />} />
-        <Route path="dashboard" element={<Dashboard />} />
+        <Route index element={<Navigate to={defaultRoute} replace />} />
+        <Route path="dashboard" element={
+          <ProtectedRoute adminOnly>
+            <Dashboard />
+          </ProtectedRoute>
+        } />
         <Route path="inbox" element={<Inbox />} />
-        <Route path="leads" element={<Leads />} />
+        <Route path="leads" element={
+          <ProtectedRoute adminOnly>
+            <Leads />
+          </ProtectedRoute>
+        } />
         <Route path="inventory" element={<Inventory />} />
-        <Route path="settings" element={<Settings />} />
+        <Route path="users" element={
+          <ProtectedRoute adminOnly>
+            <Users />
+          </ProtectedRoute>
+        } />
+        <Route path="settings" element={
+          <ProtectedRoute adminOnly>
+            <Settings />
+          </ProtectedRoute>
+        } />
       </Route>
     </Routes>
   );
