@@ -8,7 +8,9 @@ import {
   Settings,
   LogOut,
   Menu,
-  X
+  X,
+  UserCog,
+  Shield
 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -18,13 +20,15 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Badge } from "@/components/ui/badge";
 
-const navItems = [
-  { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
-  { to: "/inbox", icon: MessageSquare, label: "Inbox" },
-  { to: "/leads", icon: Users, label: "Leads" },
-  { to: "/inventory", icon: Package, label: "Inventario" },
-  { to: "/settings", icon: Settings, label: "Configuración" },
+const adminNavItems = [
+  { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard", roles: ["admin"] },
+  { to: "/inbox", icon: MessageSquare, label: "Inbox", roles: ["admin", "asesor"] },
+  { to: "/leads", icon: Users, label: "Leads", roles: ["admin"] },
+  { to: "/inventory", icon: Package, label: "Inventario", roles: ["admin", "asesor"] },
+  { to: "/users", icon: UserCog, label: "Usuarios", roles: ["admin"] },
+  { to: "/settings", icon: Settings, label: "Configuración", roles: ["admin"] },
 ];
 
 export default function Layout() {
@@ -36,6 +40,13 @@ export default function Layout() {
     logout();
     navigate("/login");
   };
+
+  // Filter nav items based on user role
+  const navItems = adminNavItems.filter(item => 
+    item.roles.includes(user?.role || "asesor")
+  );
+
+  const isAdmin = user?.role === "admin";
 
   return (
     <div className="min-h-screen bg-[#09090b] flex">
@@ -107,7 +118,18 @@ export default function Layout() {
               </div>
               <div className="lg:hidden">
                 <p className="text-white text-sm font-medium truncate">{user?.name}</p>
-                <p className="text-zinc-500 text-xs truncate">{user?.email}</p>
+                <div className="flex items-center gap-1">
+                  {isAdmin ? (
+                    <Badge className="bg-purple-500/20 text-purple-300 text-xs border-0">
+                      <Shield className="w-3 h-3 mr-1" />
+                      Admin
+                    </Badge>
+                  ) : (
+                    <Badge className="bg-blue-500/20 text-blue-300 text-xs border-0">
+                      Asesor
+                    </Badge>
+                  )}
+                </div>
               </div>
             </div>
             <TooltipProvider>
