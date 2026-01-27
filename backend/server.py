@@ -292,6 +292,8 @@ async def get_me(current_user: dict = Depends(get_current_user)):
 
 # ============== LEADS ROUTES ==============
 
+# ============== LEADS ROUTES ==============
+
 FUNNEL_STAGES = ["lead", "pedido", "produccion", "entregado", "perdido", "cierre"]
 LEAD_CLASSIFICATIONS = ["frio", "tibio", "caliente"]
 
