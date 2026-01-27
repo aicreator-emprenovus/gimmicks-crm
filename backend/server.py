@@ -286,9 +286,125 @@ async def get_me(current_user: dict = Depends(get_current_user)):
         id=current_user["id"],
         email=current_user["email"],
         name=current_user["name"],
-        role=current_user.get("role", "user"),
+        role=current_user.get("role", "asesor"),
         created_at=created_at
     )
+
+# ============== USER MANAGEMENT ROUTES (Admin Only) ==============
+
+def require_admin(current_user: dict = Depends(get_current_user)):
+    if current_user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Acceso denegado. Se requiere rol de administrador.")
+    return current_user
+
+class UserCreateByAdmin(BaseModel):
+    email: EmailStr
+    password: str
+    name: str
+    role: str = "asesor"
+
+class UserUpdateByAdmin(BaseModel):
+    name: Optional[str] = None
+    password: Optional[str] = None
+    role: Optional[str] = None
+
+@api_router.get("/users", response_model=List[UserResponse])
+async def get_users(current_user: dict = Depends(require_admin)):
+    users = await db.users.find({}, {"_id": 0, "password": 0}).to_list(100)
+    
+    result = []
+    for user in users:
+        created_at = user.get("created_at")
+        if isinstance(created_at, str):
+            created_at = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+        
+        result.append(UserResponse(
+            id=user["id"],
+            email=user["email"],
+            name=user["name"],
+            role=user.get("role", "asesor"),
+            created_at=created_at
+        ))
+    
+    return result
+
+@api_router.post("/users", response_model=UserResponse)
+async def create_user_by_admin(user_data: UserCreateByAdmin, current_user: dict = Depends(require_admin)):
+    # Check if user exists
+    existing = await db.users.find_one({"email": user_data.email})
+    if existing:
+        raise HTTPException(status_code=400, detail="El email ya está registrado")
+    
+    # Validate role
+    if user_data.role not in ["admin", "asesor"]:
+        raise HTTPException(status_code=400, detail="Rol inválido. Debe ser 'admin' o 'asesor'")
+    
+    user_id = str(uuid.uuid4())
+    now = datetime.now(timezone.utc)
+    
+    user_doc = {
+        "id": user_id,
+        "email": user_data.email,
+        "password": hash_password(user_data.password),
+        "name": user_data.name,
+        "role": user_data.role,
+        "created_at": now.isoformat()
+    }
+    
+    await db.users.insert_one(user_doc)
+    
+    return UserResponse(
+        id=user_id,
+        email=user_data.email,
+        name=user_data.name,
+        role=user_data.role,
+        created_at=now
+    )
+
+@api_router.patch("/users/{user_id}", response_model=UserResponse)
+async def update_user_by_admin(user_id: str, update_data: UserUpdateByAdmin, current_user: dict = Depends(require_admin)):
+    user = await db.users.find_one({"id": user_id}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    
+    update_dict = {}
+    if update_data.name:
+        update_dict["name"] = update_data.name
+    if update_data.role:
+        if update_data.role not in ["admin", "asesor"]:
+            raise HTTPException(status_code=400, detail="Rol inválido")
+        update_dict["role"] = update_data.role
+    if update_data.password:
+        update_dict["password"] = hash_password(update_data.password)
+    
+    if update_dict:
+        await db.users.update_one({"id": user_id}, {"$set": update_dict})
+    
+    updated_user = await db.users.find_one({"id": user_id}, {"_id": 0, "password": 0})
+    
+    created_at = updated_user.get("created_at")
+    if isinstance(created_at, str):
+        created_at = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+    
+    return UserResponse(
+        id=updated_user["id"],
+        email=updated_user["email"],
+        name=updated_user["name"],
+        role=updated_user.get("role", "asesor"),
+        created_at=created_at
+    )
+
+@api_router.delete("/users/{user_id}")
+async def delete_user_by_admin(user_id: str, current_user: dict = Depends(require_admin)):
+    # Prevent self-deletion
+    if user_id == current_user["id"]:
+        raise HTTPException(status_code=400, detail="No puedes eliminar tu propia cuenta")
+    
+    result = await db.users.delete_one({"id": user_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    
+    return {"message": "Usuario eliminado exitosamente"}
 
 # ============== LEADS ROUTES ==============
 
