@@ -67,8 +67,8 @@ export default function Leads() {
   const [leads, setLeads] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterStage, setFilterStage] = useState("");
-  const [filterClassification, setFilterClassification] = useState("");
+  const [filterStage, setFilterStage] = useState("all");
+  const [filterClassification, setFilterClassification] = useState("all");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingLead, setEditingLead] = useState(null);
   const [formData, setFormData] = useState({
