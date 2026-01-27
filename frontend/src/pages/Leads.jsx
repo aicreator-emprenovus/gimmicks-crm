@@ -82,8 +82,8 @@ export default function Leads() {
     try {
       const params = new URLSearchParams();
       if (searchTerm) params.append("search", searchTerm);
-      if (filterStage) params.append("stage", filterStage);
-      if (filterClassification) params.append("classification", filterClassification);
+      if (filterStage && filterStage !== "all") params.append("stage", filterStage);
+      if (filterClassification && filterClassification !== "all") params.append("classification", filterClassification);
 
       const response = await axios.get(`${API_URL}/api/leads?${params}`, {
         headers: getAuthHeaders()
@@ -305,7 +305,7 @@ export default function Leads() {
             <SelectValue placeholder="Etapa" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Todas</SelectItem>
+            <SelectItem value="all">Todas</SelectItem>
             {FUNNEL_STAGES.map(s => (
               <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
             ))}
@@ -316,7 +316,7 @@ export default function Leads() {
             <SelectValue placeholder="Clasificación" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Todas</SelectItem>
+            <SelectItem value="all">Todas</SelectItem>
             {CLASSIFICATIONS.map(c => (
               <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
             ))}
