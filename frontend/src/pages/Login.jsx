@@ -9,13 +9,11 @@ import { toast } from "sonner";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 
 export default function Login() {
-  const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [name, setName] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { login, register } = useAuth();
+  const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -23,13 +21,8 @@ export default function Login() {
     setLoading(true);
 
     try {
-      if (isLogin) {
-        await login(email, password);
-        toast.success("¡Bienvenido!");
-      } else {
-        await register(email, password, name);
-        toast.success("¡Cuenta creada exitosamente!");
-      }
+      await login(email, password);
+      toast.success("¡Bienvenido!");
       navigate("/dashboard");
     } catch (error) {
       const message = error.response?.data?.detail || "Error de autenticación";
@@ -53,24 +46,6 @@ export default function Login() {
         </CardHeader>
         <CardContent className="p-6">
           <form onSubmit={handleSubmit} className="space-y-4">
-            {!isLogin && (
-              <div className="space-y-2">
-                <Label htmlFor="name" className="text-zinc-700 font-medium">
-                  Nombre Completo
-                </Label>
-                <Input
-                  id="name"
-                  type="text"
-                  placeholder="Tu nombre"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required={!isLogin}
-                  className="bg-white border-zinc-200 text-zinc-900 focus:ring-emerald-500"
-                  data-testid="register-name-input"
-                />
-              </div>
-            )}
-
             <div className="space-y-2">
               <Label htmlFor="email" className="text-zinc-700 font-medium">
                 Email Corporativo
@@ -121,28 +96,13 @@ export default function Login() {
             >
               {loading ? (
                 <Loader2 className="w-5 h-5 animate-spin" />
-              ) : isLogin ? (
-                "Iniciar Sesión"
               ) : (
-                "Crear Cuenta"
+                "Iniciar Sesión"
               )}
             </Button>
           </form>
 
-          <div className="mt-6 text-center">
-            <button
-              type="button"
-              onClick={() => setIsLogin(!isLogin)}
-              className="text-sm text-zinc-500 hover:text-emerald-600 transition-colors"
-              data-testid="toggle-auth-mode-btn"
-            >
-              {isLogin
-                ? "¿No tienes cuenta? Regístrate"
-                : "¿Ya tienes cuenta? Inicia sesión"}
-            </button>
-          </div>
-
-          <p className="mt-4 text-center text-xs text-zinc-400">
+          <p className="mt-6 text-center text-xs text-zinc-400">
             Acceso restringido a personal autorizado
           </p>
         </CardContent>
