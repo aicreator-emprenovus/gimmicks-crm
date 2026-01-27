@@ -270,11 +270,8 @@ class CRMAPITester:
 
     def test_ai_recommend_products(self):
         """Test AI product recommendations"""
-        recommend_data = {
-            "query": "necesito tazas personalizadas para evento corporativo",
-            "limit": 5
-        }
-        success, response = self.run_test("AI Product Recommendations", "POST", "ai/recommend-products", 200, recommend_data)
+        params = "?query=necesito tazas personalizadas para evento corporativo&limit=5"
+        success, response = self.run_test("AI Product Recommendations", "POST", f"ai/recommend-products{params}", 200)
         
         # Give AI some time to process
         if success:
