@@ -40,7 +40,7 @@ import { toast } from "sonner";
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
 export default function Inventory() {
-  const { getAuthHeaders } = useAuth();
+  const { getAuthHeaders, user } = useAuth();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -59,6 +59,8 @@ export default function Inventory() {
     stock: 0,
     image_url: ""
   });
+
+  const isAdmin = user?.role === "admin";
 
   const fetchProducts = async () => {
     try {
@@ -169,152 +171,154 @@ export default function Inventory() {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-zinc-900 font-['Manrope']">
-            Inventario
+            {isAdmin ? "Inventario" : "Catálogo de Productos"}
           </h1>
           <p className="text-zinc-500 text-sm">
-            Gestiona tu catálogo de productos
+            {isAdmin ? "Gestiona tu catálogo de productos" : "Consulta los productos disponibles"}
           </p>
         </div>
-        <div className="flex gap-2">
-          <input
-            type="file"
-            ref={fileInputRef}
-            accept=".xlsx,.xls"
-            onChange={handleFileUpload}
-            className="hidden"
-            data-testid="file-upload-input"
-          />
-          <Button
-            variant="outline"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={uploading}
-            className="gap-2"
-            data-testid="upload-excel-btn"
-          >
-            {uploading ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Upload size={18} />
-            )}
-            Cargar Excel
-          </Button>
-          <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-            <DialogTrigger asChild>
-              <Button
-                className="bg-emerald-500 hover:bg-emerald-600 gap-2"
-                data-testid="add-product-btn"
-              >
-                <Plus size={18} />
-                Nuevo Producto
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-lg">
-              <DialogHeader>
-                <DialogTitle className="font-['Manrope']">Crear Producto</DialogTitle>
-              </DialogHeader>
-              <ScrollArea className="max-h-[60vh]">
-                <div className="space-y-4 mt-4 pr-4">
-                  <div className="grid grid-cols-2 gap-4">
+        {isAdmin && (
+          <div className="flex gap-2">
+            <input
+              type="file"
+              ref={fileInputRef}
+              accept=".xlsx,.xls"
+              onChange={handleFileUpload}
+              className="hidden"
+              data-testid="file-upload-input"
+            />
+            <Button
+              variant="outline"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+              className="gap-2"
+              data-testid="upload-excel-btn"
+            >
+              {uploading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Upload size={18} />
+              )}
+              Cargar Excel
+            </Button>
+            <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+              <DialogTrigger asChild>
+                <Button
+                  className="bg-emerald-500 hover:bg-emerald-600 gap-2"
+                  data-testid="add-product-btn"
+                >
+                  <Plus size={18} />
+                  Nuevo Producto
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-lg">
+                <DialogHeader>
+                  <DialogTitle className="font-['Manrope']">Crear Producto</DialogTitle>
+                </DialogHeader>
+                <ScrollArea className="max-h-[60vh]">
+                  <div className="space-y-4 mt-4 pr-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Código *</Label>
+                        <Input
+                          placeholder="SKU-001"
+                          value={formData.code}
+                          onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                          data-testid="product-code-input"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Stock</Label>
+                        <Input
+                          type="number"
+                          value={formData.stock}
+                          onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
+                          data-testid="product-stock-input"
+                        />
+                      </div>
+                    </div>
                     <div className="space-y-2">
-                      <Label>Código *</Label>
+                      <Label>Nombre *</Label>
                       <Input
-                        placeholder="SKU-001"
-                        value={formData.code}
-                        onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-                        data-testid="product-code-input"
+                        placeholder="Nombre del producto"
+                        value={formData.name}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        data-testid="product-name-input"
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>Stock</Label>
-                      <Input
-                        type="number"
-                        value={formData.stock}
-                        onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
-                        data-testid="product-stock-input"
+                      <Label>Descripción</Label>
+                      <Textarea
+                        placeholder="Descripción del producto..."
+                        value={formData.description}
+                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                        data-testid="product-desc-input"
                       />
                     </div>
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="space-y-2">
+                        <Label>Categoría 1</Label>
+                        <Input
+                          placeholder="Tipo"
+                          value={formData.category_1}
+                          onChange={(e) => setFormData({ ...formData, category_1: e.target.value })}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Categoría 2</Label>
+                        <Input
+                          placeholder="Material"
+                          value={formData.category_2}
+                          onChange={(e) => setFormData({ ...formData, category_2: e.target.value })}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Categoría 3</Label>
+                        <Input
+                          placeholder="Uso"
+                          value={formData.category_3}
+                          onChange={(e) => setFormData({ ...formData, category_3: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Precio</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          placeholder="0.00"
+                          value={formData.price}
+                          onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                          data-testid="product-price-input"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>URL Imagen</Label>
+                        <Input
+                          placeholder="https://..."
+                          value={formData.image_url}
+                          onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                    <Button
+                      onClick={createProduct}
+                      className="w-full bg-emerald-500 hover:bg-emerald-600"
+                      data-testid="submit-product-btn"
+                    >
+                      Crear Producto
+                    </Button>
                   </div>
-                  <div className="space-y-2">
-                    <Label>Nombre *</Label>
-                    <Input
-                      placeholder="Nombre del producto"
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      data-testid="product-name-input"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Descripción</Label>
-                    <Textarea
-                      placeholder="Descripción del producto..."
-                      value={formData.description}
-                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                      data-testid="product-desc-input"
-                    />
-                  </div>
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="space-y-2">
-                      <Label>Categoría 1</Label>
-                      <Input
-                        placeholder="Tipo"
-                        value={formData.category_1}
-                        onChange={(e) => setFormData({ ...formData, category_1: e.target.value })}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Categoría 2</Label>
-                      <Input
-                        placeholder="Material"
-                        value={formData.category_2}
-                        onChange={(e) => setFormData({ ...formData, category_2: e.target.value })}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Categoría 3</Label>
-                      <Input
-                        placeholder="Uso"
-                        value={formData.category_3}
-                        onChange={(e) => setFormData({ ...formData, category_3: e.target.value })}
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Precio</Label>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        placeholder="0.00"
-                        value={formData.price}
-                        onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                        data-testid="product-price-input"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>URL Imagen</Label>
-                      <Input
-                        placeholder="https://..."
-                        value={formData.image_url}
-                        onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
-                      />
-                    </div>
-                  </div>
-                  <Button
-                    onClick={createProduct}
-                    className="w-full bg-emerald-500 hover:bg-emerald-600"
-                    data-testid="submit-product-btn"
-                  >
-                    Crear Producto
-                  </Button>
-                </div>
-              </ScrollArea>
-            </DialogContent>
-          </Dialog>
-        </div>
+                </ScrollArea>
+              </DialogContent>
+            </Dialog>
+          </div>
+        )}
       </div>
 
       {/* Upload Result */}
-      {uploadResult && (
+      {uploadResult && isAdmin && (
         <Card className={`border ${uploadResult.error ? 'border-red-200 bg-red-50' : 'border-emerald-200 bg-emerald-50'}`}>
           <CardContent className="p-4 flex items-center gap-3">
             {uploadResult.error ? (
@@ -367,7 +371,7 @@ export default function Inventory() {
               <FileSpreadsheet className="w-16 h-16 mx-auto mb-4 opacity-30" />
               <p className="text-lg font-medium">No hay productos</p>
               <p className="text-sm mt-1">
-                Carga un archivo Excel con tu catálogo
+                {isAdmin ? "Carga un archivo Excel con tu catálogo" : "El catálogo está vacío"}
               </p>
             </div>
           ) : (
@@ -381,7 +385,7 @@ export default function Inventory() {
                     <TableHead>Categoría</TableHead>
                     <TableHead className="text-right">Precio</TableHead>
                     <TableHead className="text-right">Stock</TableHead>
-                    <TableHead className="w-16"></TableHead>
+                    {isAdmin && <TableHead className="w-16"></TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -442,17 +446,19 @@ export default function Inventory() {
                           {product.stock}
                         </Badge>
                       </TableCell>
-                      <TableCell>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-8 w-8 p-0 text-red-500 hover:text-red-600"
-                          onClick={() => deleteProduct(product.id)}
-                          data-testid={`delete-product-${product.id}`}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </TableCell>
+                      {isAdmin && (
+                        <TableCell>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 w-8 p-0 text-red-500 hover:text-red-600"
+                            onClick={() => deleteProduct(product.id)}
+                            data-testid={`delete-product-${product.id}`}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </TableCell>
+                      )}
                     </TableRow>
                   ))}
                 </TableBody>
