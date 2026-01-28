@@ -685,6 +685,21 @@ async def send_message(
     message_id = str(uuid.uuid4())
     now = datetime.now(timezone.utc)
     
+    # Send message via WhatsApp API
+    whatsapp_message_id = None
+    send_status = "sent"
+    
+    try:
+        whatsapp_message_id = await send_whatsapp_message(
+            conv["phone_number"],
+            message_data.content
+        )
+        send_status = "delivered"
+        logger.info(f"WhatsApp message sent: {whatsapp_message_id}")
+    except Exception as e:
+        logger.error(f"Failed to send WhatsApp message: {e}")
+        send_status = "failed"
+    
     message_doc = {
         "id": message_id,
         "conversation_id": conversation_id,
@@ -692,7 +707,8 @@ async def send_message(
         "sender": "business",
         "message_type": message_data.message_type,
         "content": {"text": message_data.content},
-        "status": "sent",
+        "status": send_status,
+        "whatsapp_message_id": whatsapp_message_id,
         "timestamp": now.isoformat()
     }
     
