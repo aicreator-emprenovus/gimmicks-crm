@@ -219,6 +219,51 @@ def serialize_doc(doc: dict) -> dict:
     result = {k: v for k, v in doc.items() if k != '_id'}
     return result
 
+# ============== WHATSAPP API FUNCTIONS ==============
+
+async def send_whatsapp_message(to_phone: str, message_text: str) -> str:
+    """Send a text message via WhatsApp Business API"""
+    import aiohttp
+    
+    phone_number_id = os.environ.get("WHATSAPP_PHONE_NUMBER_ID")
+    access_token = os.environ.get("WHATSAPP_ACCESS_TOKEN")
+    
+    if not phone_number_id or not access_token:
+        raise Exception("WhatsApp credentials not configured")
+    
+    # Remove any non-numeric characters except +
+    clean_phone = ''.join(c for c in to_phone if c.isdigit())
+    
+    url = f"https://graph.facebook.com/v18.0/{phone_number_id}/messages"
+    
+    headers = {
+        "Authorization": f"Bearer {access_token}",
+        "Content-Type": "application/json"
+    }
+    
+    payload = {
+        "messaging_product": "whatsapp",
+        "recipient_type": "individual",
+        "to": clean_phone,
+        "type": "text",
+        "text": {
+            "preview_url": False,
+            "body": message_text
+        }
+    }
+    
+    async with aiohttp.ClientSession() as session:
+        async with session.post(url, headers=headers, json=payload) as response:
+            result = await response.json()
+            
+            if response.status != 200:
+                error_msg = result.get("error", {}).get("message", "Unknown error")
+                logger.error(f"WhatsApp API error: {result}")
+                raise Exception(f"WhatsApp API error: {error_msg}")
+            
+            message_id = result.get("messages", [{}])[0].get("id")
+            return message_id
+
 # ============== AUTH ROUTES ==============
 
 @api_router.post("/auth/register", response_model=TokenResponse)
