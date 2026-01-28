@@ -1116,23 +1116,29 @@ async def get_dashboard_metrics(current_user: dict = Depends(get_current_user)):
 
 # ============== WHATSAPP WEBHOOK ==============
 
-from fastapi.responses import PlainTextResponse
+from fastapi.responses import PlainTextResponse, Response
+from fastapi import Request
 
-@api_router.get("/webhook/whatsapp", response_class=PlainTextResponse)
-async def verify_whatsapp_webhook(
-    hub_mode: str = Query(None, alias="hub.mode"),
-    hub_challenge: str = Query(None, alias="hub.challenge"),
-    hub_verify_token: str = Query(None, alias="hub.verify_token")
-):
+@api_router.get("/webhook/whatsapp")
+async def verify_whatsapp_webhook(request: Request):
     """Webhook verification for WhatsApp Business API"""
+    # Get query parameters directly from request
+    params = dict(request.query_params)
+    
+    hub_mode = params.get("hub.mode")
+    hub_challenge = params.get("hub.challenge")
+    hub_verify_token = params.get("hub.verify_token")
+    
     verify_token = os.environ.get("WHATSAPP_VERIFY_TOKEN", "")
     
-    logger.info(f"Webhook verification: mode={hub_mode}, token_match={hub_verify_token == verify_token}")
+    logger.info(f"Webhook verification request: mode={hub_mode}, challenge={hub_challenge}, token_received={hub_verify_token}, token_expected={verify_token}")
     
     if hub_mode == "subscribe" and hub_verify_token == verify_token:
-        return hub_challenge or "0"
+        logger.info(f"Webhook verified successfully, returning challenge: {hub_challenge}")
+        return Response(content=hub_challenge, media_type="text/plain")
     
-    raise HTTPException(status_code=403, detail="Verificación fallida")
+    logger.warning(f"Webhook verification failed: mode={hub_mode}, token_match={hub_verify_token == verify_token}")
+    return Response(content="Verification failed", status_code=403, media_type="text/plain")
 
 @api_router.post("/webhook/whatsapp")
 async def handle_whatsapp_webhook(request_data: dict):
