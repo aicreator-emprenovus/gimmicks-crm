@@ -1114,9 +1114,11 @@ async def get_dashboard_metrics(current_user: dict = Depends(get_current_user)):
         active_conversations=active_conversations
     )
 
-# ============== WHATSAPP WEBHOOK (SIMULATED) ==============
+# ============== WHATSAPP WEBHOOK ==============
 
-@api_router.get("/webhook/whatsapp")
+from fastapi.responses import PlainTextResponse
+
+@api_router.get("/webhook/whatsapp", response_class=PlainTextResponse)
 async def verify_whatsapp_webhook(
     hub_mode: str = Query(None, alias="hub.mode"),
     hub_challenge: str = Query(None, alias="hub.challenge"),
@@ -1125,8 +1127,10 @@ async def verify_whatsapp_webhook(
     """Webhook verification for WhatsApp Business API"""
     verify_token = os.environ.get("WHATSAPP_VERIFY_TOKEN", "")
     
+    logger.info(f"Webhook verification: mode={hub_mode}, token_match={hub_verify_token == verify_token}")
+    
     if hub_mode == "subscribe" and hub_verify_token == verify_token:
-        return int(hub_challenge) if hub_challenge else 0
+        return hub_challenge or "0"
     
     raise HTTPException(status_code=403, detail="Verificación fallida")
 
