@@ -80,7 +80,8 @@ export default function Inbox() {
       setAiSuggestion(null);
       fetchConversations();
     } catch (error) {
-      toast.error("Error al enviar mensaje");
+      console.error("Send message error:", error.response?.data || error);
+      toast.error(error.response?.data?.detail || "Error al enviar mensaje");
     } finally {
       setSending(false);
     }
@@ -386,7 +387,7 @@ export default function Inbox() {
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
                 placeholder="Escribe un mensaje..."
-                className="flex-1"
+                className="flex-1 bg-zinc-50 text-zinc-900 border-zinc-300 placeholder:text-zinc-400"
                 disabled={sending}
                 data-testid="message-input"
               />
