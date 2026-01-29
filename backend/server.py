@@ -1252,11 +1252,18 @@ async def analyze_message(
 ):
     """Analyze a message using AI to classify intent and suggest products"""
     try:
-        from emergentintegrations.llm.chat import LlmChat, UserMessage
+        from openai import OpenAI
         
-        api_key = os.environ.get("EMERGENT_LLM_KEY")
+        api_key = os.environ.get("OPENAI_API_KEY") or os.environ.get("EMERGENT_LLM_KEY")
         if not api_key:
-            raise HTTPException(status_code=500, detail="API key not configured")
+            # Return basic analysis if no API key
+            return {
+                "intent": "consulta",
+                "lead_classification": "tibio",
+                "suggested_products": [],
+                "suggested_response": f"Gracias por tu mensaje. Un asesor te contactará pronto.",
+                "analysis_notes": "Análisis básico - API key no configurada"
+            }
         
         # Get products for context
         products = await db.products.find({}, {"_id": 0, "name": 1, "description": 1, "category_1": 1, "category_2": 1}).limit(50).to_list(50)
@@ -1282,21 +1289,22 @@ Responde SIEMPRE en formato JSON con esta estructura:
     "analysis_notes": "notas sobre el análisis"
 }}"""
         
-        chat = LlmChat(
-            api_key=api_key,
-            session_id=f"analysis-{uuid.uuid4()}",
-            system_message=system_message
-        ).with_model("openai", "gpt-5.2")
+        client = OpenAI(api_key=api_key)
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": system_message},
+                {"role": "user", "content": f"Analiza este mensaje del cliente: \"{message}\""}
+            ],
+            temperature=0.7
+        )
         
-        user_message = UserMessage(text=f"Analiza este mensaje del cliente: \"{message}\"")
-        
-        response = await chat.send_message(user_message)
+        response_text = response.choices[0].message.content
         
         # Parse response
         try:
-            # Try to extract JSON from response
             import re
-            json_match = re.search(r'\{[\s\S]*\}', response)
+            json_match = re.search(r'\{[\s\S]*\}', response_text)
             if json_match:
                 result = json.loads(json_match.group())
             else:
@@ -1304,7 +1312,7 @@ Responde SIEMPRE en formato JSON con esta estructura:
                     "intent": "otro",
                     "lead_classification": "frio",
                     "suggested_products": [],
-                    "suggested_response": response,
+                    "suggested_response": response_text,
                     "analysis_notes": "No se pudo parsear la respuesta JSON"
                 }
         except json.JSONDecodeError:
@@ -1312,17 +1320,21 @@ Responde SIEMPRE en formato JSON con esta estructura:
                 "intent": "otro",
                 "lead_classification": "frio",
                 "suggested_products": [],
-                "suggested_response": response,
+                "suggested_response": response_text,
                 "analysis_notes": "No se pudo parsear la respuesta JSON"
             }
         
         return result
         
-    except ImportError:
-        raise HTTPException(status_code=500, detail="Librería de IA no instalada")
     except Exception as e:
         logger.error(f"AI analysis error: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        return {
+            "intent": "consulta",
+            "lead_classification": "tibio",
+            "suggested_products": [],
+            "suggested_response": "Gracias por tu mensaje. Un asesor te contactará pronto.",
+            "analysis_notes": f"Error en análisis: {str(e)}"
+        }
 
 @api_router.post("/ai/recommend-products")
 async def recommend_products(
@@ -1332,11 +1344,11 @@ async def recommend_products(
 ):
     """Recommend products based on customer query using AI"""
     try:
-        from emergentintegrations.llm.chat import LlmChat, UserMessage
+        from openai import OpenAI
         
-        api_key = os.environ.get("EMERGENT_LLM_KEY")
+        api_key = os.environ.get("OPENAI_API_KEY") or os.environ.get("EMERGENT_LLM_KEY")
         if not api_key:
-            raise HTTPException(status_code=500, detail="API key not configured")
+            return {"recommendations": [], "message": "API key no configurada"}
         
         # Get all products
         products = await db.products.find({}, {"_id": 0}).limit(100).to_list(100)
