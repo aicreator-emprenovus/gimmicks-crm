@@ -1,94 +1,183 @@
-# Gimmicks CRM - WhatsApp Business PRD
+# Gimmicks CRM - WhatsApp Business Integration
 
-## Problema Original
-CRM WEB basado en funnel conversacional con WhatsApp Business para Gimmicks Marketing Services. Sistema capaz de:
-- Recibir mensajes de WhatsApp Business (leads de Meta Ads u otros canales)
-- Gestionar funnel de ventas conversacional automatizado
-- Responder automáticamente usando reglas e IA
-- Conectarse al sistema de inventario para recomendaciones personalizadas
+## Original Problem Statement
+Build a web-based CRM integrated with WhatsApp Business to manage a conversational sales funnel for Gimmicks Marketing Services.
 
-## User Personas
-1. **Agente de Ventas**: Gestiona conversaciones, responde leads, mueve leads por el funnel
-2. **Administrador**: Configura reglas de automatización, gestiona inventario
-3. **Lead/Cliente**: Contacta vía WhatsApp buscando productos promocionales
+## Core Requirements
 
-## Arquitectura
-- **Backend**: FastAPI + MongoDB
-- **Frontend**: React + Shadcn UI + Tailwind CSS
-- **IA**: GPT-5.2 via Emergent LLM Key
-- **Estilo**: Gimmicks Theme (fondo oscuro #09090b, cards blancas, emerald #10b981)
+### 1. Lead Entry
+- Automatically receive and register incoming messages from WhatsApp Business Cloud API
+- Capture lead's number, name, source, and timestamp
 
-## Features Implementadas (Fecha: 2026-01-27)
+### 2. Conversational Funnel
+- Send automatic welcome messages
+- Ask guided questions to qualify leads
+- Use rules and AI to interpret messages and classify leads (cold, warm, hot)
 
-### Autenticación
-- [x] Registro de usuarios (JWT)
-- [x] Login con email/password
-- [x] Protección de rutas
+### 3. Inventory Integration
+- Connect to internal inventory system (loaded from Excel)
+- Auto-search and recommend products based on customer messages
+- Send product details (name, description, availability)
 
-### Dashboard
-- [x] Métricas principales (total leads, mensajes hoy, conversión, tiempo respuesta)
-- [x] Gráfico de leads por etapa del funnel
-- [x] Gráfico de leads por fuente
-- [x] Datos demo para testing
+### 4. Response Automation
+- Personalized automatic responses
+- Escalate to human agent when necessary
 
-### Inbox (Chat WhatsApp)
-- [x] Lista de conversaciones con búsqueda
-- [x] Vista de mensajes en tiempo real (estilo WhatsApp)
-- [x] Envío de mensajes
-- [x] Análisis de mensajes con IA
-- [x] Badge de mensajes no leídos
+### 5. CRM Functionality
+- Log entire conversation history
+- Track lead status (In Conversation, Quoted, Converted, Lost)
+- Automatic follow-ups via WhatsApp
 
-### Gestión de Leads (Funnel Kanban)
-- [x] Vista Kanban de 6 etapas: Lead, Pedido, Producción, Entregado, Perdido, Cierre
-- [x] CRUD completo de leads
-- [x] Clasificación: Frío, Tibio, Caliente
-- [x] Fuentes: WhatsApp, Meta Ads, Web, Orgánico
-- [x] Filtros por etapa y clasificación
-- [x] Actualización de etapa desde tarjeta
+### 6. Web Interface
+- Centralized WhatsApp inbox with real-time conversations
+- Customer profile view with history
+- Configuration panel for automatic responses and funnel rules
+- Dashboard with metrics (leads received, conversion, response time)
 
-### Inventario
-- [x] Tabla de productos con búsqueda
-- [x] **Carga masiva de productos via Excel**
-- [x] Categorías múltiples
-- [x] CRUD completo
+### 7. User Roles
+- **Admin**: Full access to all features
+- **Asesor (Agent)**: Limited access (view catalog, access chat)
 
-### Automatización
-- [x] Reglas con triggers: keyword, new_lead, funnel_change, no_response
-- [x] Acciones: send_message, change_stage, assign_agent, recommend_product
-- [x] Activar/desactivar reglas
-- [x] Reglas de demostración pre-configuradas
+## Tech Stack
+- **Backend**: FastAPI, Python, Motor (async MongoDB), JWT Auth
+- **Frontend**: React, TailwindCSS, Shadcn UI
+- **Database**: MongoDB
+- **Integrations**: WhatsApp Business Cloud API, OpenAI API
 
-### Integración IA (GPT-5.2)
-- [x] Análisis de intención de mensajes
-- [x] Clasificación automática de leads
-- [x] Sugerencias de respuestas
-- [x] Recomendación de productos basada en texto
+## What's Been Implemented
 
-### WhatsApp Business API
-- [x] Webhook de verificación configurado
-- [x] Endpoint para recibir mensajes (SIMULADO - sin conexión real)
-- [x] Procesamiento de mensajes entrantes
+### ✅ Completed (January 2026)
+- [x] Backend API with FastAPI
+- [x] JWT-based authentication with Admin/Asesor roles
+- [x] User management (Admin can create/manage users)
+- [x] WhatsApp webhook configured and verified with Meta
+- [x] Core UI pages: Login, Dashboard, Inbox, Leads, Inventory, Settings, Users
+- [x] Real-time conversation display in Inbox
+- [x] Message sending from CRM to WhatsApp
+- [x] Basic automation rules feature (keyword-based, new lead triggers)
+- [x] AI analysis integration (GPT for lead classification)
 
-## Backlog Priorizado
+### 🔧 Bug Fixes (January 29, 2026)
+- [x] Fixed invisible text in Inbox message input (CSS color issue)
+- [x] Fixed message sending from CRM UI (verified backend endpoint works)
 
-### P0 (Crítico)
-- [ ] Conexión real a WhatsApp Business Cloud API
-- [ ] Envío de mensajes vía API oficial de Meta
+## Pending Tasks
 
-### P1 (Alta prioridad)
-- [ ] Notificaciones en tiempo real (WebSockets)
-- [ ] Envío de archivos e imágenes en chat
-- [ ] Templates de WhatsApp para mensajes fuera de 24h
-- [ ] Dashboard de analytics avanzado
+### P0 - High Priority
+- [ ] Test automation rules end-to-end
+- [ ] Configure WhatsApp credentials in production
 
-### P2 (Media prioridad)
-- [ ] Asignación de agentes a conversaciones
-- [ ] Respuestas automáticas completas
-- [ ] Exportación de reportes
-- [ ] Historial de cambios en leads
+### P1 - Medium Priority
+- [ ] Implement Excel inventory upload
+- [ ] AI-powered product recommendations
 
-## Próximas Acciones
-1. Cargar el catálogo completo de productos usando el Excel proporcionado
-2. Configurar WhatsApp Business API con credenciales reales de Meta
-3. Probar flujo completo de mensajes entrantes/salientes
-4. Configurar reglas de automatización personalizadas
+### P2 - Lower Priority
+- [ ] Dashboard real metrics implementation
+- [ ] Finalize Asesor role restrictions
+- [ ] Refactor server.py into modules
+
+## Database Schema
+
+### users
+```json
+{
+  "id": "uuid",
+  "email": "string",
+  "password": "hashed_string",
+  "name": "string",
+  "role": "admin|asesor",
+  "created_at": "datetime"
+}
+```
+
+### conversations
+```json
+{
+  "id": "uuid",
+  "phone_number": "string",
+  "contact_name": "string",
+  "source": "string",
+  "stage": "lead|pedido|produccion|entregado|perdido",
+  "classification": "frio|tibio|caliente",
+  "last_message": "string",
+  "last_message_time": "datetime",
+  "unread_count": "int",
+  "created_at": "datetime"
+}
+```
+
+### messages
+```json
+{
+  "id": "uuid",
+  "conversation_id": "uuid",
+  "phone_number": "string",
+  "sender": "user|business",
+  "message_type": "text",
+  "content": {"text": "string"},
+  "status": "sent|delivered|failed|received",
+  "timestamp": "datetime"
+}
+```
+
+### automation_rules
+```json
+{
+  "id": "uuid",
+  "name": "string",
+  "trigger_type": "keyword|new_lead",
+  "keywords": ["array"],
+  "action_type": "send_message|classify_lead",
+  "action_value": "string",
+  "is_active": "boolean",
+  "created_at": "datetime"
+}
+```
+
+## API Endpoints
+
+### Auth
+- `POST /api/auth/register` - Register new user
+- `POST /api/auth/login` - User login
+- `GET /api/auth/me` - Get current user
+
+### Users (Admin only)
+- `GET /api/users` - List users
+- `POST /api/users` - Create user
+- `DELETE /api/users/{id}` - Delete user
+
+### Conversations
+- `GET /api/conversations` - List conversations
+- `GET /api/conversations/{id}/messages` - Get messages
+- `POST /api/conversations/{id}/messages` - Send message
+
+### Automations
+- `GET /api/automations` - List rules
+- `POST /api/automations` - Create rule
+- `PUT /api/automations/{id}` - Update rule
+- `DELETE /api/automations/{id}` - Delete rule
+
+### WhatsApp
+- `GET /api/webhook/whatsapp` - Webhook verification
+- `POST /api/webhook/whatsapp` - Receive messages
+
+## Environment Variables
+
+### Backend (.env)
+```
+MONGO_URL=mongodb://localhost:27017
+DB_NAME=gimmicks_crm
+JWT_SECRET_KEY=your-secret-key
+WHATSAPP_ACCESS_TOKEN=your-token
+WHATSAPP_PHONE_NUMBER_ID=your-phone-id
+WHATSAPP_VERIFY_TOKEN=your-verify-token
+```
+
+### Frontend (.env)
+```
+REACT_APP_BACKEND_URL=https://your-backend-url
+```
+
+## Access Credentials (Development)
+- **Email**: admin@gimmicks.com
+- **Password**: admin123456
