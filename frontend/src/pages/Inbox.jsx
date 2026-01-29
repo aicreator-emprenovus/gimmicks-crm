@@ -182,7 +182,7 @@ export default function Inbox() {
               placeholder="Buscar conversación..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9 bg-zinc-50 border-zinc-200"
+              className="pl-9 bg-zinc-50 text-zinc-900 border-zinc-200 placeholder:text-zinc-400"
               data-testid="search-conversations"
             />
           </div>
