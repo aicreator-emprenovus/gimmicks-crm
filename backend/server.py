@@ -1380,31 +1380,33 @@ Responde en formato JSON:
     "message": "mensaje para el cliente explicando las recomendaciones"
 }}"""
         
-        chat = LlmChat(
-            api_key=api_key,
-            session_id=f"recommend-{uuid.uuid4()}",
-            system_message=system_message
-        ).with_model("openai", "gpt-5.2")
+        client = OpenAI(api_key=api_key)
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": system_message},
+                {"role": "user", "content": f"El cliente necesita: {query}"}
+            ],
+            temperature=0.7
+        )
         
-        user_message = UserMessage(text=f"El cliente necesita: {query}")
-        
-        response = await chat.send_message(user_message)
+        response_text = response.choices[0].message.content
         
         try:
             import re
-            json_match = re.search(r'\{[\s\S]*\}', response)
+            json_match = re.search(r'\{[\s\S]*\}', response_text)
             if json_match:
                 result = json.loads(json_match.group())
             else:
-                result = {"recommendations": [], "message": response}
+                result = {"recommendations": [], "message": response_text}
         except:
-            result = {"recommendations": [], "message": response}
+            result = {"recommendations": [], "message": response_text}
         
         return result
         
     except Exception as e:
         logger.error(f"Product recommendation error: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        return {"recommendations": [], "message": f"Error: {str(e)}"}
 
 # ============== SEED DATA FOR DEMO ==============
 
