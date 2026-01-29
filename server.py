@@ -1242,6 +1242,89 @@ async def process_incoming_message(message: dict, metadata: dict):
     await db.messages.insert_one(msg_doc)
     
     logger.info(f"Message processed from {phone_number}")
+    
+    # Process automation rules
+    message_text = content.get("text", "").lower()
+    is_new_lead = not conversation.get("lead_id")  # Was this a new lead?
+    
+    await process_automation_rules(
+        phone_number=phone_number,
+        message_text=message_text,
+        conversation_id=conversation["id"],
+        is_new_lead=is_new_lead
+    )
+
+async def process_automation_rules(phone_number: str, message_text: str, conversation_id: str, is_new_lead: bool = False):
+    """Process automation rules and send automatic responses"""
+    try:
+        # Get all active rules
+        rules = await db.automation_rules.find({"is_active": True}, {"_id": 0}).to_list(100)
+        
+        for rule in rules:
+            should_trigger = False
+            
+            # Check trigger conditions
+            if rule["trigger_type"] == "new_lead" and is_new_lead:
+                should_trigger = True
+                
+            elif rule["trigger_type"] == "keyword" and rule.get("trigger_value"):
+                keywords = [k.strip().lower() for k in rule["trigger_value"].split(",")]
+                if any(keyword in message_text for keyword in keywords):
+                    should_trigger = True
+            
+            # Execute action if triggered
+            if should_trigger:
+                logger.info(f"Rule triggered: {rule['name']}")
+                
+                if rule["action_type"] == "send_message":
+                    # Send automatic response via WhatsApp
+                    try:
+                        await send_whatsapp_message(phone_number, rule["action_value"])
+                        
+                        # Save the sent message to database
+                        now = datetime.now(timezone.utc)
+                        auto_msg = {
+                            "id": str(uuid.uuid4()),
+                            "conversation_id": conversation_id,
+                            "phone_number": phone_number,
+                            "sender": "business",
+                            "message_type": "text",
+                            "content": {"text": rule["action_value"]},
+                            "status": "sent",
+                            "is_automated": True,
+                            "rule_name": rule["name"],
+                            "timestamp": now.isoformat()
+                        }
+                        await db.messages.insert_one(auto_msg)
+                        
+                        # Update conversation
+                        await db.conversations.update_one(
+                            {"id": conversation_id},
+                            {"$set": {
+                                "last_message": rule["action_value"][:100],
+                                "last_message_time": now.isoformat()
+                            }}
+                        )
+                        
+                        logger.info(f"Auto-response sent to {phone_number}")
+                    except Exception as e:
+                        logger.error(f"Failed to send auto-response: {e}")
+                
+                elif rule["action_type"] == "change_stage":
+                    # Update lead stage
+                    conv = await db.conversations.find_one({"id": conversation_id}, {"_id": 0})
+                    if conv and conv.get("lead_id"):
+                        await db.leads.update_one(
+                            {"id": conv["lead_id"]},
+                            {"$set": {"funnel_stage": rule["action_value"], "updated_at": datetime.now(timezone.utc).isoformat()}}
+                        )
+                        logger.info(f"Lead stage changed to {rule['action_value']}")
+                
+                # Only execute first matching rule to avoid spam
+                break
+                
+    except Exception as e:
+        logger.error(f"Error processing automation rules: {e}")
 
 # ============== AI ANALYSIS ROUTES ==============
 
