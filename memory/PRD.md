@@ -181,3 +181,27 @@ REACT_APP_BACKEND_URL=https://your-backend-url
 ## Access Credentials (Development)
 - **Email**: admin@gimmicks.com
 - **Password**: admin123456
+
+---
+
+## 🔴 TAREAS PENDIENTES (Última actualización: Enero 29, 2026)
+
+### 1. Configuración del Robot de Automatización
+- [ ] Probar reglas de automatización end-to-end
+- [ ] Crear reglas en Configuración → respuestas automáticas por palabras clave
+- [ ] Configurar mensaje de bienvenida automático para nuevos leads
+- [ ] Verificar que las reglas se activen cuando lleguen mensajes al webhook
+
+### 2. Configuración del Número de WhatsApp para Producción
+- [ ] Migrar de número de prueba (+1 555 167 4338) a número real de Gimmicks
+- [ ] Publicar la app en Meta para recibir mensajes de producción
+- [ ] Configurar webhook para recibir mensajes entrantes reales
+
+### 3. Credenciales de WhatsApp Configuradas
+- **WHATSAPP_PHONE_NUMBER_ID**: 932135423324087
+- **WHATSAPP_ACCESS_TOKEN**: Configurado en Railway
+- **Webhook URL**: https://gimmicks-crm-production.up.railway.app/api/webhook/whatsapp
+
+### 4. URLs de Acceso
+- **Preview (Emergent)**: https://chatwiz-manager.preview.emergentagent.com
+- **Backend (Railway)**: https://gimmicks-crm-production.up.railway.app
