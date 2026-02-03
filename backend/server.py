@@ -1614,6 +1614,87 @@ async def seed_demo_data(current_user: dict = Depends(get_current_user)):
 async def health_check():
     return {"status": "healthy", "timestamp": datetime.now(timezone.utc).isoformat()}
 
+
+# ============== LEGAL PAGES ==============
+
+@api_router.get("/privacy", include_in_schema=False)
+async def privacy_policy():
+    from fastapi.responses import HTMLResponse
+    html_content = """
+    <!DOCTYPE html>
+    <html lang="es">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Política de Privacidad - Gimmicks CRM</title>
+        <style>
+            body { font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; line-height: 1.6; }
+            h1 { color: #10b981; }
+            h2 { color: #374151; margin-top: 30px; }
+        </style>
+    </head>
+    <body>
+        <h1>Política de Privacidad</h1>
+        <p><strong>Última actualización:</strong> Febrero 2026</p>
+        
+        <h2>1. Información que Recopilamos</h2>
+        <p>Gimmicks CRM recopila información proporcionada a través de WhatsApp Business, incluyendo números de teléfono, nombres y mensajes de conversación para gestionar la comunicación con clientes.</p>
+        
+        <h2>2. Uso de la Información</h2>
+        <p>La información se utiliza exclusivamente para:</p>
+        <ul>
+            <li>Gestionar conversaciones con clientes</li>
+            <li>Proporcionar soporte y seguimiento de ventas</li>
+            <li>Mejorar nuestros servicios</li>
+        </ul>
+        
+        <h2>3. Protección de Datos</h2>
+        <p>Implementamos medidas de seguridad técnicas y organizativas para proteger su información personal.</p>
+        
+        <h2>4. Contacto</h2>
+        <p>Para consultas sobre privacidad, contactar a: info@gimmicks.com</p>
+    </body>
+    </html>
+    """
+    return HTMLResponse(content=html_content)
+
+@api_router.get("/terms", include_in_schema=False)
+async def terms_of_service():
+    from fastapi.responses import HTMLResponse
+    html_content = """
+    <!DOCTYPE html>
+    <html lang="es">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Términos de Servicio - Gimmicks CRM</title>
+        <style>
+            body { font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; line-height: 1.6; }
+            h1 { color: #10b981; }
+            h2 { color: #374151; margin-top: 30px; }
+        </style>
+    </head>
+    <body>
+        <h1>Términos de Servicio</h1>
+        <p><strong>Última actualización:</strong> Febrero 2026</p>
+        
+        <h2>1. Aceptación de Términos</h2>
+        <p>Al utilizar Gimmicks CRM y sus servicios de WhatsApp Business, acepta estos términos de servicio.</p>
+        
+        <h2>2. Descripción del Servicio</h2>
+        <p>Gimmicks CRM proporciona una plataforma de gestión de relaciones con clientes integrada con WhatsApp Business.</p>
+        
+        <h2>3. Uso Aceptable</h2>
+        <p>El usuario se compromete a utilizar el servicio de manera responsable y conforme a las políticas de WhatsApp Business.</p>
+        
+        <h2>4. Contacto</h2>
+        <p>Para consultas: info@gimmicks.com</p>
+    </body>
+    </html>
+    """
+    return HTMLResponse(content=html_content)
+
+
 # Include the router in the main app
 app.include_router(api_router)
 
