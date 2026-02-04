@@ -152,6 +152,58 @@ export default function Inbox() {
     }
   };
 
+  // Delete conversation
+  const deleteConversation = async () => {
+    if (!selectedConv) return;
+    try {
+      await axios.delete(
+        `${API_URL}/api/conversations/${selectedConv.id}`,
+        { headers: getAuthHeaders() }
+      );
+      toast.success("Conversación eliminada");
+      setSelectedConv(null);
+      setMessages([]);
+      fetchConversations();
+    } catch (error) {
+      toast.error("Error al eliminar conversación");
+    }
+    setShowDeleteDialog(false);
+  };
+
+  // Clear messages
+  const clearMessages = async () => {
+    if (!selectedConv) return;
+    try {
+      await axios.delete(
+        `${API_URL}/api/conversations/${selectedConv.id}/messages`,
+        { headers: getAuthHeaders() }
+      );
+      toast.success("Mensajes eliminados");
+      setMessages([]);
+      fetchConversations();
+    } catch (error) {
+      toast.error("Error al limpiar mensajes");
+    }
+    setShowClearDialog(false);
+  };
+
+  // Toggle star
+  const toggleStar = async () => {
+    if (!selectedConv) return;
+    try {
+      const response = await axios.patch(
+        `${API_URL}/api/conversations/${selectedConv.id}/star`,
+        {},
+        { headers: getAuthHeaders() }
+      );
+      toast.success(response.data.message);
+      setSelectedConv({ ...selectedConv, is_starred: response.data.is_starred });
+      fetchConversations();
+    } catch (error) {
+      toast.error("Error al guardar conversación");
+    }
+  };
+
   useEffect(() => {
     fetchConversations();
     const interval = setInterval(fetchConversations, 10000);
@@ -169,9 +221,12 @@ export default function Inbox() {
   }, [messages]);
 
   const filteredConversations = conversations.filter(
-    (conv) =>
-      conv.contact_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      conv.phone_number.includes(searchTerm)
+    (conv) => {
+      const matchesSearch = conv.contact_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        conv.phone_number.includes(searchTerm);
+      const matchesStarred = filterStarred ? conv.is_starred : true;
+      return matchesSearch && matchesStarred;
+    }
   );
 
   const formatTime = (dateStr) => {
