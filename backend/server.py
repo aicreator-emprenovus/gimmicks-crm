@@ -122,6 +122,7 @@ class ConversationResponse(BaseModel):
     status: str
     unread_count: int
     lead_id: Optional[str]
+    is_starred: Optional[bool] = False
     created_at: datetime
 
 # Product/Inventory Models
