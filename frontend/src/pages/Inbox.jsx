@@ -368,7 +368,7 @@ export default function Inbox() {
                   size="sm"
                   onClick={analyzeWithAI}
                   disabled={analyzing}
-                  className="gap-2"
+                  className="gap-2 bg-purple-500 hover:bg-purple-600 text-white"
                   data-testid="analyze-ai-btn"
                 >
                   {analyzing ? (
@@ -382,31 +382,31 @@ export default function Inbox() {
                 {/* Actions Menu */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm" data-testid="chat-actions-btn">
-                      <MoreVertical className="w-4 h-4" />
+                    <Button variant="outline" size="sm" className="border-zinc-300 hover:bg-zinc-100" data-testid="chat-actions-btn">
+                      <MoreVertical className="w-4 h-4 text-zinc-700" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-48">
-                    <DropdownMenuItem onClick={toggleStar} data-testid="toggle-star-btn">
-                      <Star className={`w-4 h-4 mr-2 ${selectedConv.is_starred ? "fill-amber-500 text-amber-500" : ""}`} />
-                      {selectedConv.is_starred ? "Quitar de guardados" : "Guardar conversación"}
+                  <DropdownMenuContent align="end" className="w-48 bg-white border border-zinc-200 shadow-lg">
+                    <DropdownMenuItem onClick={toggleStar} className="cursor-pointer hover:bg-zinc-100" data-testid="toggle-star-btn">
+                      <Star className={`w-4 h-4 mr-2 ${selectedConv.is_starred ? "fill-amber-500 text-amber-500" : "text-zinc-600"}`} />
+                      <span className="text-zinc-800">{selectedConv.is_starred ? "Quitar de guardados" : "Guardar conversación"}</span>
                     </DropdownMenuItem>
-                    <DropdownMenuSeparator />
+                    <DropdownMenuSeparator className="bg-zinc-200" />
                     <DropdownMenuItem 
                       onClick={() => setShowClearDialog(true)}
-                      className="text-orange-600"
+                      className="cursor-pointer hover:bg-orange-50"
                       data-testid="clear-messages-btn"
                     >
-                      <Eraser className="w-4 h-4 mr-2" />
-                      Limpiar mensajes
+                      <Eraser className="w-4 h-4 mr-2 text-orange-600" />
+                      <span className="text-orange-600 font-medium">Limpiar mensajes</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem 
                       onClick={() => setShowDeleteDialog(true)}
-                      className="text-red-600"
+                      className="cursor-pointer hover:bg-red-50"
                       data-testid="delete-conversation-btn"
                     >
-                      <Trash2 className="w-4 h-4 mr-2" />
-                      Eliminar conversación
+                      <Trash2 className="w-4 h-4 mr-2 text-red-600" />
+                      <span className="text-red-600 font-medium">Eliminar conversación</span>
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
