@@ -684,8 +684,67 @@ async def get_conversation(conversation_id: str, current_user: dict = Depends(ge
         status=conv.get("status", "active"),
         unread_count=conv.get("unread_count", 0),
         lead_id=conv.get("lead_id"),
+        is_starred=conv.get("is_starred", False),
         created_at=created_at
     )
+
+# Delete conversation
+@api_router.delete("/conversations/{conversation_id}")
+async def delete_conversation(
+    conversation_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    # Delete conversation
+    result = await db.conversations.delete_one({"id": conversation_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Conversación no encontrada")
+    
+    # Delete all messages in conversation
+    await db.messages.delete_many({"conversation_id": conversation_id})
+    
+    return {"message": "Conversación eliminada exitosamente"}
+
+# Clear messages from conversation (keep conversation)
+@api_router.delete("/conversations/{conversation_id}/messages")
+async def clear_conversation_messages(
+    conversation_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    # Verify conversation exists
+    conv = await db.conversations.find_one({"id": conversation_id})
+    if not conv:
+        raise HTTPException(status_code=404, detail="Conversación no encontrada")
+    
+    # Delete all messages
+    result = await db.messages.delete_many({"conversation_id": conversation_id})
+    
+    # Update conversation
+    await db.conversations.update_one(
+        {"id": conversation_id},
+        {"$set": {"last_message": None, "unread_count": 0}}
+    )
+    
+    return {"message": f"{result.deleted_count} mensajes eliminados"}
+
+# Toggle star/save conversation
+@api_router.patch("/conversations/{conversation_id}/star")
+async def toggle_star_conversation(
+    conversation_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    conv = await db.conversations.find_one({"id": conversation_id})
+    if not conv:
+        raise HTTPException(status_code=404, detail="Conversación no encontrada")
+    
+    current_starred = conv.get("is_starred", False)
+    new_starred = not current_starred
+    
+    await db.conversations.update_one(
+        {"id": conversation_id},
+        {"$set": {"is_starred": new_starred}}
+    )
+    
+    return {"is_starred": new_starred, "message": "Conversación guardada" if new_starred else "Conversación quitada de guardados"}
 
 @api_router.get("/conversations/{conversation_id}/messages", response_model=List[MessageResponse])
 async def get_conversation_messages(
