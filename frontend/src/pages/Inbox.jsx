@@ -14,11 +14,32 @@ import {
   Sparkles,
   Loader2,
   MessageSquare,
-  Bot
+  Bot,
+  Star,
+  Trash2,
+  Eraser,
+  MoreVertical
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -33,6 +54,9 @@ export default function Inbox() {
   const [analyzing, setAnalyzing] = useState(false);
   const [aiSuggestion, setAiSuggestion] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showClearDialog, setShowClearDialog] = useState(false);
+  const [filterStarred, setFilterStarred] = useState(false);
   const messagesEndRef = useRef(null);
 
   const fetchConversations = async () => {
