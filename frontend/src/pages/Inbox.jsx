@@ -350,8 +350,11 @@ export default function Inbox() {
                     selectedConv.phone_number.slice(-2)}
                 </div>
                 <div>
-                  <h3 className="font-semibold text-zinc-900">
+                  <h3 className="font-semibold text-zinc-900 flex items-center gap-2">
                     {selectedConv.contact_name || selectedConv.phone_number}
+                    {selectedConv.is_starred && (
+                      <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
+                    )}
                   </h3>
                   <p className="text-sm text-zinc-500 flex items-center gap-1">
                     <Phone className="w-3 h-3" />
@@ -359,21 +362,55 @@ export default function Inbox() {
                   </p>
                 </div>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={analyzeWithAI}
-                disabled={analyzing}
-                className="gap-2"
-                data-testid="analyze-ai-btn"
-              >
-                {analyzing ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Sparkles className="w-4 h-4" />
-                )}
-                Analizar con IA
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={analyzeWithAI}
+                  disabled={analyzing}
+                  className="gap-2"
+                  data-testid="analyze-ai-btn"
+                >
+                  {analyzing ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Sparkles className="w-4 h-4" />
+                  )}
+                  Analizar con IA
+                </Button>
+                
+                {/* Actions Menu */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" data-testid="chat-actions-btn">
+                      <MoreVertical className="w-4 h-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuItem onClick={toggleStar} data-testid="toggle-star-btn">
+                      <Star className={`w-4 h-4 mr-2 ${selectedConv.is_starred ? "fill-amber-500 text-amber-500" : ""}`} />
+                      {selectedConv.is_starred ? "Quitar de guardados" : "Guardar conversación"}
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem 
+                      onClick={() => setShowClearDialog(true)}
+                      className="text-orange-600"
+                      data-testid="clear-messages-btn"
+                    >
+                      <Eraser className="w-4 h-4 mr-2" />
+                      Limpiar mensajes
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={() => setShowDeleteDialog(true)}
+                      className="text-red-600"
+                      data-testid="delete-conversation-btn"
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Eliminar conversación
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </div>
 
             {/* AI Suggestion Panel */}
