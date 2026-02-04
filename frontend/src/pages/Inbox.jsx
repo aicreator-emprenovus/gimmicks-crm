@@ -487,13 +487,14 @@ export default function Inbox() {
                     }`}
                   >
                     <div
-                      className={`max-w-[70%] ${
+                      className={`max-w-[70%] break-words overflow-hidden ${
                         msg.sender === "business"
                           ? "message-bubble-user"
                           : "message-bubble-business"
                       }`}
+                      style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}
                     >
-                      <p>{msg.content?.text || JSON.stringify(msg.content)}</p>
+                      <p className="whitespace-pre-wrap">{msg.content?.text || JSON.stringify(msg.content)}</p>
                       <p
                         className={`text-xs mt-1 ${
                           msg.sender === "business"
