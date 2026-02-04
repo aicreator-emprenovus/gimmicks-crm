@@ -1696,6 +1696,116 @@ async def terms_of_service():
 
 
 # Include the router in the main app
+
+# ============== ROOT PAGE (for Meta verification) ==============
+
+@app.get("/", include_in_schema=False)
+async def root_page():
+    from fastapi.responses import HTMLResponse
+    html_content = """
+    <!DOCTYPE html>
+    <html lang="es">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Gimmicks CRM - WhatsApp Business</title>
+        <meta name="description" content="Plataforma CRM integrada con WhatsApp Business para gestión de clientes y ventas.">
+        <style>
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            body { 
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                background: linear-gradient(135deg, #09090b 0%, #18181b 100%);
+                min-height: 100vh;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: white;
+            }
+            .container {
+                text-align: center;
+                padding: 40px;
+                max-width: 600px;
+            }
+            .logo {
+                width: 120px;
+                margin-bottom: 30px;
+            }
+            h1 {
+                font-size: 2.5rem;
+                margin-bottom: 15px;
+                color: #10b981;
+            }
+            p {
+                font-size: 1.1rem;
+                color: #a1a1aa;
+                margin-bottom: 30px;
+                line-height: 1.6;
+            }
+            .features {
+                display: flex;
+                gap: 20px;
+                justify-content: center;
+                flex-wrap: wrap;
+                margin-top: 30px;
+            }
+            .feature {
+                background: rgba(255,255,255,0.05);
+                padding: 20px;
+                border-radius: 12px;
+                width: 150px;
+            }
+            .feature-icon {
+                font-size: 2rem;
+                margin-bottom: 10px;
+            }
+            .feature-text {
+                font-size: 0.9rem;
+                color: #d4d4d8;
+            }
+            .btn {
+                display: inline-block;
+                background: #10b981;
+                color: white;
+                padding: 15px 30px;
+                border-radius: 8px;
+                text-decoration: none;
+                font-weight: 600;
+                margin-top: 20px;
+                transition: background 0.3s;
+            }
+            .btn:hover {
+                background: #059669;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>Gimmicks CRM</h1>
+            <p>Plataforma de gestión de clientes integrada con WhatsApp Business. Centraliza tus conversaciones, automatiza respuestas y aumenta tus ventas.</p>
+            
+            <div class="features">
+                <div class="feature">
+                    <div class="feature-icon">💬</div>
+                    <div class="feature-text">Chat en tiempo real</div>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">🤖</div>
+                    <div class="feature-text">Respuestas automáticas</div>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">📊</div>
+                    <div class="feature-text">Seguimiento de leads</div>
+                </div>
+            </div>
+            
+            <a href="/api/privacy" class="btn">Política de Privacidad</a>
+        </div>
+    </body>
+    </html>
+    """
+    return HTMLResponse(content=html_content)
+
+
 app.include_router(api_router)
 
 app.add_middleware(
