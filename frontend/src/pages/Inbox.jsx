@@ -252,9 +252,20 @@ export default function Inbox() {
       {/* Conversations List */}
       <div className="w-80 border-r border-zinc-200 flex flex-col">
         <div className="p-4 border-b border-zinc-200">
-          <h2 className="text-lg font-semibold text-zinc-900 font-['Manrope'] mb-3">
-            Inbox
-          </h2>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-lg font-semibold text-zinc-900 font-['Manrope']">
+              Inbox
+            </h2>
+            <Button
+              variant={filterStarred ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setFilterStarred(!filterStarred)}
+              className={filterStarred ? "bg-amber-500 hover:bg-amber-600" : "text-zinc-500"}
+              data-testid="filter-starred-btn"
+            >
+              <Star className={`w-4 h-4 ${filterStarred ? "fill-white" : ""}`} />
+            </Button>
+          </div>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
             <Input
@@ -275,7 +286,7 @@ export default function Inbox() {
           ) : filteredConversations.length === 0 ? (
             <div className="p-4 text-center text-zinc-400">
               <MessageSquare className="w-12 h-12 mx-auto mb-2 opacity-50" />
-              <p>No hay conversaciones</p>
+              <p>{filterStarred ? "No hay conversaciones guardadas" : "No hay conversaciones"}</p>
             </div>
           ) : (
             <div className="divide-y divide-zinc-100">
@@ -292,9 +303,14 @@ export default function Inbox() {
                   data-testid={`conversation-${conv.id}`}
                 >
                   <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center text-white font-medium flex-shrink-0">
-                      {conv.contact_name?.charAt(0)?.toUpperCase() ||
-                        conv.phone_number.slice(-2)}
+                    <div className="relative">
+                      <div className="w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center text-white font-medium flex-shrink-0">
+                        {conv.contact_name?.charAt(0)?.toUpperCase() ||
+                          conv.phone_number.slice(-2)}
+                      </div>
+                      {conv.is_starred && (
+                        <Star className="absolute -top-1 -right-1 w-4 h-4 text-amber-500 fill-amber-500" />
+                      )}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">
