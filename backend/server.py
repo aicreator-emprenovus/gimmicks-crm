@@ -153,9 +153,9 @@ class ProductResponse(BaseModel):
 # Automation Rule Models
 class AutomationRuleCreate(BaseModel):
     name: str
-    trigger_type: str  # "keyword", "new_lead", "funnel_change", "no_response"
+    trigger_type: str  # "keyword", "new_lead", "funnel_change", "no_response", "ai_intent"
     trigger_value: Optional[str] = None
-    action_type: str  # "send_message", "change_stage", "assign_agent", "recommend_product"
+    action_type: str  # "send_message", "change_stage", "assign_agent", "recommend_product", "ai_response"
     action_value: str
     is_active: bool = True
 
