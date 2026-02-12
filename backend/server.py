@@ -169,6 +169,39 @@ class AutomationRuleResponse(BaseModel):
     is_active: bool
     created_at: datetime
 
+# Conversation State Models (para memoria conversacional)
+class ConversationState(BaseModel):
+    phone_number: str
+    current_step: str  # "greeting", "identify_need", "collect_name", "collect_empresa", etc.
+    request_type: Optional[str] = None  # "cotizacion", "catalogo", "ideas", "temporada", "ejecutivo", "urgente"
+    collected_data: Dict = {}
+    products_recommended: List[str] = []
+    catalog_sent: bool = False
+    quote_generated: bool = False
+    transferred_to_human: bool = False
+    last_interaction: datetime
+
+# Quote Models
+class QuoteItem(BaseModel):
+    product_id: str
+    product_name: str
+    quantity: int
+    unit_price: float
+    subtotal: float
+    personalization: Optional[str] = None
+
+class Quote(BaseModel):
+    id: str
+    conversation_id: str
+    phone_number: str
+    client_name: Optional[str]
+    client_empresa: Optional[str]
+    items: List[QuoteItem]
+    total: float
+    delivery_time: str
+    notes: Optional[str]
+    created_at: datetime
+
 # Dashboard Metrics
 class DashboardMetrics(BaseModel):
     total_leads: int
