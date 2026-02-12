@@ -1332,6 +1332,10 @@ async def process_automation_rules(phone_number: str, message_text: str, convers
                 if any(keyword in message_text for keyword in keywords):
                     should_trigger = True
             
+            elif rule["trigger_type"] == "ai_intent":
+                # AI analyzes the message intent for product recommendations
+                should_trigger = await check_ai_intent(message_text, rule.get("trigger_value", ""))
+            
             # Execute action if triggered
             if should_trigger:
                 logger.info(f"Rule triggered: {rule['name']}")
@@ -1370,6 +1374,39 @@ async def process_automation_rules(phone_number: str, message_text: str, convers
                     except Exception as e:
                         logger.error(f"Failed to send auto-response: {e}")
                 
+                elif rule["action_type"] == "ai_response":
+                    # Generate AI response with product recommendations
+                    try:
+                        ai_response = await generate_ai_product_response(message_text)
+                        if ai_response:
+                            await send_whatsapp_message(phone_number, ai_response)
+                            
+                            now = datetime.now(timezone.utc)
+                            auto_msg = {
+                                "id": str(uuid.uuid4()),
+                                "conversation_id": conversation_id,
+                                "phone_number": phone_number,
+                                "sender": "business",
+                                "message_type": "text",
+                                "content": {"text": ai_response},
+                                "status": "sent",
+                                "is_automated": True,
+                                "rule_name": rule["name"],
+                                "timestamp": now.isoformat()
+                            }
+                            await db.messages.insert_one(auto_msg)
+                            
+                            await db.conversations.update_one(
+                                {"id": conversation_id},
+                                {"$set": {
+                                    "last_message": ai_response[:100],
+                                    "last_message_time": now.isoformat()
+                                }}
+                            )
+                            logger.info(f"AI response sent to {phone_number}")
+                    except Exception as e:
+                        logger.error(f"Failed to send AI response: {e}")
+                
                 elif rule["action_type"] == "change_stage":
                     # Update lead stage
                     conv = await db.conversations.find_one({"id": conversation_id}, {"_id": 0})
@@ -1385,6 +1422,81 @@ async def process_automation_rules(phone_number: str, message_text: str, convers
                 
     except Exception as e:
         logger.error(f"Error processing automation rules: {e}")
+
+
+async def check_ai_intent(message: str, intent_keywords: str) -> bool:
+    """Check if message matches AI intent using keywords or patterns"""
+    message_lower = message.lower()
+    
+    # Product-related keywords
+    product_keywords = ["precio", "cuanto", "cuesta", "catalogo", "producto", "tienen", "venden", 
+                       "busco", "necesito", "cotización", "cotizar", "disponible", "stock"]
+    
+    if intent_keywords:
+        keywords = [k.strip().lower() for k in intent_keywords.split(",")]
+        return any(kw in message_lower for kw in keywords)
+    
+    # Default: check for product-related queries
+    return any(kw in message_lower for kw in product_keywords)
+
+
+async def generate_ai_product_response(message: str) -> Optional[str]:
+    """Generate an AI response with product recommendations based on user message"""
+    try:
+        from openai import OpenAI
+        
+        api_key = os.environ.get("OPENAI_API_KEY") or os.environ.get("EMERGENT_LLM_KEY")
+        if not api_key:
+            return None
+        
+        # Get products from inventory
+        products = await db.products.find({}, {"_id": 0}).limit(100).to_list(100)
+        
+        if not products:
+            return "¡Hola! Gracias por tu interés. Actualmente estamos actualizando nuestro catálogo. Un asesor te contactará pronto con más información."
+        
+        # Build product catalog context
+        products_context = "\n".join([
+            f"- {p['name']}: {p.get('description', 'Sin descripción')[:150]} | Categoría: {p.get('category_1', 'General')} | Precio: ${p.get('price', 'Consultar')}"
+            for p in products
+        ])
+        
+        system_message = f"""Eres un asistente de ventas amigable de Gimmicks Marketing Services, especializado en productos promocionales y publicitarios.
+
+Tu tarea es responder al cliente de manera profesional y sugerir productos relevantes basándote en su consulta.
+
+CATÁLOGO DE PRODUCTOS DISPONIBLES:
+{products_context}
+
+INSTRUCCIONES:
+1. Analiza lo que el cliente está buscando
+2. Recomienda 1-3 productos relevantes de nuestro catálogo
+3. Incluye nombre, descripción breve y precio si está disponible
+4. Sé amigable y profesional
+5. Si no hay productos exactos, sugiere alternativas similares
+6. Invita al cliente a solicitar cotización o más información
+7. Responde en español
+8. Mantén la respuesta concisa (máximo 300 caracteres para WhatsApp)
+
+NO uses formato markdown, solo texto plano."""
+
+        client = OpenAI(api_key=api_key)
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": system_message},
+                {"role": "user", "content": f"Cliente dice: {message}"}
+            ],
+            temperature=0.7,
+            max_tokens=200
+        )
+        
+        ai_response = response.choices[0].message.content.strip()
+        return ai_response
+        
+    except Exception as e:
+        logger.error(f"Error generating AI product response: {e}")
+        return None
 
 # ============== AI ANALYSIS ROUTES ==============
 
