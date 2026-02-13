@@ -494,7 +494,37 @@ async def delete_user_by_admin(user_id: str, current_user: dict = Depends(requir
     
     return {"message": "Usuario eliminado exitosamente"}
 
-# ============== LEADS ROUTES ==============
+def build_lead_response(lead: dict) -> LeadResponse:
+    """Build LeadResponse from a lead document, handling date parsing."""
+    created_at = lead.get("created_at")
+    updated_at = lead.get("updated_at")
+    last_message_at = lead.get("last_message_at")
+    if isinstance(created_at, str):
+        created_at = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+    if isinstance(updated_at, str):
+        updated_at = datetime.fromisoformat(updated_at.replace('Z', '+00:00'))
+    if isinstance(last_message_at, str):
+        last_message_at = datetime.fromisoformat(last_message_at.replace('Z', '+00:00'))
+    return LeadResponse(
+        id=lead["id"],
+        phone_number=lead["phone_number"],
+        name=lead.get("name"),
+        source=lead.get("source", "whatsapp"),
+        status=lead.get("status", "active"),
+        funnel_stage=lead.get("funnel_stage", "lead"),
+        classification=lead.get("classification", "frio"),
+        notes=lead.get("notes"),
+        ai_category=lead.get("ai_category"),
+        empresa=lead.get("empresa"),
+        ciudad=lead.get("ciudad"),
+        correo=lead.get("correo"),
+        producto_interes=lead.get("producto_interes"),
+        cantidad_estimada=lead.get("cantidad_estimada"),
+        presupuesto=lead.get("presupuesto"),
+        created_at=created_at,
+        updated_at=updated_at,
+        last_message_at=last_message_at
+    )
 
 # ============== LEADS ROUTES ==============
 
