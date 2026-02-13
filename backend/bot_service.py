@@ -110,14 +110,28 @@ async def search_products_by_keyword(db: AsyncIOMotorDatabase, keyword: str, lim
 
 
 async def validate_product_codes(db: AsyncIOMotorDatabase, codes: List[str]) -> List[Dict]:
-    """Validate product codes and return matching products"""
+    """Validate product codes and return matching products. Handles codes with/without spaces."""
     found = []
     for code in codes:
-        code_clean = code.strip().upper()
+        code_clean = code.strip().upper().replace(" ", "")
+        # Try exact match first, then flexible
         product = await db.products.find_one(
             {"code": {"$regex": f"^{re.escape(code_clean)}", "$options": "i"}},
             {"_id": 0}
         )
+        if not product:
+            # Try with spaces between letters and numbers
+            spaced = re.sub(r'([A-Za-z])(\d)', r'\1 \2', code_clean)
+            product = await db.products.find_one(
+                {"code": {"$regex": f"^{re.escape(spaced)}", "$options": "i"}},
+                {"_id": 0}
+            )
+        if not product:
+            # Try partial match - just the significant part
+            product = await db.products.find_one(
+                {"code": {"$regex": code_clean[:6], "$options": "i"}},
+                {"_id": 0}
+            )
         if product:
             found.append(product)
     return found
