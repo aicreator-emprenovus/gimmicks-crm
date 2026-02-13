@@ -282,7 +282,16 @@ async def process_ai_conversation(
         collected_summary = ""
         if collected_data:
             parts = [f"{k}: {v}" for k, v in collected_data.items() if v]
-            collected_summary = "Datos recopilados hasta ahora: " + ", ".join(parts)
+            collected_summary = "Datos recopilados hasta ahora: " + ", ".join(parts) if parts else ""
+        
+        # Tell AI what's still missing
+        required_fields = ["nombre", "empresa", "correo", "producto", "cantidad"]
+        missing = [f for f in required_fields if not collected_data.get(f)]
+        missing_str = ""
+        if missing:
+            missing_str = f"\nDatos que AUN FALTAN para poder cotizar: {', '.join(missing)}. Pregunta por ellos de forma natural."
+        else:
+            missing_str = "\nYa tienes todos los datos necesarios. Puedes marcar needs_quote=true."
 
         user_prompt = f"""CATALOGO DE PRODUCTOS:
 {products_context}
