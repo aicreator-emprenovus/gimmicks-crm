@@ -327,7 +327,7 @@ export default function Leads() {
       {/* Kanban Board */}
       {loading ? (
         <div className="flex items-center justify-center py-12">
-          <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
+          <Loader2 className="w-8 h-8 animate-spin text-[#7BA899]" />
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
@@ -483,7 +483,7 @@ export default function Leads() {
             </div>
             <Button
               onClick={updateLead}
-              className="w-full bg-emerald-500 hover:bg-emerald-600"
+              className="w-full bg-[#7BA899] hover:bg-[#6A9688] text-white"
               data-testid="save-lead-btn"
             >
               Guardar Cambios
