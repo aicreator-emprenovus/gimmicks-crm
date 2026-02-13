@@ -316,7 +316,7 @@ export default function Inbox() {
                           {formatDate(conv.last_message_time)}
                         </span>
                       </div>
-                      <p className="text-sm text-gray-500 truncate mt-0.5">
+                      <p className="text-sm text-gray-500 mt-0.5 break-words">
                         {conv.last_message || "Sin mensajes"}
                       </p>
                       {conv.unread_count > 0 && (
