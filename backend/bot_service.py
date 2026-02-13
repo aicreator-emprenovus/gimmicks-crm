@@ -228,8 +228,8 @@ async def create_pending_quote(db: AsyncIOMotorDatabase, phone_number: str, coll
                 "product_id": p.get("id", ""),
                 "code": p.get("code", ""),
                 "product_name": p.get("name", ""),
-                "description": p.get("description", "")[:100],
-                "price": p.get("price", 0),
+                "description": (p.get("description") or "")[:100],
+                "price": p.get("price", 0) or 0,
             })
 
     # Fallback: search by product keyword
@@ -240,8 +240,8 @@ async def create_pending_quote(db: AsyncIOMotorDatabase, phone_number: str, coll
                 "product_id": p.get("id", ""),
                 "code": p.get("code", ""),
                 "product_name": p.get("name", ""),
-                "description": p.get("description", "")[:100],
-                "price": p.get("price", 0),
+                "description": (p.get("description") or "")[:100],
+                "price": p.get("price", 0) or 0,
             })
 
     quote_doc = {
