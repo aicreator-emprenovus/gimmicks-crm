@@ -148,75 +148,75 @@ export default function Dashboard() {
                   {metrics?.total_leads || 0}
                 </p>
               </div>
-              <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-                <Users className="w-6 h-6 text-blue-600" />
+              <div className="w-12 h-12 bg-blue-500/20 rounded-xl flex items-center justify-center">
+                <Users className="w-6 h-6 text-blue-400" />
               </div>
             </div>
             <div className="mt-4 flex items-center gap-1 text-sm">
-              <ArrowUpRight className="w-4 h-4 text-emerald-500" />
-              <span className="text-emerald-500 font-medium">
+              <ArrowUpRight className="w-4 h-4 text-emerald-400" />
+              <span className="text-emerald-400 font-medium">
                 +{metrics?.leads_today || 0}
               </span>
-              <span className="text-zinc-400">hoy</span>
+              <span className="text-[#6b6b6b]">hoy</span>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border border-zinc-100 shadow-sm hover:shadow-md transition-shadow">
+        <Card className="bg-[#2d2d30] border-[#3d3d40] shadow-lg hover:shadow-xl transition-shadow">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-zinc-500">Mensajes Hoy</p>
-                <p className="text-3xl font-bold text-zinc-900 font-['Manrope']">
+                <p className="text-sm text-[#8a8a8a]">Mensajes Hoy</p>
+                <p className="text-3xl font-bold text-white font-['Manrope']">
                   {metrics?.messages_today || 0}
                 </p>
               </div>
-              <div className="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center">
-                <MessageSquare className="w-6 h-6 text-emerald-600" />
+              <div className="w-12 h-12 bg-emerald-500/20 rounded-xl flex items-center justify-center">
+                <MessageSquare className="w-6 h-6 text-emerald-400" />
               </div>
             </div>
             <div className="mt-4 flex items-center gap-1 text-sm">
-              <span className="text-zinc-500">
+              <span className="text-[#6b6b6b]">
                 {metrics?.active_conversations || 0} conversaciones activas
               </span>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border border-zinc-100 shadow-sm hover:shadow-md transition-shadow">
+        <Card className="bg-[#2d2d30] border-[#3d3d40] shadow-lg hover:shadow-xl transition-shadow">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-zinc-500">Tasa Conversión</p>
-                <p className="text-3xl font-bold text-zinc-900 font-['Manrope']">
+                <p className="text-sm text-[#8a8a8a]">Tasa Conversión</p>
+                <p className="text-3xl font-bold text-white font-['Manrope']">
                   {metrics?.conversion_rate || 0}%
                 </p>
               </div>
-              <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
-                <TrendingUp className="w-6 h-6 text-purple-600" />
+              <div className="w-12 h-12 bg-purple-500/20 rounded-xl flex items-center justify-center">
+                <TrendingUp className="w-6 h-6 text-purple-400" />
               </div>
             </div>
             <div className="mt-4 flex items-center gap-1 text-sm">
-              <span className="text-zinc-500">Leads convertidos a cierre</span>
+              <span className="text-[#6b6b6b]">Leads convertidos a cierre</span>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border border-zinc-100 shadow-sm hover:shadow-md transition-shadow">
+        <Card className="bg-[#2d2d30] border-[#3d3d40] shadow-lg hover:shadow-xl transition-shadow">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-zinc-500">Tiempo Respuesta</p>
-                <p className="text-3xl font-bold text-zinc-900 font-['Manrope']">
+                <p className="text-sm text-[#8a8a8a]">Tiempo Respuesta</p>
+                <p className="text-3xl font-bold text-white font-['Manrope']">
                   {metrics?.avg_response_time || 0}m
                 </p>
               </div>
-              <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
-                <Clock className="w-6 h-6 text-orange-600" />
+              <div className="w-12 h-12 bg-orange-500/20 rounded-xl flex items-center justify-center">
+                <Clock className="w-6 h-6 text-orange-400" />
               </div>
             </div>
             <div className="mt-4 flex items-center gap-1 text-sm">
-              <span className="text-zinc-500">Promedio de respuesta</span>
+              <span className="text-[#6b6b6b]">Promedio de respuesta</span>
             </div>
           </CardContent>
         </Card>
