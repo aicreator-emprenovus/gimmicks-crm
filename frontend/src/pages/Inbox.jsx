@@ -520,7 +520,7 @@ export default function Inbox() {
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
                 placeholder="Escribe un mensaje..."
-                className="flex-1 bg-zinc-50 text-zinc-900 border-zinc-300 placeholder:text-zinc-400"
+                className="flex-1 bg-[#2d2d30] text-white border-[#3d3d40] placeholder:text-[#6b6b6b]"
                 disabled={sending}
                 data-testid="message-input"
               />
@@ -539,10 +539,10 @@ export default function Inbox() {
             </form>
           </>
         ) : (
-          <div className="flex-1 flex items-center justify-center text-zinc-400">
+          <div className="flex-1 flex items-center justify-center text-[#6b6b6b]">
             <div className="text-center">
               <MessageSquare className="w-16 h-16 mx-auto mb-4 opacity-30" />
-              <p className="text-lg font-medium">
+              <p className="text-lg font-medium text-white">
                 Selecciona una conversación
               </p>
               <p className="text-sm">
@@ -555,15 +555,15 @@ export default function Inbox() {
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
+        <AlertDialogContent className="bg-[#2d2d30] border-[#3d3d40]">
           <AlertDialogHeader>
-            <AlertDialogTitle>¿Eliminar conversación?</AlertDialogTitle>
-            <AlertDialogDescription>
+            <AlertDialogTitle className="text-white">¿Eliminar conversación?</AlertDialogTitle>
+            <AlertDialogDescription className="text-[#8a8a8a]">
               Esta acción no se puede deshacer. Se eliminarán todos los mensajes de esta conversación permanentemente.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel className="bg-[#3d3d40] text-white border-[#4d4d50] hover:bg-[#4d4d50]">Cancelar</AlertDialogCancel>
             <AlertDialogAction 
               onClick={deleteConversation}
               className="bg-red-600 hover:bg-red-700"
@@ -576,15 +576,15 @@ export default function Inbox() {
 
       {/* Clear Messages Confirmation Dialog */}
       <AlertDialog open={showClearDialog} onOpenChange={setShowClearDialog}>
-        <AlertDialogContent>
+        <AlertDialogContent className="bg-[#2d2d30] border-[#3d3d40]">
           <AlertDialogHeader>
-            <AlertDialogTitle>¿Limpiar mensajes?</AlertDialogTitle>
-            <AlertDialogDescription>
+            <AlertDialogTitle className="text-white">¿Limpiar mensajes?</AlertDialogTitle>
+            <AlertDialogDescription className="text-[#8a8a8a]">
               Se eliminarán todos los mensajes de esta conversación. La conversación se mantendrá pero quedará vacía.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel className="bg-[#3d3d40] text-white border-[#4d4d50] hover:bg-[#4d4d50]">Cancelar</AlertDialogCancel>
             <AlertDialogAction 
               onClick={clearMessages}
               className="bg-orange-600 hover:bg-orange-700"
