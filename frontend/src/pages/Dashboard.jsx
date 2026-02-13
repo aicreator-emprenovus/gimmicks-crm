@@ -95,21 +95,21 @@ export default function Dashboard() {
 
   if (loading) {
     return (
-      <div className="p-6 flex items-center justify-center min-h-[400px]">
+      <div className="p-6 flex items-center justify-center min-h-[400px] bg-[#1a1a1d]">
         <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
       </div>
     );
   }
 
   return (
-    <div className="p-6 space-y-6" data-testid="dashboard-page">
+    <div className="p-6 space-y-6 bg-[#1a1a1d] min-h-screen" data-testid="dashboard-page">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-zinc-900 font-['Manrope']">
+          <h1 className="text-2xl font-bold text-white font-['Manrope']">
             Dashboard
           </h1>
-          <p className="text-zinc-500 text-sm">
+          <p className="text-[#8a8a8a] text-sm">
             Vista general del CRM WhatsApp
           </p>
         </div>
@@ -118,7 +118,7 @@ export default function Dashboard() {
             variant="outline"
             size="sm"
             onClick={fetchMetrics}
-            className="gap-2"
+            className="gap-2 border-[#3d3d40] text-[#8a8a8a] hover:text-white hover:bg-[#2d2d30]"
             data-testid="refresh-metrics-btn"
           >
             <RefreshCw size={16} />
@@ -139,12 +139,12 @@ export default function Dashboard() {
 
       {/* Metric Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="border border-zinc-100 shadow-sm hover:shadow-md transition-shadow">
+        <Card className="bg-[#2d2d30] border-[#3d3d40] shadow-lg hover:shadow-xl transition-shadow">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-zinc-500">Total Leads</p>
-                <p className="text-3xl font-bold text-zinc-900 font-['Manrope']">
+                <p className="text-sm text-[#8a8a8a]">Total Leads</p>
+                <p className="text-3xl font-bold text-white font-['Manrope']">
                   {metrics?.total_leads || 0}
                 </p>
               </div>
