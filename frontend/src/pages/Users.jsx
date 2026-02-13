@@ -189,7 +189,7 @@ export default function Users() {
         <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
           <DialogTrigger asChild>
             <Button
-              className="bg-emerald-500 hover:bg-emerald-600 gap-2"
+              className="bg-[#7BA899] hover:bg-[#6A9688] gap-2"
               data-testid="create-user-btn"
             >
               <Plus size={18} />
@@ -256,7 +256,7 @@ export default function Users() {
               </div>
               <Button
                 onClick={createUser}
-                className="w-full bg-emerald-500 hover:bg-emerald-600"
+                className="w-full bg-[#7BA899] hover:bg-[#6A9688]"
                 data-testid="submit-user-btn"
               >
                 Crear Usuario
@@ -292,7 +292,7 @@ export default function Users() {
         <CardContent className="p-0">
           {loading ? (
             <div className="flex items-center justify-center py-12">
-              <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
+              <Loader2 className="w-8 h-8 animate-spin text-[#7BA899]" />
             </div>
           ) : filteredUsers.length === 0 ? (
             <div className="text-center py-12 text-zinc-400">
@@ -316,7 +316,7 @@ export default function Users() {
                   <TableRow key={user.id} data-testid={`user-row-${user.id}`}>
                     <TableCell>
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center text-white font-medium">
+                        <div className="w-10 h-10 rounded-full bg-[#7BA899] flex items-center justify-center text-white font-medium">
                           {user.name?.charAt(0)?.toUpperCase() || "?"}
                         </div>
                         <span className="font-medium text-zinc-900">{user.name}</span>
@@ -415,7 +415,7 @@ export default function Users() {
             </div>
             <Button
               onClick={updateUser}
-              className="w-full bg-emerald-500 hover:bg-emerald-600"
+              className="w-full bg-[#7BA899] hover:bg-[#6A9688]"
               data-testid="save-user-btn"
             >
               Guardar Cambios

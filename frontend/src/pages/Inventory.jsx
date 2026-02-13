@@ -204,7 +204,7 @@ export default function Inventory() {
             <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
               <DialogTrigger asChild>
                 <Button
-                  className="bg-emerald-500 hover:bg-emerald-600 gap-2"
+                  className="bg-[#7BA899] hover:bg-[#6A9688] gap-2"
                   data-testid="add-product-btn"
                 >
                   <Plus size={18} />
@@ -304,7 +304,7 @@ export default function Inventory() {
                     </div>
                     <Button
                       onClick={createProduct}
-                      className="w-full bg-emerald-500 hover:bg-emerald-600"
+                      className="w-full bg-[#7BA899] hover:bg-[#6A9688]"
                       data-testid="submit-product-btn"
                     >
                       Crear Producto
@@ -328,7 +328,7 @@ export default function Inventory() {
               </>
             ) : (
               <>
-                <CheckCircle className="w-5 h-5 text-emerald-500" />
+                <CheckCircle className="w-5 h-5 text-[#7BA899]" />
                 <p className="text-emerald-700">
                   {uploadResult.message} - {uploadResult.created} creados, {uploadResult.updated} actualizados
                 </p>
@@ -364,7 +364,7 @@ export default function Inventory() {
         <CardContent className="p-0">
           {loading ? (
             <div className="flex items-center justify-center py-12">
-              <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
+              <Loader2 className="w-8 h-8 animate-spin text-[#7BA899]" />
             </div>
           ) : products.length === 0 ? (
             <div className="text-center py-12 text-zinc-400">
