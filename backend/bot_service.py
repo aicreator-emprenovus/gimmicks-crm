@@ -300,6 +300,7 @@ HISTORIAL DE CONVERSACION:
 {history_text}
 
 {collected_summary}
+{missing_str}
 
 MENSAJE ACTUAL DEL CLIENTE: {message_text}
 
