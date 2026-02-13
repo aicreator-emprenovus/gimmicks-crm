@@ -2388,6 +2388,279 @@ async def seed_demo_data(current_user: dict = Depends(get_current_user)):
         "rules_created": rules_created
     }
 
+# ============== QUOTES MANAGEMENT ROUTES ==============
+
+class QuoteResponse(BaseModel):
+    id: str
+    conversation_id: str
+    phone_number: str
+    status: str
+    client_name: Optional[str]
+    client_empresa: Optional[str]
+    client_correo: Optional[str]
+    client_ciudad: Optional[str]
+    items: List[Dict[str, Any]]
+    cantidad: Optional[str]
+    fecha_entrega: Optional[str]
+    personalizacion: Optional[str]
+    necesita_diseno: Optional[str]
+    total: float
+    notes: Optional[str]
+    created_at: datetime
+    updated_at: datetime
+
+def build_quote_response(q: dict) -> QuoteResponse:
+    created_at = q.get("created_at")
+    updated_at = q.get("updated_at", created_at)
+    if isinstance(created_at, str):
+        created_at = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+    if isinstance(updated_at, str):
+        updated_at = datetime.fromisoformat(updated_at.replace('Z', '+00:00'))
+    return QuoteResponse(
+        id=q["id"],
+        conversation_id=q.get("conversation_id", ""),
+        phone_number=q.get("phone_number", ""),
+        status=q.get("status", "pending"),
+        client_name=q.get("client_name"),
+        client_empresa=q.get("client_empresa"),
+        client_correo=q.get("client_correo"),
+        client_ciudad=q.get("client_ciudad"),
+        items=q.get("items", []),
+        cantidad=q.get("cantidad"),
+        fecha_entrega=q.get("fecha_entrega"),
+        personalizacion=q.get("personalizacion"),
+        necesita_diseno=q.get("necesita_diseno"),
+        total=q.get("total", 0),
+        notes=q.get("notes", ""),
+        created_at=created_at,
+        updated_at=updated_at
+    )
+
+@api_router.get("/quotes", response_model=List[QuoteResponse])
+async def get_quotes(
+    status: Optional[str] = None,
+    skip: int = 0,
+    limit: int = 50,
+    current_user: dict = Depends(get_current_user)
+):
+    query = {}
+    if status:
+        query["status"] = status
+    quotes = await db.quotes.find(query, {"_id": 0}).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    return [build_quote_response(q) for q in quotes]
+
+@api_router.get("/quotes/{quote_id}", response_model=QuoteResponse)
+async def get_quote(quote_id: str, current_user: dict = Depends(get_current_user)):
+    q = await db.quotes.find_one({"id": quote_id}, {"_id": 0})
+    if not q:
+        raise HTTPException(status_code=404, detail="Cotizacion no encontrada")
+    return build_quote_response(q)
+
+class QuoteUpdate(BaseModel):
+    total: Optional[float] = None
+    notes: Optional[str] = None
+    items: Optional[List[Dict[str, Any]]] = None
+
+@api_router.patch("/quotes/{quote_id}", response_model=QuoteResponse)
+async def update_quote(quote_id: str, data: QuoteUpdate, current_user: dict = Depends(get_current_user)):
+    q = await db.quotes.find_one({"id": quote_id}, {"_id": 0})
+    if not q:
+        raise HTTPException(status_code=404, detail="Cotizacion no encontrada")
+    update = {k: v for k, v in data.model_dump().items() if v is not None}
+    update["updated_at"] = datetime.now(timezone.utc).isoformat()
+    await db.quotes.update_one({"id": quote_id}, {"$set": update})
+    updated = await db.quotes.find_one({"id": quote_id}, {"_id": 0})
+    return build_quote_response(updated)
+
+@api_router.post("/quotes/{quote_id}/send")
+async def send_quote_email(quote_id: str, current_user: dict = Depends(get_current_user)):
+    """Send quote to client via email"""
+    q = await db.quotes.find_one({"id": quote_id}, {"_id": 0})
+    if not q:
+        raise HTTPException(status_code=404, detail="Cotizacion no encontrada")
+    
+    correo = q.get("client_correo")
+    if not correo:
+        raise HTTPException(status_code=400, detail="El cliente no tiene correo registrado")
+    
+    # Build email
+    items_text = ""
+    for item in q.get("items", []):
+        items_text += f"- {item.get('code', '')} {item.get('product_name', 'Producto')}\n"
+    
+    body = f"""Estimado/a {q.get('client_name', 'Cliente')},
+
+Gracias por su interes en Gimmicks Marketing Services.
+
+Adjunto los detalles de su cotizacion:
+
+Productos solicitados:
+{items_text}
+Cantidad: {q.get('cantidad', 'Por confirmar')}
+Personalizacion: {q.get('personalizacion', 'N/A')}
+Fecha de entrega: {q.get('fecha_entrega', 'Por confirmar')}
+Total: ${q.get('total', 0):,.2f}
+
+{q.get('notes', '')}
+
+Quedamos atentos a su confirmacion.
+
+Saludos cordiales,
+Gimmicks Marketing Services
+"""
+    
+    # Try SMTP
+    smtp_host = os.environ.get("SMTP_HOST")
+    smtp_user = os.environ.get("SMTP_USER")
+    smtp_pass = os.environ.get("SMTP_PASSWORD")
+    smtp_from = os.environ.get("SMTP_FROM_EMAIL", smtp_user)
+    
+    email_sent = False
+    if smtp_host and smtp_user and smtp_pass:
+        try:
+            import smtplib
+            from email.mime.text import MIMEText
+            from email.mime.multipart import MIMEMultipart
+            
+            msg = MIMEMultipart()
+            msg["From"] = smtp_from
+            msg["To"] = correo
+            msg["Subject"] = f"Cotizacion Gimmicks - {q.get('client_name', '')}"
+            msg.attach(MIMEText(body, "plain"))
+            
+            port = int(os.environ.get("SMTP_PORT", 587))
+            server = smtplib.SMTP(smtp_host, port)
+            server.starttls()
+            server.login(smtp_user, smtp_pass)
+            server.send_message(msg)
+            server.quit()
+            email_sent = True
+            logger.info(f"Quote email sent to {correo}")
+        except Exception as e:
+            logger.error(f"SMTP error: {e}")
+            raise HTTPException(status_code=500, detail=f"Error enviando email: {str(e)}")
+    else:
+        raise HTTPException(status_code=400, detail="SMTP no configurado. Agrega SMTP_HOST, SMTP_USER, SMTP_PASSWORD en .env")
+    
+    # Update status
+    await db.quotes.update_one(
+        {"id": quote_id},
+        {"$set": {"status": "sent", "sent_at": datetime.now(timezone.utc).isoformat(), "updated_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    # Update lead stage
+    await db.leads.update_one(
+        {"phone_number": q["phone_number"]},
+        {"$set": {"funnel_stage": "cotizacion_generada", "updated_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    # Log
+    await db.audit_logs.insert_one({
+        "id": str(uuid.uuid4()),
+        "action": "quote_sent",
+        "quote_id": quote_id,
+        "sent_to": correo,
+        "sent_by": current_user.get("email"),
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    })
+    
+    return {"message": f"Cotizacion enviada a {correo}", "email_sent": email_sent}
+
+@api_router.delete("/quotes/{quote_id}")
+async def delete_quote(quote_id: str, current_user: dict = Depends(get_current_user)):
+    result = await db.quotes.delete_one({"id": quote_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Cotizacion no encontrada")
+    return {"message": "Cotizacion eliminada"}
+
+# ============== FOLLOW-UP SYSTEM ==============
+
+@api_router.post("/followup/check")
+async def check_followups(current_user: dict = Depends(get_current_user)):
+    """Manually trigger follow-up check for inactive conversations"""
+    results = await run_followup_check()
+    return results
+
+async def run_followup_check():
+    """Check for inactive conversations and send reminders or mark as lost"""
+    now = datetime.now(timezone.utc)
+    results = {"reminders_sent": 0, "marked_lost": 0, "reactivated": 0}
+    
+    states = await db.conversation_states.find(
+        {"transferred_to_human": {"$ne": True}},
+        {"_id": 0}
+    ).to_list(500)
+    
+    for state in states:
+        phone = state.get("phone_number")
+        last_interaction = state.get("last_interaction")
+        if not last_interaction:
+            continue
+        
+        if isinstance(last_interaction, str):
+            last_dt = datetime.fromisoformat(last_interaction.replace('Z', '+00:00'))
+        else:
+            last_dt = last_interaction
+        
+        hours_inactive = (now - last_dt).total_seconds() / 3600
+        reminder_sent = state.get("reminder_sent", False)
+        
+        # 4 hours: send reminder
+        if 4 <= hours_inactive < 24 and not reminder_sent:
+            conv = await db.conversations.find_one({"phone_number": phone}, {"_id": 0, "id": 1})
+            if conv:
+                try:
+                    await send_whatsapp_message(phone, "Hola! Solo para saber si pudiste revisar la info que te envie. Si quieres te ayudo con la cotizacion 😊")
+                    
+                    now_iso = now.isoformat()
+                    msg_doc = {
+                        "id": str(uuid.uuid4()),
+                        "conversation_id": conv["id"],
+                        "phone_number": phone,
+                        "sender": "business",
+                        "message_type": "text",
+                        "content": {"text": "Hola! Solo para saber si pudiste revisar la info que te envie. Si quieres te ayudo con la cotizacion 😊"},
+                        "status": "sent",
+                        "is_automated": True,
+                        "is_followup": True,
+                        "timestamp": now_iso
+                    }
+                    await db.messages.insert_one(msg_doc)
+                    await db.conversation_states.update_one(
+                        {"phone_number": phone},
+                        {"$set": {"reminder_sent": True, "reminder_time": now_iso}}
+                    )
+                    
+                    await db.audit_logs.insert_one({
+                        "id": str(uuid.uuid4()),
+                        "action": "followup_reminder",
+                        "phone_number": phone,
+                        "timestamp": now_iso
+                    })
+                    
+                    results["reminders_sent"] += 1
+                except Exception as e:
+                    logger.error(f"Failed to send reminder to {phone}: {e}")
+        
+        # 24 hours: mark as lost
+        elif hours_inactive >= 24 and reminder_sent:
+            lead = await db.leads.find_one({"phone_number": phone}, {"_id": 0})
+            if lead and lead.get("funnel_stage") != "perdido" and lead.get("funnel_stage") != "pedido":
+                await db.leads.update_one(
+                    {"phone_number": phone},
+                    {"$set": {"funnel_stage": "perdido", "updated_at": now.isoformat()}}
+                )
+                await db.audit_logs.insert_one({
+                    "id": str(uuid.uuid4()),
+                    "action": "lead_marked_lost",
+                    "phone_number": phone,
+                    "reason": "24h_inactivity",
+                    "timestamp": now.isoformat()
+                })
+                results["marked_lost"] += 1
+    
+    return results
+
 # ============== HEALTH CHECK ==============
 
 @api_router.get("/health")
