@@ -93,6 +93,13 @@ class LeadResponse(BaseModel):
     funnel_stage: str
     classification: str
     notes: Optional[str]
+    ai_category: Optional[str] = None
+    empresa: Optional[str] = None
+    ciudad: Optional[str] = None
+    correo: Optional[str] = None
+    producto_interes: Optional[str] = None
+    cantidad_estimada: Optional[str] = None
+    presupuesto: Optional[str] = None
     created_at: datetime
     updated_at: datetime
     last_message_at: Optional[datetime]
