@@ -1342,15 +1342,14 @@ async def process_incoming_message(message: dict, metadata: dict):
     if not message_text.strip():
         return
     
-    # Detect if this was a brand new conversation (lead just created above)
-    is_new_lead = (conversation.get("created_at") == now.isoformat())
-    
-    # Process ONLY the intelligent conversation bot (single handler, no duplicates)
-    await process_intelligent_conversation(
+    # Process with AI-powered bot
+    from bot_service import process_ai_conversation
+    await process_ai_conversation(
+        db=db,
         phone_number=phone_number,
         message_text=message_text,
         conversation_id=conversation["id"],
-        is_new_lead=is_new_lead
+        send_message_fn=send_bot_message
     )
 
 # ============== INTELLIGENT BOT FUNCTIONS ==============
