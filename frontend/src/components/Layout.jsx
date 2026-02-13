@@ -160,7 +160,7 @@ export default function Layout() {
       )}
 
       {/* Main content */}
-      <main className="flex-1 overflow-auto bg-[#1a1a1d]">
+      <main className="flex-1 overflow-auto bg-[#f5f6f8]">
         <div className="min-h-screen">
           <Outlet />
         </div>
