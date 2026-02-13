@@ -94,7 +94,7 @@ export default function Layout() {
                     className={({ isActive }) =>
                       `flex items-center ${collapsed ? "justify-center" : "gap-3"} ${collapsed ? "px-2" : "px-3"} py-2.5 rounded-xl transition-all duration-200 group ${
                         isActive
-                          ? "bg-gradient-to-r from-[#2d2d30] to-[#3d3d40] text-white border-l-3 border-emerald-400"
+                          ? "bg-gradient-to-r from-[#2d2d30] to-[#3d3d40] text-white border-l-3 border-[#7BA899]"
                           : "text-[#8a8a8a] hover:text-white hover:bg-[#2d2d30]/50"
                       }`
                     }
@@ -112,7 +112,7 @@ export default function Layout() {
           <div className={`border-t border-[#2d2d30] ${collapsed ? "p-2" : "p-3"}`}>
             {collapsed ? (
               <div className="flex flex-col items-center gap-2">
-                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-white font-bold text-sm shadow-lg">
+                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#7BA899] to-[#5E8A7A] flex items-center justify-center text-white font-bold text-sm shadow-lg">
                   {user?.name?.charAt(0)?.toUpperCase() || "A"}
                 </div>
                 <button
@@ -125,14 +125,14 @@ export default function Layout() {
               </div>
             ) : (
               <div className="flex items-center gap-2 p-2 rounded-xl bg-[#2d2d30]/50">
-                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-white font-bold text-sm shadow-lg flex-shrink-0">
+                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#7BA899] to-[#5E8A7A] flex items-center justify-center text-white font-bold text-sm shadow-lg flex-shrink-0">
                   {user?.name?.charAt(0)?.toUpperCase() || "A"}
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-white text-xs font-semibold truncate">
                     {user?.name || "Admin Demo"}
                   </p>
-                  <p className="text-emerald-400 text-[10px] font-medium">
+                  <p className="text-[#7BA899] text-[10px] font-medium">
                     {isAdmin ? "Administrador" : "Asesor"}
                   </p>
                 </div>
