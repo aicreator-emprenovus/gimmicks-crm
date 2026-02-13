@@ -289,7 +289,7 @@ export default function Inbox() {
               <p>{filterStarred ? "No hay conversaciones guardadas" : "No hay conversaciones"}</p>
             </div>
           ) : (
-            <div className="divide-y divide-zinc-100">
+            <div className="divide-y divide-[#2d2d30]">
               {filteredConversations.map((conv) => (
                 <button
                   key={conv.id}
@@ -297,14 +297,14 @@ export default function Inbox() {
                     setSelectedConv(conv);
                     setAiSuggestion(null);
                   }}
-                  className={`w-full p-4 text-left hover:bg-zinc-50 transition-colors ${
-                    selectedConv?.id === conv.id ? "bg-emerald-50" : ""
+                  className={`w-full p-4 text-left hover:bg-[#2d2d30] transition-colors ${
+                    selectedConv?.id === conv.id ? "bg-[#2d2d30] border-l-2 border-emerald-500" : ""
                   }`}
                   data-testid={`conversation-${conv.id}`}
                 >
                   <div className="flex items-start gap-3">
                     <div className="relative">
-                      <div className="w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center text-white font-medium flex-shrink-0">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-white font-medium flex-shrink-0">
                         {conv.contact_name?.charAt(0)?.toUpperCase() ||
                           conv.phone_number.slice(-2)}
                       </div>
@@ -314,14 +314,14 @@ export default function Inbox() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">
-                        <p className="font-medium text-zinc-900 truncate">
+                        <p className="font-medium text-white truncate">
                           {conv.contact_name || conv.phone_number}
                         </p>
-                        <span className="text-xs text-zinc-400">
+                        <span className="text-xs text-[#6b6b6b]">
                           {formatDate(conv.last_message_time)}
                         </span>
                       </div>
-                      <p className="text-sm text-zinc-500 truncate mt-0.5">
+                      <p className="text-sm text-[#8a8a8a] truncate mt-0.5">
                         {conv.last_message || "Sin mensajes"}
                       </p>
                       {conv.unread_count > 0 && (
@@ -339,24 +339,24 @@ export default function Inbox() {
       </div>
 
       {/* Chat Area */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col bg-[#232326]">
         {selectedConv ? (
           <>
             {/* Chat Header */}
-            <div className="p-4 border-b border-zinc-200 flex items-center justify-between">
+            <div className="p-4 border-b border-[#2d2d30] flex items-center justify-between bg-[#1a1a1d]">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center text-white font-medium">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-white font-medium">
                   {selectedConv.contact_name?.charAt(0)?.toUpperCase() ||
                     selectedConv.phone_number.slice(-2)}
                 </div>
                 <div>
-                  <h3 className="font-semibold text-zinc-900 flex items-center gap-2">
+                  <h3 className="font-semibold text-white flex items-center gap-2">
                     {selectedConv.contact_name || selectedConv.phone_number}
                     {selectedConv.is_starred && (
                       <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
                     )}
                   </h3>
-                  <p className="text-sm text-zinc-500 flex items-center gap-1">
+                  <p className="text-sm text-[#8a8a8a] flex items-center gap-1">
                     <Phone className="w-3 h-3" />
                     {selectedConv.phone_number}
                   </p>
