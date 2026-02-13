@@ -1337,21 +1337,18 @@ async def process_incoming_message(message: dict, metadata: dict):
     
     logger.info(f"Message processed from {phone_number}")
     
-    # Process automation rules
-    message_text = content.get("text", "").lower()
-    is_new_lead = not conversation.get("lead_id")  # Was this a new lead?
+    # Only text messages trigger the bot
+    message_text = content.get("text", "")
+    if not message_text.strip():
+        return
     
-    await process_automation_rules(
-        phone_number=phone_number,
-        message_text=message_text,
-        conversation_id=conversation["id"],
-        is_new_lead=is_new_lead
-    )
+    # Detect if this was a brand new conversation (lead just created above)
+    is_new_lead = (conversation.get("created_at") == now.isoformat())
     
-    # Process intelligent conversation flow
+    # Process ONLY the intelligent conversation bot (single handler, no duplicates)
     await process_intelligent_conversation(
         phone_number=phone_number,
-        message_text=content.get("text", ""),
+        message_text=message_text,
         conversation_id=conversation["id"],
         is_new_lead=is_new_lead
     )
