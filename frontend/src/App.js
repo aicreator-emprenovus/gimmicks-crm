@@ -69,6 +69,7 @@ function AppRoutes() {
           </ProtectedRoute>
         } />
         <Route path="inventory" element={<Inventory />} />
+        <Route path="quotes" element={<Quotes />} />
         <Route path="users" element={
           <ProtectedRoute adminOnly>
             <Users />
