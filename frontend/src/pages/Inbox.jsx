@@ -9,8 +9,6 @@ import {
   Search,
   Send,
   Phone,
-  User,
-  Clock,
   Sparkles,
   Loader2,
   MessageSquare,
@@ -152,7 +150,6 @@ export default function Inbox() {
     }
   };
 
-  // Delete conversation
   const deleteConversation = async () => {
     if (!selectedConv) return;
     try {
@@ -170,7 +167,6 @@ export default function Inbox() {
     setShowDeleteDialog(false);
   };
 
-  // Clear messages
   const clearMessages = async () => {
     if (!selectedConv) return;
     try {
@@ -187,7 +183,6 @@ export default function Inbox() {
     setShowClearDialog(false);
   };
 
-  // Toggle star
   const toggleStar = async () => {
     if (!selectedConv) return;
     try {
@@ -248,31 +243,31 @@ export default function Inbox() {
   };
 
   return (
-    <div className="flex h-screen bg-[#1a1a1d]" data-testid="inbox-page">
+    <div className="flex h-screen" data-testid="inbox-page">
       {/* Conversations List */}
-      <div className="w-80 border-r border-[#2d2d30] flex flex-col bg-[#1a1a1d]">
-        <div className="p-4 border-b border-[#2d2d30]">
+      <div className="w-80 border-r border-gray-200 flex flex-col bg-white">
+        <div className="p-4 border-b border-gray-200">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-lg font-semibold text-white font-['Manrope']">
+            <h2 className="text-lg font-semibold text-gray-800 font-['Manrope']">
               Inbox
             </h2>
             <Button
               variant={filterStarred ? "default" : "ghost"}
               size="sm"
               onClick={() => setFilterStarred(!filterStarred)}
-              className={filterStarred ? "bg-amber-500 hover:bg-amber-600" : "text-[#8a8a8a] hover:text-white hover:bg-[#2d2d30]"}
+              className={filterStarred ? "bg-amber-500 hover:bg-amber-600" : "text-gray-400 hover:text-gray-600 hover:bg-gray-100"}
               data-testid="filter-starred-btn"
             >
               <Star className={`w-4 h-4 ${filterStarred ? "fill-white" : ""}`} />
             </Button>
           </div>
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6b6b6b]" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <Input
               placeholder="Buscar conversación..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9 bg-[#2d2d30] text-white border-[#3d3d40] placeholder:text-[#6b6b6b]"
+              className="pl-9 bg-gray-50 text-gray-800 border-gray-200 placeholder:text-gray-400"
               data-testid="search-conversations"
             />
           </div>
@@ -281,15 +276,15 @@ export default function Inbox() {
         <ScrollArea className="flex-1">
           {loading ? (
             <div className="p-4 text-center">
-              <Loader2 className="w-6 h-6 animate-spin mx-auto text-emerald-500" />
+              <Loader2 className="w-6 h-6 animate-spin mx-auto text-[#7BA899]" />
             </div>
           ) : filteredConversations.length === 0 ? (
-            <div className="p-4 text-center text-[#6b6b6b]">
-              <MessageSquare className="w-12 h-12 mx-auto mb-2 opacity-50" />
+            <div className="p-4 text-center text-gray-400">
+              <MessageSquare className="w-12 h-12 mx-auto mb-2 opacity-30" />
               <p>{filterStarred ? "No hay conversaciones guardadas" : "No hay conversaciones"}</p>
             </div>
           ) : (
-            <div className="divide-y divide-[#2d2d30]">
+            <div className="divide-y divide-gray-100">
               {filteredConversations.map((conv) => (
                 <button
                   key={conv.id}
@@ -297,14 +292,14 @@ export default function Inbox() {
                     setSelectedConv(conv);
                     setAiSuggestion(null);
                   }}
-                  className={`w-full p-4 text-left hover:bg-[#2d2d30] transition-colors ${
-                    selectedConv?.id === conv.id ? "bg-[#2d2d30] border-l-2 border-emerald-500" : ""
+                  className={`w-full p-4 text-left hover:bg-gray-50 transition-colors ${
+                    selectedConv?.id === conv.id ? "bg-[#7BA899]/10 border-l-2 border-[#7BA899]" : ""
                   }`}
                   data-testid={`conversation-${conv.id}`}
                 >
                   <div className="flex items-start gap-3">
                     <div className="relative">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-white font-medium flex-shrink-0">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#7BA899] to-[#5E8A7A] flex items-center justify-center text-white font-medium flex-shrink-0">
                         {conv.contact_name?.charAt(0)?.toUpperCase() ||
                           conv.phone_number.slice(-2)}
                       </div>
@@ -314,18 +309,18 @@ export default function Inbox() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">
-                        <p className="font-medium text-white truncate">
+                        <p className="font-medium text-gray-800 truncate">
                           {conv.contact_name || conv.phone_number}
                         </p>
-                        <span className="text-xs text-[#6b6b6b]">
+                        <span className="text-xs text-gray-400">
                           {formatDate(conv.last_message_time)}
                         </span>
                       </div>
-                      <p className="text-sm text-[#8a8a8a] truncate mt-0.5">
+                      <p className="text-sm text-gray-500 truncate mt-0.5">
                         {conv.last_message || "Sin mensajes"}
                       </p>
                       {conv.unread_count > 0 && (
-                        <Badge className="mt-1 bg-emerald-500 text-white text-xs">
+                        <Badge className="mt-1 bg-[#7BA899] text-white text-xs">
                           {conv.unread_count} nuevos
                         </Badge>
                       )}
@@ -339,24 +334,24 @@ export default function Inbox() {
       </div>
 
       {/* Chat Area */}
-      <div className="flex-1 flex flex-col bg-[#232326]">
+      <div className="flex-1 flex flex-col bg-[#f0f2f5]">
         {selectedConv ? (
           <>
             {/* Chat Header */}
-            <div className="p-4 border-b border-[#2d2d30] flex items-center justify-between bg-[#1a1a1d]">
+            <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-white">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-white font-medium">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#7BA899] to-[#5E8A7A] flex items-center justify-center text-white font-medium">
                   {selectedConv.contact_name?.charAt(0)?.toUpperCase() ||
                     selectedConv.phone_number.slice(-2)}
                 </div>
                 <div>
-                  <h3 className="font-semibold text-white flex items-center gap-2">
+                  <h3 className="font-semibold text-gray-800 flex items-center gap-2">
                     {selectedConv.contact_name || selectedConv.phone_number}
                     {selectedConv.is_starred && (
                       <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
                     )}
                   </h3>
-                  <p className="text-sm text-[#8a8a8a] flex items-center gap-1">
+                  <p className="text-sm text-gray-500 flex items-center gap-1">
                     <Phone className="w-3 h-3" />
                     {selectedConv.phone_number}
                   </p>
@@ -368,7 +363,7 @@ export default function Inbox() {
                   size="sm"
                   onClick={analyzeWithAI}
                   disabled={analyzing}
-                  className="gap-2 bg-purple-500 hover:bg-purple-600 text-white"
+                  className="gap-2 bg-[#7BA899] hover:bg-[#6A9688] text-white border-[#7BA899]"
                   data-testid="analyze-ai-btn"
                 >
                   {analyzing ? (
@@ -382,16 +377,16 @@ export default function Inbox() {
                 {/* Actions Menu */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="border-zinc-300 hover:bg-zinc-100" data-testid="chat-actions-btn">
-                      <MoreVertical className="w-4 h-4 text-zinc-700" />
+                    <Button variant="outline" size="sm" className="border-gray-300 hover:bg-gray-100" data-testid="chat-actions-btn">
+                      <MoreVertical className="w-4 h-4 text-gray-600" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-48 bg-white border border-zinc-200 shadow-lg">
-                    <DropdownMenuItem onClick={toggleStar} className="cursor-pointer hover:bg-zinc-100" data-testid="toggle-star-btn">
-                      <Star className={`w-4 h-4 mr-2 ${selectedConv.is_starred ? "fill-amber-500 text-amber-500" : "text-zinc-600"}`} />
-                      <span className="text-zinc-800">{selectedConv.is_starred ? "Quitar de guardados" : "Guardar conversación"}</span>
+                  <DropdownMenuContent align="end" className="w-48 bg-white border border-gray-200 shadow-lg">
+                    <DropdownMenuItem onClick={toggleStar} className="cursor-pointer hover:bg-gray-50" data-testid="toggle-star-btn">
+                      <Star className={`w-4 h-4 mr-2 ${selectedConv.is_starred ? "fill-amber-500 text-amber-500" : "text-gray-500"}`} />
+                      <span className="text-gray-700">{selectedConv.is_starred ? "Quitar de guardados" : "Guardar conversación"}</span>
                     </DropdownMenuItem>
-                    <DropdownMenuSeparator className="bg-zinc-200" />
+                    <DropdownMenuSeparator className="bg-gray-100" />
                     <DropdownMenuItem 
                       onClick={() => setShowClearDialog(true)}
                       className="cursor-pointer hover:bg-orange-50"
@@ -415,56 +410,56 @@ export default function Inbox() {
 
             {/* AI Suggestion Panel */}
             {aiSuggestion && (
-              <div className="p-4 bg-gradient-to-r from-purple-900/30 to-blue-900/30 border-b border-[#3d3d40]">
+              <div className="p-4 bg-[#7BA899]/10 border-b border-[#7BA899]/20">
                 <div className="flex items-start gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center">
-                    <Bot className="w-4 h-4 text-purple-400" />
+                  <div className="w-8 h-8 rounded-lg bg-[#7BA899]/20 flex items-center justify-center">
+                    <Bot className="w-4 h-4 text-[#5E8A7A]" />
                   </div>
                   <div className="flex-1">
-                    <p className="font-medium text-white text-sm">
+                    <p className="font-medium text-gray-800 text-sm">
                       Análisis de IA
                     </p>
                     <div className="mt-2 grid grid-cols-3 gap-2 text-xs">
-                      <div className="bg-[#2d2d30] rounded-lg p-2 border border-[#3d3d40]">
-                        <span className="text-[#8a8a8a]">Intención:</span>
-                        <Badge className="ml-1 capitalize bg-purple-500/20 text-purple-300">
+                      <div className="bg-white rounded-lg p-2 border border-gray-200">
+                        <span className="text-gray-500">Intención:</span>
+                        <Badge className="ml-1 capitalize bg-[#7BA899]/15 text-[#5E8A7A]">
                           {aiSuggestion.intent}
                         </Badge>
                       </div>
-                      <div className="bg-[#2d2d30] rounded-lg p-2 border border-[#3d3d40]">
-                        <span className="text-[#8a8a8a]">Clasificación:</span>
+                      <div className="bg-white rounded-lg p-2 border border-gray-200">
+                        <span className="text-gray-500">Clasificación:</span>
                         <Badge
                           className={`ml-1 capitalize ${
                             aiSuggestion.lead_classification === "caliente"
-                              ? "bg-red-500/20 text-red-300"
+                              ? "bg-red-100 text-red-700"
                               : aiSuggestion.lead_classification === "tibio"
-                              ? "bg-orange-500/20 text-orange-300"
-                              : "bg-cyan-500/20 text-cyan-300"
+                              ? "bg-orange-100 text-orange-700"
+                              : "bg-cyan-100 text-cyan-700"
                           }`}
                         >
                           {aiSuggestion.lead_classification}
                         </Badge>
                       </div>
-                      <div className="bg-[#2d2d30] rounded-lg p-2 border border-[#3d3d40]">
-                        <span className="text-[#8a8a8a]">Productos:</span>
-                        <span className="ml-1 text-white">
+                      <div className="bg-white rounded-lg p-2 border border-gray-200">
+                        <span className="text-gray-500">Productos:</span>
+                        <span className="ml-1 text-gray-800">
                           {aiSuggestion.suggested_products?.length || 0}
                         </span>
                       </div>
                     </div>
                     {aiSuggestion.suggested_response && (
-                      <div className="mt-2 p-2 bg-[#2d2d30] rounded-lg border border-[#3d3d40]">
-                        <p className="text-xs text-[#8a8a8a] mb-1">
+                      <div className="mt-2 p-2 bg-white rounded-lg border border-gray-200">
+                        <p className="text-xs text-gray-500 mb-1">
                           Respuesta sugerida:
                         </p>
-                        <p className="text-sm text-white">
+                        <p className="text-sm text-gray-800">
                           {aiSuggestion.suggested_response}
                         </p>
                         <Button
                           size="sm"
                           variant="outline"
                           onClick={useSuggestedResponse}
-                          className="mt-2 border-[#3d3d40] text-white hover:bg-[#3d3d40]"
+                          className="mt-2 border-[#7BA899] text-[#5E8A7A] hover:bg-[#7BA899]/10"
                           data-testid="use-suggestion-btn"
                         >
                           Usar esta respuesta
@@ -477,7 +472,7 @@ export default function Inbox() {
             )}
 
             {/* Messages */}
-            <ScrollArea className="flex-1 p-4 chat-container bg-[#232326]">
+            <ScrollArea className="flex-1 p-4 chat-container-light">
               <div className="space-y-4">
                 {messages.map((msg) => (
                   <div
@@ -489,8 +484,8 @@ export default function Inbox() {
                     <div
                       className={`max-w-[70%] break-words overflow-hidden ${
                         msg.sender === "business"
-                          ? "message-bubble-user"
-                          : "message-bubble-business"
+                          ? "msg-bubble-sent"
+                          : "msg-bubble-received"
                       }`}
                       style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}
                     >
@@ -498,8 +493,8 @@ export default function Inbox() {
                       <p
                         className={`text-xs mt-1 ${
                           msg.sender === "business"
-                            ? "text-emerald-100"
-                            : "text-zinc-400"
+                            ? "text-white/70"
+                            : "text-gray-400"
                         }`}
                       >
                         {formatTime(msg.timestamp)}
@@ -514,20 +509,20 @@ export default function Inbox() {
             {/* Message Input */}
             <form
               onSubmit={sendMessage}
-              className="p-4 border-t border-[#2d2d30] flex gap-2 bg-[#1a1a1d]"
+              className="p-4 border-t border-gray-200 flex gap-2 bg-white"
             >
               <Input
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
                 placeholder="Escribe un mensaje..."
-                className="flex-1 bg-[#2d2d30] text-white border-[#3d3d40] placeholder:text-[#6b6b6b]"
+                className="flex-1 bg-gray-50 text-gray-800 border-gray-200 placeholder:text-gray-400"
                 disabled={sending}
                 data-testid="message-input"
               />
               <Button
                 type="submit"
                 disabled={sending || !newMessage.trim()}
-                className="bg-emerald-500 hover:bg-emerald-600"
+                className="bg-[#7BA899] hover:bg-[#6A9688] text-white"
                 data-testid="send-message-btn"
               >
                 {sending ? (
@@ -539,10 +534,10 @@ export default function Inbox() {
             </form>
           </>
         ) : (
-          <div className="flex-1 flex items-center justify-center text-[#6b6b6b]">
+          <div className="flex-1 flex items-center justify-center text-gray-400">
             <div className="text-center">
               <MessageSquare className="w-16 h-16 mx-auto mb-4 opacity-30" />
-              <p className="text-lg font-medium text-white">
+              <p className="text-lg font-medium text-gray-600">
                 Selecciona una conversación
               </p>
               <p className="text-sm">
@@ -555,15 +550,15 @@ export default function Inbox() {
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent className="bg-[#2d2d30] border-[#3d3d40]">
+        <AlertDialogContent className="bg-white border-gray-200">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-white">¿Eliminar conversación?</AlertDialogTitle>
-            <AlertDialogDescription className="text-[#8a8a8a]">
+            <AlertDialogTitle className="text-gray-800">¿Eliminar conversación?</AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-500">
               Esta acción no se puede deshacer. Se eliminarán todos los mensajes de esta conversación permanentemente.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="bg-[#3d3d40] text-white border-[#4d4d50] hover:bg-[#4d4d50]">Cancelar</AlertDialogCancel>
+            <AlertDialogCancel className="bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200">Cancelar</AlertDialogCancel>
             <AlertDialogAction 
               onClick={deleteConversation}
               className="bg-red-600 hover:bg-red-700"
@@ -576,15 +571,15 @@ export default function Inbox() {
 
       {/* Clear Messages Confirmation Dialog */}
       <AlertDialog open={showClearDialog} onOpenChange={setShowClearDialog}>
-        <AlertDialogContent className="bg-[#2d2d30] border-[#3d3d40]">
+        <AlertDialogContent className="bg-white border-gray-200">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-white">¿Limpiar mensajes?</AlertDialogTitle>
-            <AlertDialogDescription className="text-[#8a8a8a]">
+            <AlertDialogTitle className="text-gray-800">¿Limpiar mensajes?</AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-500">
               Se eliminarán todos los mensajes de esta conversación. La conversación se mantendrá pero quedará vacía.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="bg-[#3d3d40] text-white border-[#4d4d50] hover:bg-[#4d4d50]">Cancelar</AlertDialogCancel>
+            <AlertDialogCancel className="bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200">Cancelar</AlertDialogCancel>
             <AlertDialogAction 
               onClick={clearMessages}
               className="bg-orange-600 hover:bg-orange-700"
