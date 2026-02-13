@@ -57,7 +57,7 @@ export default function Login() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="bg-white border-zinc-200 text-zinc-900 focus:ring-emerald-500"
+                className="bg-white border-zinc-200 text-zinc-900 focus:ring-[#7BA899]"
                 data-testid="login-email-input"
               />
             </div>
@@ -74,7 +74,7 @@ export default function Login() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="bg-white border-zinc-200 text-zinc-900 focus:ring-emerald-500 pr-10"
+                  className="bg-white border-zinc-200 text-zinc-900 focus:ring-[#7BA899] pr-10"
                   data-testid="login-password-input"
                 />
                 <button
@@ -91,7 +91,7 @@ export default function Login() {
             <Button
               type="submit"
               disabled={loading}
-              className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-medium py-2.5 transition-all duration-200"
+              className="w-full bg-[#7BA899] hover:bg-[#6A9688] text-white font-medium py-2.5 transition-all duration-200"
               data-testid="login-submit-btn"
             >
               {loading ? (
