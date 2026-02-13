@@ -552,19 +552,7 @@ async def create_lead(lead_data: LeadCreate, current_user: dict = Depends(get_cu
     
     await db.leads.insert_one(lead_doc)
     
-    return LeadResponse(
-        id=lead_id,
-        phone_number=lead_data.phone_number,
-        name=lead_data.name,
-        source=lead_data.source,
-        status="active",
-        funnel_stage="lead",
-        classification="frio",
-        notes=lead_data.notes,
-        created_at=now,
-        updated_at=now,
-        last_message_at=None
-    )
+    return build_lead_response(lead_doc)
 
 @api_router.get("/leads", response_model=List[LeadResponse])
 async def get_leads(
