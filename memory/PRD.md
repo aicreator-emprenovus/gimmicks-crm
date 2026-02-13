@@ -203,5 +203,5 @@ REACT_APP_BACKEND_URL=https://your-backend-url
 - **Webhook URL**: https://gimmicks-crm-production.up.railway.app/api/webhook/whatsapp
 
 ### 4. URLs de Acceso
-- **Preview (Emergent)**: https://chatwiz-manager.preview.emergentagent.com
+- **Preview (Emergent)**: https://gimmicks-bot-test.preview.emergentagent.com
 - **Backend (Railway)**: https://gimmicks-crm-production.up.railway.app
