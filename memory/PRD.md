@@ -7,7 +7,8 @@ Build a web-based CRM integrated with WhatsApp Business to manage a conversation
 - **Backend**: FastAPI, Python, Motor (async MongoDB), JWT Auth
 - **Frontend**: React, TailwindCSS, Shadcn UI
 - **Database**: MongoDB
-- **Integrations**: WhatsApp Business Cloud API, OpenAI API (Emergent LLM Key)
+- **Integrations**: WhatsApp Business Cloud API, OpenAI GPT-4o-mini (via Emergent LLM Key)
+- **AI Library**: emergentintegrations (LlmChat)
 
 ## What's Been Implemented
 
@@ -17,39 +18,45 @@ Build a web-based CRM integrated with WhatsApp Business to manage a conversation
 - [x] Core UI pages: Login, Dashboard, Inbox, Leads, Inventory, Settings, Users
 - [x] Real-time conversation display and message sending
 - [x] Automation rules (keyword-based, new lead triggers)
-- [x] AI analysis integration (GPT for lead classification)
 - [x] Conversation management (star/save, clear, delete)
 
 ### Completed (February 13, 2026)
 - [x] Sidebar cleanup + collapsible sidebar
 - [x] Light theme for content areas + teal color palette (#7BA899)
-- [x] **Complete bot conversational flow rewrite**:
-  - Fixed double-response bug (automation_rules + intelligent bot both firing)
-  - Fixed is_new_lead always being False
-  - Fixed greeting step not sending messages
-  - Added welcome message with numbered menu options
-  - Added data confirmation step before quoting
-  - Added data correction flow
-  - Single `send_bot_message` helper for consistent message saving
-  - Improved error handling and logging
-  - Full state machine: greeting → identify_need → collect_name → empresa → ciudad → correo → producto → cantidad → fecha → presupuesto → personalización → confirm_data → quote → transfer
-  - Catalog auto-sent based on request type
-  - Quote with Ecuador price format ($1.250,00)
-  - Transfer to Ana María with structured summary
+- [x] Rule-based bot flow (now superseded by AI bot)
 
-## Bot Flow (Tested E2E)
-1. Customer writes → Welcome + 6 options menu
-2. Selects option (number or keywords) → Routes to correct flow
-3. Collects: name, company, city, email, product, quantity, date, budget, customization
-4. Shows data summary → Asks for confirmation
-5. On "sí" → Generates quote from products DB → Sends to customer
-6. Transfers to Ana María with full summary → Lead marked as "caliente"
+### Completed (February 13, 2026 - AI Bot)
+- [x] **AI-powered conversational bot** (bot_service.py):
+  - Uses GPT-4o-mini via emergentintegrations LlmChat
+  - Natural language understanding - no rigid state machine
+  - Extracts lead data progressively from conversation: nombre, empresa, ciudad, correo, producto, cantidad, fecha_entrega, presupuesto, personalizacion
+  - Classifies lead quality: caliente / tibio / frio
+  - Auto-categorizes: cotizacion_directa / solicitud_catalogo / consulta_ideas / pedido_estacional / otra
+  - Generates quotes when enough data collected (nombre + empresa + correo + producto + cantidad)
+  - Auto-transfers to Ana Maria with summary after quote
+  - Updates lead record in real-time with AI-extracted data
+- [x] **Lead model enhanced** with new fields: ai_category, empresa, ciudad, correo, producto_interes, cantidad_estimada, presupuesto
+- [x] **Leads UI updated** (Leads.jsx):
+  - Quality badges (Frio/Tibio/Caliente) with color-coded dots
+  - AI category tags visible on cards
+  - Empresa, ciudad, producto shown on cards
+  - Detail dialog (eye icon) showing all collected data
+  - All existing functionality preserved (Kanban, filters, search, edit, delete)
+
+## Bot Flow (AI-Driven)
+1. Customer writes anything -> AI understands intent naturally
+2. AI responds conversationally, asks for missing data
+3. Extracts entities from each message (name, company, email, etc.)
+4. Updates lead quality and category in real-time
+5. When 5 required fields collected -> Generates quote -> Sends to customer
+6. Transfers to Ana Maria with full summary -> Lead marked as "pedido"
 
 ## Pending Tasks
 
 ### P1 - Medium Priority
 - [ ] Implement Excel inventory upload (UI + backend connection)
 - [ ] Dashboard real metrics implementation
+- [ ] Deploy AI bot to production Railway (currently local only)
 
 ### P2 - Lower Priority
 - [ ] Finalize Asesor role restrictions
@@ -62,3 +69,9 @@ Build a web-based CRM integrated with WhatsApp Business to manage a conversation
 ## URLs
 - **Preview**: https://whatsapp-crm-flow.preview.emergentagent.com
 - **Backend (Railway)**: https://gimmicks-crm-production.up.railway.app
+
+## Key Files
+- `/app/backend/server.py` - Main API server
+- `/app/backend/bot_service.py` - AI bot service (NEW)
+- `/app/frontend/src/pages/Leads.jsx` - Leads page with AI data
+- `/app/frontend/src/components/Layout.jsx` - Sidebar layout
