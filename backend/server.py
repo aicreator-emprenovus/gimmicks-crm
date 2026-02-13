@@ -1367,30 +1367,29 @@ CONVERSATION_STEPS = [
     "collect_fecha",
     "collect_presupuesto",
     "collect_personalizacion",
+    "confirm_data",
     "send_catalog",
     "generate_quote",
     "transfer_human"
 ]
 
 REQUEST_TYPES = {
-    "cotizacion": ["cotiza", "precio", "cuanto", "cuesta", "valor", "costo"],
-    "catalogo": ["catalogo", "catálogo", "productos", "ver", "mostrar", "tienen"],
-    "ideas": ["idea", "sugerencia", "recomienda", "qué me", "opciones", "alternativas"],
-    "temporada": ["navidad", "san valentin", "día de", "madre", "padre", "playa", "verano", "evento"],
-    "ejecutivo": ["ejecutivo", "corporativo", "empresa", "empresarial", "premium", "lujo"],
-    "urgente": ["urgente", "rápido", "pronto", "mañana", "hoy", "inmediato", "express"]
+    "cotizacion": ["cotiza", "precio", "cuanto", "cuesta", "valor", "costo", "tarifa"],
+    "catalogo": ["catalogo", "catálogo", "productos", "ver", "mostrar", "tienen", "ofrecen"],
+    "ideas": ["idea", "sugerencia", "recomienda", "qué me", "opciones", "alternativas", "ayuda"],
+    "temporada": ["navidad", "san valentin", "valentín", "día de", "madre", "padre", "playa", "verano", "evento", "fiestas", "halloween"],
+    "ejecutivo": ["ejecutivo", "corporativo", "empresa", "empresarial", "premium", "lujo", "regalo corporativo"],
+    "urgente": ["urgente", "rápido", "pronto", "mañana", "hoy", "inmediato", "express", "ya mismo"]
 }
 
+REQUIRED_FIELDS = ["nombre", "empresa", "ciudad", "correo", "producto", "cantidad", "fecha_entrega", "presupuesto", "personalizacion"]
+
 async def get_conversation_state(phone_number: str) -> Optional[Dict]:
-    """Get current conversation state for a phone number"""
     state = await db.conversation_states.find_one({"phone_number": phone_number}, {"_id": 0})
     return state
 
 async def update_conversation_state(phone_number: str, updates: Dict):
-    """Update conversation state"""
-    now = datetime.now(timezone.utc)
-    updates["last_interaction"] = now.isoformat()
-    
+    updates["last_interaction"] = datetime.now(timezone.utc).isoformat()
     await db.conversation_states.update_one(
         {"phone_number": phone_number},
         {"$set": updates},
@@ -1398,40 +1397,21 @@ async def update_conversation_state(phone_number: str, updates: Dict):
     )
 
 async def identify_request_type(message: str) -> str:
-    """Identify the type of request based on message content"""
-    message_lower = message.lower()
-    
+    message_lower = message.lower().strip()
     for req_type, keywords in REQUEST_TYPES.items():
         if any(kw in message_lower for kw in keywords):
             return req_type
-    
     return "general"
 
-async def get_missing_fields(collected_data: Dict) -> List[str]:
-    """Get list of missing required fields"""
-    required_fields = ["nombre", "empresa", "ciudad", "correo", "producto", "cantidad"]
-    missing = []
-    
-    for field in required_fields:
-        if not collected_data.get(field):
-            missing.append(field)
-    
-    return missing
-
 async def extract_data_from_message(message: str, current_step: str, collected_data: Dict) -> Dict:
-    """Extract relevant data from user message based on current step"""
     message = message.strip()
     
-    # Try to extract email if present
-    import re
     email_match = re.search(r'[\w\.-]+@[\w\.-]+\.\w+', message)
     if email_match:
         collected_data["correo"] = email_match.group()
     
-    # Try to extract numbers for quantity
     number_match = re.search(r'\b(\d+)\b', message)
     
-    # Map steps to fields
     step_field_map = {
         "collect_name": "nombre",
         "collect_empresa": "empresa", 
@@ -1449,23 +1429,21 @@ async def extract_data_from_message(message: str, current_step: str, collected_d
         if field == "cantidad" and number_match:
             collected_data[field] = number_match.group()
         elif field == "correo" and email_match:
-            pass  # Already extracted above
-        elif field not in ["correo"]:  # Don't overwrite email with non-email text
+            pass
+        elif field == "correo" and not email_match:
+            collected_data[field] = message
+        elif field not in ["correo"]:
             collected_data[field] = message
     
     return collected_data
 
 def format_price_ecuador(price: float) -> str:
-    """Format price in Ecuador format: $1.250,00"""
     return f"${price:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 async def generate_quote_message(phone_number: str, collected_data: Dict) -> str:
-    """Generate a quote based on collected data and products database"""
     try:
-        # Search for relevant products
         product_need = collected_data.get("producto", "").lower()
         
-        # Search products by name or category
         products = await db.products.find({
             "$or": [
                 {"name": {"$regex": product_need, "$options": "i"}},
@@ -1476,40 +1454,36 @@ async def generate_quote_message(phone_number: str, collected_data: Dict) -> str
         }, {"_id": 0}).limit(5).to_list(5)
         
         if not products:
-            # Get some general products
             products = await db.products.find({}, {"_id": 0}).limit(3).to_list(3)
         
         if not products:
-            return "📋 Gracias por tu interés. No encontramos productos específicos en nuestro catálogo actual. Un asesor te contactará con opciones personalizadas."
+            return "Gracias por tu interés. No encontramos productos específicos en nuestro catálogo actual. Un asesor te contactará con opciones personalizadas."
         
-        # Determine quantities
         cantidad_str = collected_data.get("cantidad", "")
         try:
-            cantidad = int(re.search(r'\d+', cantidad_str).group()) if cantidad_str else None
+            cantidad = int(re.search(r'\d+', str(cantidad_str)).group()) if cantidad_str else None
         except:
             cantidad = None
         
         quantities = [cantidad] if cantidad else [50, 100, 300]
         
-        # Build quote
-        quote_lines = ["📋 *COTIZACIÓN GIMMICKS*\n"]
-        quote_lines.append(f"👤 Cliente: {collected_data.get('nombre', 'N/A')}")
-        quote_lines.append(f"🏢 Empresa: {collected_data.get('empresa', 'N/A')}")
-        quote_lines.append(f"📍 Ciudad: {collected_data.get('ciudad', 'N/A')}\n")
+        quote_lines = ["*COTIZACIÓN GIMMICKS*\n"]
+        quote_lines.append(f"Cliente: {collected_data.get('nombre', 'N/A')}")
+        quote_lines.append(f"Empresa: {collected_data.get('empresa', 'N/A')}")
+        quote_lines.append(f"Ciudad: {collected_data.get('ciudad', 'N/A')}\n")
         
         total_general = 0
         quote_items = []
         
         for product in products[:3]:
             product_name = product.get("name", "Producto")
-            base_price = product.get("price", 0) or 5.00  # Default price if not set
+            base_price = product.get("price", 0) or 5.00
             
-            quote_lines.append(f"📦 *{product_name}*")
+            quote_lines.append(f"*{product_name}*")
             if product.get("description"):
-                quote_lines.append(f"   {product['description'][:80]}...")
+                quote_lines.append(f"  {product['description'][:80]}")
             
             for qty in quantities:
-                # Apply volume discount
                 if qty >= 300:
                     unit_price = base_price * 0.85
                 elif qty >= 100:
@@ -1520,7 +1494,7 @@ async def generate_quote_message(phone_number: str, collected_data: Dict) -> str
                 subtotal = unit_price * qty
                 total_general += subtotal
                 
-                quote_lines.append(f"   • {qty} unidades: {format_price_ecuador(unit_price)} c/u = {format_price_ecuador(subtotal)}")
+                quote_lines.append(f"  {qty} unidades: {format_price_ecuador(unit_price)} c/u = {format_price_ecuador(subtotal)}")
                 
                 quote_items.append({
                     "product_id": product.get("id", ""),
@@ -1532,124 +1506,125 @@ async def generate_quote_message(phone_number: str, collected_data: Dict) -> str
             
             quote_lines.append("")
         
-        # Add personalization note
-        if collected_data.get("personalizacion"):
-            quote_lines.append(f"🎨 Personalización: {collected_data['personalizacion']}")
-            quote_lines.append("   *Nota: El precio puede variar según complejidad del diseño*\n")
+        if collected_data.get("personalizacion") and collected_data["personalizacion"].lower() not in ["no", "ninguna", "n/a"]:
+            quote_lines.append(f"Personalización: {collected_data['personalizacion']}")
+            quote_lines.append("Nota: El precio puede variar según complejidad del diseño.\n")
         
-        # Delivery time
         fecha_entrega = collected_data.get("fecha_entrega", "")
-        if "urgente" in fecha_entrega.lower() or "pronto" in fecha_entrega.lower():
+        if any(w in str(fecha_entrega).lower() for w in ["urgente", "pronto", "rápido", "express", "hoy", "mañana"]):
             delivery = "3-5 días hábiles (servicio express)"
         else:
             delivery = "7-10 días hábiles"
         
-        quote_lines.append(f"🚚 Tiempo de entrega: {delivery}")
-        quote_lines.append(f"\n💰 *Precios incluyen IVA*")
-        quote_lines.append("✅ Cotización válida por 15 días")
+        quote_lines.append(f"Tiempo de entrega: {delivery}")
+        quote_lines.append(f"\n*Precios incluyen IVA*")
+        quote_lines.append("Cotización válida por 15 días")
         
-        # Save quote to database
+        # Save quote to DB
+        conv = await db.conversations.find_one({"phone_number": phone_number}, {"_id": 0, "id": 1})
         quote_doc = {
             "id": str(uuid.uuid4()),
-            "conversation_id": (await db.conversations.find_one({"phone_number": phone_number}, {"_id": 0, "id": 1}))["id"],
+            "conversation_id": conv["id"] if conv else "",
             "phone_number": phone_number,
             "client_name": collected_data.get("nombre"),
             "client_empresa": collected_data.get("empresa"),
             "items": quote_items,
             "total": total_general,
             "delivery_time": delivery,
+            "personalization": collected_data.get("personalizacion"),
             "created_at": datetime.now(timezone.utc).isoformat()
         }
         await db.quotes.insert_one(quote_doc)
+        logger.info(f"Quote saved for {phone_number}, total: {total_general}")
         
         return "\n".join(quote_lines)
         
     except Exception as e:
         logger.error(f"Error generating quote: {e}")
-        return "📋 Hubo un error al generar la cotización. Un asesor te contactará pronto."
+        return "Hubo un error al generar la cotización. Un asesor te contactará pronto."
 
 async def get_catalog_message(request_type: str, product_need: str = "") -> str:
-    """Generate catalog message based on request type"""
     try:
         query = {}
+        catalog_title = "CATÁLOGO GIMMICKS"
         
         if request_type == "temporada":
-            # Search for seasonal products
             query = {"$or": [
-                {"category_1": {"$regex": "navidad|evento|temporada", "$options": "i"}},
-                {"category_2": {"$regex": "navidad|evento|temporada", "$options": "i"}}
+                {"category_1": {"$regex": "navidad|evento|temporada|playa|verano", "$options": "i"}},
+                {"category_2": {"$regex": "navidad|evento|temporada|playa|verano", "$options": "i"}}
             ]}
+            catalog_title = "CATÁLOGO DE TEMPORADA"
         elif request_type == "ejecutivo":
             query = {"$or": [
-                {"category_1": {"$regex": "ejecutivo|premium|corporativo", "$options": "i"}},
-                {"category_2": {"$regex": "ejecutivo|premium|corporativo", "$options": "i"}}
+                {"category_1": {"$regex": "ejecutivo|premium|corporativo|lujo", "$options": "i"}},
+                {"category_2": {"$regex": "ejecutivo|premium|corporativo|lujo", "$options": "i"}}
             ]}
+            catalog_title = "CATÁLOGO EJECUTIVO / CORPORATIVO"
         elif product_need:
             query = {"$or": [
                 {"name": {"$regex": product_need, "$options": "i"}},
                 {"category_1": {"$regex": product_need, "$options": "i"}},
                 {"description": {"$regex": product_need, "$options": "i"}}
             ]}
+            catalog_title = f"PRODUCTOS: {product_need.upper()}"
         
         products = await db.products.find(query, {"_id": 0}).limit(10).to_list(10)
         
         if not products:
             products = await db.products.find({}, {"_id": 0}).limit(10).to_list(10)
+            catalog_title = "CATÁLOGO GENERAL GIMMICKS"
         
         if not products:
-            return "📚 Nuestro catálogo está siendo actualizado. Un asesor te enviará las opciones disponibles pronto."
+            return "Nuestro catálogo está siendo actualizado. Un asesor te enviará las opciones disponibles pronto."
         
-        catalog_lines = ["📚 *CATÁLOGO GIMMICKS*\n"]
+        catalog_lines = [f"*{catalog_title}*\n"]
         
-        # Group by category if possible
         for i, product in enumerate(products, 1):
             name = product.get("name", "Producto")
             desc = product.get("description", "")[:60] if product.get("description") else ""
             price = product.get("price")
-            category = product.get("category_1", "General")
+            sku = product.get("sku", "")
             
             catalog_lines.append(f"*{i}. {name}*")
+            if sku:
+                catalog_lines.append(f"  Código: {sku}")
             if desc:
-                catalog_lines.append(f"   {desc}...")
+                catalog_lines.append(f"  {desc}")
             if price:
-                catalog_lines.append(f"   💰 Desde: {format_price_ecuador(price)}")
+                catalog_lines.append(f"  Desde: {format_price_ecuador(price)}")
             catalog_lines.append("")
         
-        catalog_lines.append("💡 *¿Te interesa algún producto?*")
-        catalog_lines.append("Dime el número o nombre y te doy más detalles.")
+        catalog_lines.append("¿Te interesa algún producto? Dime el número o nombre y te doy más detalles.")
         
         return "\n".join(catalog_lines)
         
     except Exception as e:
         logger.error(f"Error generating catalog: {e}")
-        return "📚 Un asesor te enviará nuestro catálogo completo pronto."
+        return "Un asesor te enviará nuestro catálogo completo pronto."
 
 async def transfer_to_human(phone_number: str, collected_data: Dict, conversation_id: str) -> str:
-    """Transfer conversation to human agent (Ana María) with summary"""
     try:
-        # Create internal summary
         summary_lines = [
-            "🔔 *NUEVO CASO PARA ATENCIÓN*\n",
-            f"📱 Teléfono: {phone_number}",
-            f"👤 Nombre: {collected_data.get('nombre', 'No proporcionado')}",
-            f"🏢 Empresa: {collected_data.get('empresa', 'No proporcionado')}",
-            f"📍 Ciudad: {collected_data.get('ciudad', 'No proporcionado')}",
-            f"📧 Correo: {collected_data.get('correo', 'No proporcionado')}",
-            f"\n📦 Producto/Necesidad: {collected_data.get('producto', 'No especificado')}",
-            f"🔢 Cantidad: {collected_data.get('cantidad', 'No especificada')}",
-            f"📅 Fecha entrega: {collected_data.get('fecha_entrega', 'No especificada')}",
-            f"💰 Presupuesto: {collected_data.get('presupuesto', 'No especificado')}",
-            f"🎨 Personalización: {collected_data.get('personalizacion', 'No especificada')}",
+            "*NUEVO CASO PARA ATENCIÓN*\n",
+            f"Teléfono: {phone_number}",
+            f"Nombre: {collected_data.get('nombre', 'No proporcionado')}",
+            f"Empresa: {collected_data.get('empresa', 'No proporcionado')}",
+            f"Ciudad: {collected_data.get('ciudad', 'No proporcionado')}",
+            f"Correo: {collected_data.get('correo', 'No proporcionado')}",
+            f"\nProducto/Necesidad: {collected_data.get('producto', 'No especificado')}",
+            f"Cantidad: {collected_data.get('cantidad', 'No especificada')}",
+            f"Fecha entrega: {collected_data.get('fecha_entrega', 'No especificada')}",
+            f"Presupuesto: {collected_data.get('presupuesto', 'No especificado')}",
+            f"Personalización: {collected_data.get('personalizacion', 'No especificada')}",
         ]
         
-        # Check if quote was generated
         quote = await db.quotes.find_one({"phone_number": phone_number}, {"_id": 0}, sort=[("created_at", -1)])
         if quote:
-            summary_lines.append(f"\n✅ Cotización generada: {format_price_ecuador(quote.get('total', 0))}")
+            summary_lines.append(f"\nCotización generada: {format_price_ecuador(quote.get('total', 0))}")
+            summary_lines.append(f"Productos: {', '.join([i.get('product_name','') for i in quote.get('items',[])])}")
         
         summary = "\n".join(summary_lines)
         
-        # Save transfer record
         await db.conversation_states.update_one(
             {"phone_number": phone_number},
             {"$set": {
@@ -1659,7 +1634,6 @@ async def transfer_to_human(phone_number: str, collected_data: Dict, conversatio
             }}
         )
         
-        # Update lead with collected data
         await db.leads.update_one(
             {"phone_number": phone_number},
             {"$set": {
@@ -1678,197 +1652,326 @@ async def transfer_to_human(phone_number: str, collected_data: Dict, conversatio
             }}
         )
         
-        # Log transfer for Ana María (could also send notification)
+        # Update conversation contact_name with collected name
+        if collected_data.get("nombre"):
+            await db.conversations.update_one(
+                {"phone_number": phone_number},
+                {"$set": {"contact_name": collected_data["nombre"]}}
+            )
+        
         logger.info(f"Case transferred to human: {phone_number}\n{summary}")
         
-        # Return message for customer
-        return "✅ *¡Perfecto!* He recopilado toda tu información.\n\n👩‍💼 *Ana María*, nuestra asesora comercial, se pondrá en contacto contigo muy pronto para finalizar los detalles.\n\n¡Gracias por preferirnos! 🙌"
+        return "¡Perfecto! He recopilado toda tu información.\n\n*Ana María*, nuestra asesora comercial, se pondrá en contacto contigo muy pronto para finalizar los detalles.\n\n¡Gracias por preferirnos!"
         
     except Exception as e:
         logger.error(f"Error transferring to human: {e}")
         return "Un asesor te contactará pronto. ¡Gracias!"
 
-async def process_intelligent_conversation(phone_number: str, message_text: str, conversation_id: str, is_new_lead: bool = False):
-    """Main intelligent conversation handler"""
+async def send_bot_message(phone_number: str, conversation_id: str, message: str):
+    """Send a message from the bot and save it to DB"""
     try:
-        # Get or create conversation state
+        await send_whatsapp_message(phone_number, message)
+        
+        now = datetime.now(timezone.utc)
+        msg_doc = {
+            "id": str(uuid.uuid4()),
+            "conversation_id": conversation_id,
+            "phone_number": phone_number,
+            "sender": "business",
+            "message_type": "text",
+            "content": {"text": message},
+            "status": "sent",
+            "is_automated": True,
+            "timestamp": now.isoformat()
+        }
+        await db.messages.insert_one(msg_doc)
+        
+        await db.conversations.update_one(
+            {"id": conversation_id},
+            {"$set": {
+                "last_message": message[:100],
+                "last_message_time": now.isoformat()
+            }}
+        )
+        logger.info(f"Bot message sent to {phone_number}: {message[:60]}...")
+    except Exception as e:
+        logger.error(f"Error sending bot message to {phone_number}: {e}")
+
+async def process_intelligent_conversation(phone_number: str, message_text: str, conversation_id: str, is_new_lead: bool = False):
+    """Main intelligent conversation handler - single entry point for all bot logic"""
+    try:
         state = await get_conversation_state(phone_number)
         
         if not state:
-            # New conversation - create state
+            # Brand new conversation
             state = {
                 "phone_number": phone_number,
-                "current_step": "greeting" if is_new_lead else "identify_need",
+                "current_step": "greeting",
                 "request_type": None,
                 "collected_data": {},
-                "products_recommended": [],
                 "catalog_sent": False,
                 "quote_generated": False,
                 "transferred_to_human": False,
+                "message_count": 0,
                 "last_interaction": datetime.now(timezone.utc).isoformat()
             }
-            await db.conversation_states.insert_one(state)
+            await db.conversation_states.update_one(
+                {"phone_number": phone_number},
+                {"$set": state},
+                upsert=True
+            )
+            
+            # Send welcome and immediately ask for need
+            welcome = "¡Hola! Bienvenido a *Gimmicks Marketing Services*. Somos especialistas en productos promocionales y publicitarios.\n\n¿En qué podemos ayudarte hoy?\n\n1. Cotización de productos\n2. Ver nuestro catálogo\n3. Necesito ideas/sugerencias\n4. Productos de temporada\n5. Regalos corporativos/ejecutivos\n6. Tengo un pedido urgente"
+            await send_bot_message(phone_number, conversation_id, welcome)
+            
+            await update_conversation_state(phone_number, {
+                "current_step": "identify_need",
+                "message_count": 1
+            })
+            return
         
-        # If already transferred, don't process
+        # If already transferred to human, let human handle it
         if state.get("transferred_to_human"):
+            await send_bot_message(phone_number, conversation_id, 
+                "Ana María ya tiene tu caso y te contactará muy pronto. Si necesitas algo adicional, ella te ayudará directamente.")
             return
         
         current_step = state.get("current_step", "identify_need")
         collected_data = state.get("collected_data", {})
         request_type = state.get("request_type")
+        msg_count = state.get("message_count", 0) + 1
+        
+        # Extract data from current message
+        collected_data = await extract_data_from_message(message_text, current_step, collected_data)
+        
+        # Detect request type if not already set
+        if not request_type:
+            request_type = await identify_request_type(message_text)
         
         response = None
         next_step = current_step
         
-        # Extract data from message
-        collected_data = await extract_data_from_message(message_text, current_step, collected_data)
+        # ====== STATE MACHINE ======
         
-        # Identify request type if not set
-        if not request_type:
-            request_type = await identify_request_type(message_text)
-            await update_conversation_state(phone_number, {"request_type": request_type})
-        
-        # State machine for conversation flow
         if current_step == "greeting":
-            # Already sent by automation rules, move to identify need
+            # Shouldn't normally reach here, but handle gracefully
+            welcome = "¡Hola! Bienvenido a *Gimmicks Marketing Services*.\n\n¿En qué podemos ayudarte hoy?"
+            await send_bot_message(phone_number, conversation_id, welcome)
             next_step = "identify_need"
-            
+        
         elif current_step == "identify_need":
-            # Analyze what they need
+            # Check if user selected a number option
+            msg_stripped = message_text.strip()
+            if msg_stripped == "1":
+                request_type = "cotizacion"
+            elif msg_stripped == "2":
+                request_type = "catalogo"
+            elif msg_stripped == "3":
+                request_type = "ideas"
+            elif msg_stripped == "4":
+                request_type = "temporada"
+            elif msg_stripped == "5":
+                request_type = "ejecutivo"
+            elif msg_stripped == "6":
+                request_type = "urgente"
+            else:
+                request_type = await identify_request_type(message_text)
+            
             if request_type == "catalogo":
                 catalog = await get_catalog_message(request_type, message_text)
-                await send_whatsapp_message(phone_number, catalog)
+                await send_bot_message(phone_number, conversation_id, catalog)
                 await update_conversation_state(phone_number, {"catalog_sent": True})
-                response = "¿Te gustaría cotizar alguno de estos productos? 📋"
+                response = "¿Te gustaría cotizar alguno de estos productos? Para continuar, necesito algunos datos.\n\n¿Cuál es tu nombre completo?"
                 next_step = "collect_name"
+            
             elif request_type == "cotizacion":
-                response = "¡Perfecto! Para darte una cotización precisa, necesito algunos datos.\n\n¿Cuál es tu nombre completo? 👤"
+                response = "¡Perfecto! Para darte una cotización precisa, necesito algunos datos.\n\n¿Cuál es tu nombre completo?"
                 next_step = "collect_name"
+            
             elif request_type == "ideas":
-                response = "¡Con gusto te ayudo con ideas! 💡\n\n¿Para qué ocasión o evento necesitas los productos promocionales?\n\nPor ejemplo: evento corporativo, feria, regalo de fin de año, etc."
+                response = "¡Con gusto te ayudo con ideas!\n\n¿Para qué ocasión o evento necesitas los productos promocionales?\n\nPor ejemplo: evento corporativo, feria, regalo de fin de año, lanzamiento de marca, etc."
                 next_step = "collect_producto"
+            
             elif request_type in ["temporada", "ejecutivo"]:
                 catalog = await get_catalog_message(request_type)
-                await send_whatsapp_message(phone_number, catalog)
+                await send_bot_message(phone_number, conversation_id, catalog)
                 await update_conversation_state(phone_number, {"catalog_sent": True})
-                response = "¿Alguno te interesa? Dame tu nombre para continuar 👤"
+                response = "¿Alguno te interesa? Para avanzar, dime tu nombre completo."
                 next_step = "collect_name"
+            
             elif request_type == "urgente":
-                response = "⚡ Entiendo que es urgente. Haremos todo lo posible por ayudarte.\n\n¿Cuál es tu nombre para agilizar? 👤"
+                response = "Entiendo que es urgente. Haremos todo lo posible por ayudarte.\n\nPara agilizar, dime tu nombre completo."
                 next_step = "collect_name"
+            
             else:
-                response = "¡Hola! Para ayudarte mejor, cuéntame:\n\n¿Qué tipo de productos promocionales buscas? 🎁"
-                next_step = "collect_producto"
+                response = "¡Gracias por escribirnos! Para ayudarte mejor, cuéntame: ¿qué tipo de productos promocionales buscas?\n\nPuedes describir lo que necesitas o elegir una opción:\n1. Cotización\n2. Catálogo\n3. Ideas\n4. Temporada\n5. Corporativos\n6. Urgente"
+                next_step = "identify_need"
         
         elif current_step == "collect_name":
-            collected_data["nombre"] = message_text
-            response = f"Gracias {message_text.split()[0]}! 👋\n\n¿De qué empresa nos contactas? 🏢"
+            collected_data["nombre"] = message_text.strip()
+            first_name = message_text.strip().split()[0]
+            response = f"Gracias {first_name}. ¿De qué empresa nos contactas?"
             next_step = "collect_empresa"
-            
+        
         elif current_step == "collect_empresa":
-            collected_data["empresa"] = message_text
-            response = "¡Excelente! ¿En qué ciudad te encuentras? 📍"
+            collected_data["empresa"] = message_text.strip()
+            response = "¿En qué ciudad te encuentras?"
             next_step = "collect_ciudad"
-            
+        
         elif current_step == "collect_ciudad":
-            collected_data["ciudad"] = message_text
-            response = "¿Me puedes dar tu correo electrónico para enviarte la cotización formal? 📧"
+            collected_data["ciudad"] = message_text.strip()
+            response = "¿Me puedes dar tu correo electrónico para enviarte la cotización formal?"
             next_step = "collect_correo"
-            
+        
         elif current_step == "collect_correo":
-            # Email should be extracted automatically
             if not collected_data.get("correo"):
-                collected_data["correo"] = message_text
+                collected_data["correo"] = message_text.strip()
             
             if collected_data.get("producto"):
-                response = "¿Qué cantidad aproximada necesitas? 🔢\n\nSi no estás seguro, puedo cotizarte varias opciones."
+                response = "¿Qué cantidad aproximada necesitas?\n\nSi no estás seguro, te puedo cotizar varias opciones (50, 100 y 300 unidades)."
                 next_step = "collect_cantidad"
             else:
-                response = "¿Qué producto o tipo de artículo promocional te interesa? 📦\n\nPuedes describirme lo que buscas."
+                response = "¿Qué producto o tipo de artículo promocional te interesa?\n\nPuedes describir lo que buscas o el tipo de evento."
                 next_step = "collect_producto"
-            
+        
         elif current_step == "collect_producto":
-            collected_data["producto"] = message_text
+            collected_data["producto"] = message_text.strip()
             
-            # Send relevant catalog
-            catalog = await get_catalog_message("general", message_text)
             if not state.get("catalog_sent"):
-                await send_whatsapp_message(phone_number, catalog)
+                catalog = await get_catalog_message("general", message_text)
+                await send_bot_message(phone_number, conversation_id, catalog)
                 await update_conversation_state(phone_number, {"catalog_sent": True})
             
-            response = "¿Qué cantidad aproximada necesitas? 🔢"
-            next_step = "collect_cantidad"
-            
+            # Check if we still need name
+            if not collected_data.get("nombre"):
+                response = "Para preparar tu cotización, necesito algunos datos.\n\n¿Cuál es tu nombre completo?"
+                next_step = "collect_name"
+            else:
+                response = "¿Qué cantidad aproximada necesitas?\n\nSi no estás seguro, te puedo cotizar varias opciones."
+                next_step = "collect_cantidad"
+        
         elif current_step == "collect_cantidad":
-            collected_data["cantidad"] = message_text
-            response = "¿Para cuándo necesitas los productos? 📅\n\n(Ejemplo: próxima semana, 15 de marzo, urgente)"
+            collected_data["cantidad"] = message_text.strip()
+            response = "¿Para cuándo necesitas los productos?\n\n(Ejemplo: próxima semana, 15 de marzo, lo antes posible)"
             next_step = "collect_fecha"
-            
+        
         elif current_step == "collect_fecha":
-            collected_data["fecha_entrega"] = message_text
-            response = "¿Tienes un presupuesto estimado? 💰\n\n(Puedes escribir un rango o 'flexible' si prefieres opciones)"
+            collected_data["fecha_entrega"] = message_text.strip()
+            response = "¿Tienes un presupuesto estimado?\n\n(Puedes escribir un rango, monto aproximado, o 'flexible' si prefieres que te demos opciones)"
             next_step = "collect_presupuesto"
-            
+        
         elif current_step == "collect_presupuesto":
-            collected_data["presupuesto"] = message_text
-            response = "¿Necesitas personalización? 🎨\n\nPor ejemplo: logo impreso, nombre grabado, colores específicos, etc.\n\n(Escribe 'no' si no aplica)"
+            collected_data["presupuesto"] = message_text.strip()
+            response = "¿Necesitas personalización?\n\nPor ejemplo: logo impreso, nombre grabado, colores específicos, diseño especial.\n\n(Escribe 'no' si no aplica)"
             next_step = "collect_personalizacion"
-            
+        
         elif current_step == "collect_personalizacion":
-            collected_data["personalizacion"] = message_text if message_text.lower() not in ["no", "ninguna", "n/a"] else None
+            personalizacion = message_text.strip()
+            if personalizacion.lower() in ["no", "ninguna", "n/a", "nada", "sin personalización"]:
+                collected_data["personalizacion"] = "Sin personalización"
+            else:
+                collected_data["personalizacion"] = personalizacion
             
-            # Generate quote
-            quote_msg = await generate_quote_message(phone_number, collected_data)
-            await send_whatsapp_message(phone_number, quote_msg)
-            await update_conversation_state(phone_number, {"quote_generated": True})
+            # Show data summary for confirmation
+            summary = f"Perfecto, tengo todos tus datos. Déjame confirmar:\n\n"
+            summary += f"Nombre: {collected_data.get('nombre', '-')}\n"
+            summary += f"Empresa: {collected_data.get('empresa', '-')}\n"
+            summary += f"Ciudad: {collected_data.get('ciudad', '-')}\n"
+            summary += f"Correo: {collected_data.get('correo', '-')}\n"
+            summary += f"Producto: {collected_data.get('producto', '-')}\n"
+            summary += f"Cantidad: {collected_data.get('cantidad', '-')}\n"
+            summary += f"Fecha entrega: {collected_data.get('fecha_entrega', '-')}\n"
+            summary += f"Presupuesto: {collected_data.get('presupuesto', '-')}\n"
+            summary += f"Personalización: {collected_data.get('personalizacion', '-')}\n"
+            summary += f"\n¿Los datos son correctos? (sí/no)"
             
-            # Transfer to human
-            transfer_msg = await transfer_to_human(phone_number, collected_data, conversation_id)
-            response = transfer_msg
-            next_step = "transfer_human"
+            response = summary
+            next_step = "confirm_data"
+        
+        elif current_step == "confirm_data":
+            msg_lower = message_text.strip().lower()
+            
+            if msg_lower in ["si", "sí", "s", "correcto", "ok", "yes", "está bien", "confirmo"]:
+                # Generate quote
+                await send_bot_message(phone_number, conversation_id, "Generando tu cotización...")
+                
+                quote_msg = await generate_quote_message(phone_number, collected_data)
+                await send_bot_message(phone_number, conversation_id, quote_msg)
+                await update_conversation_state(phone_number, {"quote_generated": True})
+                
+                # Transfer to Ana María
+                transfer_msg = await transfer_to_human(phone_number, collected_data, conversation_id)
+                response = transfer_msg
+                next_step = "transfer_human"
+            
+            elif msg_lower in ["no", "n", "corregir", "cambiar"]:
+                response = "¿Qué dato necesitas corregir?\n\n1. Nombre\n2. Empresa\n3. Ciudad\n4. Correo\n5. Producto\n6. Cantidad\n7. Fecha\n8. Presupuesto\n9. Personalización"
+                next_step = "correct_data"
+            else:
+                response = "Por favor responde *sí* si los datos son correctos, o *no* si necesitas corregir algo."
+                next_step = "confirm_data"
+        
+        elif current_step == "correct_data":
+            correction_map = {
+                "1": ("collect_name", "nombre", "¿Cuál es tu nombre correcto?"),
+                "2": ("collect_empresa", "empresa", "¿Cuál es la empresa correcta?"),
+                "3": ("collect_ciudad", "ciudad", "¿Cuál es la ciudad correcta?"),
+                "4": ("collect_correo", "correo", "¿Cuál es el correo correcto?"),
+                "5": ("collect_producto", "producto", "¿Qué producto necesitas?"),
+                "6": ("collect_cantidad", "cantidad", "¿Qué cantidad necesitas?"),
+                "7": ("collect_fecha", "fecha_entrega", "¿Para cuándo lo necesitas?"),
+                "8": ("collect_presupuesto", "presupuesto", "¿Cuál es tu presupuesto?"),
+                "9": ("collect_personalizacion", "personalizacion", "¿Qué personalización necesitas?"),
+            }
+            
+            choice = message_text.strip()
+            if choice in correction_map:
+                step, field, question = correction_map[choice]
+                response = question
+                next_step = step
+            else:
+                # Try to match by keyword
+                msg_lower = message_text.lower()
+                matched = False
+                keywords_map = {
+                    "nombre": "1", "empresa": "2", "ciudad": "3", "correo": "4",
+                    "producto": "5", "cantidad": "6", "fecha": "7", "presupuesto": "8",
+                    "personaliz": "9"
+                }
+                for kw, num in keywords_map.items():
+                    if kw in msg_lower:
+                        step, field, question = correction_map[num]
+                        response = question
+                        next_step = step
+                        matched = True
+                        break
+                
+                if not matched:
+                    response = "No entendí qué dato quieres corregir. Por favor escribe el número (1-9) del dato a corregir."
+                    next_step = "correct_data"
         
         elif current_step == "transfer_human":
-            # Already transferred, but customer sent another message
-            response = "👩‍💼 Ana María ya tiene tu caso y te contactará muy pronto.\n\n¿Hay algo más que necesites agregar a tu solicitud?"
+            response = "Ana María ya tiene tu caso y te contactará muy pronto.\n\n¿Hay algo más que necesites agregar a tu solicitud?"
         
-        # Update state
+        # ====== UPDATE STATE ======
         await update_conversation_state(phone_number, {
             "current_step": next_step,
             "collected_data": collected_data,
-            "request_type": request_type
+            "request_type": request_type,
+            "message_count": msg_count
         })
         
-        # Send response if generated
         if response:
-            await send_whatsapp_message(phone_number, response)
-            
-            # Save bot message to database
-            now = datetime.now(timezone.utc)
-            bot_msg = {
-                "id": str(uuid.uuid4()),
-                "conversation_id": conversation_id,
-                "phone_number": phone_number,
-                "sender": "business",
-                "message_type": "text",
-                "content": {"text": response},
-                "status": "sent",
-                "is_automated": True,
-                "timestamp": now.isoformat()
-            }
-            await db.messages.insert_one(bot_msg)
-            
-            # Update conversation
-            await db.conversations.update_one(
-                {"id": conversation_id},
-                {"$set": {
-                    "last_message": response[:100],
-                    "last_message_time": now.isoformat()
-                }}
-            )
+            await send_bot_message(phone_number, conversation_id, response)
         
     except Exception as e:
-        logger.error(f"Error in intelligent conversation: {e}")
-        # Don't crash - let automation rules handle it
+        logger.error(f"Error in intelligent conversation for {phone_number}: {e}", exc_info=True)
+        try:
+            await send_bot_message(phone_number, conversation_id, 
+                "Disculpa, tuve un problema procesando tu mensaje. Un asesor te contactará pronto.")
+        except:
+            pass
 
 async def process_automation_rules(phone_number: str, message_text: str, conversation_id: str, is_new_lead: bool = False):
     """Process automation rules and send automatic responses"""
