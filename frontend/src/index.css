@@ -75,7 +75,7 @@
 }
 
 .message-bubble-business {
-    @apply bg-zinc-100 text-zinc-900 rounded-2xl rounded-bl-md px-4 py-2;
+    @apply bg-[#2d2d30] text-white rounded-2xl rounded-bl-md px-4 py-2 border border-[#3d3d40];
 }
 
 /* Floating card effect */
