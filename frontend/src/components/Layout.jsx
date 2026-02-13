@@ -11,7 +11,8 @@ import {
   X,
   Users2,
   ChevronsLeft,
-  ChevronsRight
+  ChevronsRight,
+  FileText
 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -22,7 +23,8 @@ const navItems = [
   { to: "/users", icon: Users, label: "Usuarios", roles: ["admin"] },
   { to: "/inventory", icon: Package, label: "Inventario", roles: ["admin", "asesor"] },
   { to: "/leads", icon: Users2, label: "Clientes", roles: ["admin", "asesor"] },
-  { to: "/settings", icon: Settings, label: "Configuración", roles: ["admin"] },
+  { to: "/quotes", icon: FileText, label: "Cotizaciones", roles: ["admin", "asesor"] },
+  { to: "/settings", icon: Settings, label: "Configuracion", roles: ["admin"] },
 ];
 
 export default function Layout() {
