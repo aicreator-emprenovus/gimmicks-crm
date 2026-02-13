@@ -2861,6 +2861,25 @@ async def root_page():
 
 app.include_router(api_router)
 
+# Background follow-up task
+import asyncio
+
+async def followup_background_task():
+    """Run follow-up check every 30 minutes"""
+    while True:
+        try:
+            await asyncio.sleep(1800)  # 30 minutes
+            result = await run_followup_check()
+            if result["reminders_sent"] > 0 or result["marked_lost"] > 0:
+                logger.info(f"Follow-up check: {result}")
+        except Exception as e:
+            logger.error(f"Follow-up task error: {e}")
+
+@app.on_event("startup")
+async def start_followup_task():
+    asyncio.create_task(followup_background_task())
+
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
