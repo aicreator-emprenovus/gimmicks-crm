@@ -10,6 +10,7 @@ import Leads from "@/pages/Leads";
 import Inventory from "@/pages/Inventory";
 import Settings from "@/pages/Settings";
 import Users from "@/pages/Users";
+import Quotes from "@/pages/Quotes";
 import Layout from "@/components/Layout";
 
 // Auth Context
