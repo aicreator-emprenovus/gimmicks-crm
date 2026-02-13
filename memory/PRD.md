@@ -18,31 +18,34 @@ Build a web-based CRM integrated with WhatsApp Business to manage a conversation
 - [x] Real-time conversation display and message sending
 - [x] Automation rules (keyword-based, new lead triggers)
 - [x] AI analysis integration (GPT for lead classification)
-- [x] Advanced conversational bot logic in backend
 - [x] Conversation management (star/save, clear, delete)
 
 ### Completed (February 13, 2026)
-- [x] Sidebar cleanup: Removed Cotizaciones, Ordenes de Compra, Nueva Cotizacion, Nueva Orden
-- [x] Sidebar width reduced ~30% (288px -> 200px)
-- [x] Removed "MARKETING SERVICES" subtitle under logo
-- [x] Collapsible sidebar (icon-only 72px / expanded 200px)
-- [x] **Light theme for content area**: All pages except sidebar use white/light backgrounds
-- [x] **Teal color palette (#7BA899)**: Buttons, icons, accents use sage/teal color
-- [x] Updated CSS variables, scrollbar, chat bubbles for light theme
-- [x] All text is dark (gray-800/500) on white backgrounds for readability
+- [x] Sidebar cleanup + collapsible sidebar
+- [x] Light theme for content areas + teal color palette (#7BA899)
+- [x] **Complete bot conversational flow rewrite**:
+  - Fixed double-response bug (automation_rules + intelligent bot both firing)
+  - Fixed is_new_lead always being False
+  - Fixed greeting step not sending messages
+  - Added welcome message with numbered menu options
+  - Added data confirmation step before quoting
+  - Added data correction flow
+  - Single `send_bot_message` helper for consistent message saving
+  - Improved error handling and logging
+  - Full state machine: greeting → identify_need → collect_name → empresa → ciudad → correo → producto → cantidad → fecha → presupuesto → personalización → confirm_data → quote → transfer
+  - Catalog auto-sent based on request type
+  - Quote with Ecuador price format ($1.250,00)
+  - Transfer to Ana María with structured summary
 
-### Theme Colors
-- Content background: #f5f6f8
-- Sidebar: #1a1a1d (dark)
-- Primary teal: #7BA899
-- Primary hover: #6A9688
-- Text: gray-800, gray-500
-- Cards: white with gray-200 borders
+## Bot Flow (Tested E2E)
+1. Customer writes → Welcome + 6 options menu
+2. Selects option (number or keywords) → Routes to correct flow
+3. Collects: name, company, city, email, product, quantity, date, budget, customization
+4. Shows data summary → Asks for confirmation
+5. On "sí" → Generates quote from products DB → Sends to customer
+6. Transfers to Ana María with full summary → Lead marked as "caliente"
 
 ## Pending Tasks
-
-### P0 - High Priority
-- [ ] Test bot conversational flow E2E
 
 ### P1 - Medium Priority
 - [ ] Implement Excel inventory upload (UI + backend connection)
@@ -50,9 +53,9 @@ Build a web-based CRM integrated with WhatsApp Business to manage a conversation
 
 ### P2 - Lower Priority
 - [ ] Finalize Asesor role restrictions
-- [ ] Refactor server.py (2,552 lines) into modules (routes, models, services)
+- [ ] Refactor server.py into modules (routes, models, services)
 
-## Access Credentials (Development)
+## Access Credentials
 - **Email**: admin@gimmicks.com
 - **Password**: admin123456
 
