@@ -46,7 +46,7 @@ Build a web-based CRM integrated with WhatsApp Business to manage a conversation
 
 ## What's Been Implemented
 
-### ✅ Completed (January 2026)
+### Completed (January 2026)
 - [x] Backend API with FastAPI
 - [x] JWT-based authentication with Admin/Asesor roles
 - [x] User management (Admin can create/manage users)
@@ -56,82 +56,51 @@ Build a web-based CRM integrated with WhatsApp Business to manage a conversation
 - [x] Message sending from CRM to WhatsApp
 - [x] Basic automation rules feature (keyword-based, new lead triggers)
 - [x] AI analysis integration (GPT for lead classification)
+- [x] Advanced conversational bot logic in backend
+- [x] UI Dark Theme redesign
+- [x] Conversation management (star/save, clear, delete)
 
-### 🔧 Bug Fixes (January 29, 2026)
-- [x] Fixed invisible text in Inbox message input (CSS color issue)
-- [x] Fixed message sending from CRM UI (verified backend endpoint works)
+### Completed (February 13, 2026)
+- [x] Sidebar cleanup: Removed Cotizaciones, Ordenes de Compra, Nueva Cotizacion, Nueva Orden
+- [x] Sidebar width reduced ~30% (288px -> 200px)
+- [x] Removed "MARKETING SERVICES" subtitle under logo
+- [x] Collapsible sidebar with icon-only mode (toggle button)
 
 ## Pending Tasks
 
 ### P0 - High Priority
-- [ ] Test automation rules end-to-end
-- [ ] Configure WhatsApp credentials in production
+- [ ] Test bot conversational flow E2E
+- [ ] Fix frontend JS errors (Select components, navigation)
 
 ### P1 - Medium Priority
-- [ ] Implement Excel inventory upload
+- [ ] Implement Excel inventory upload (UI + backend connection)
 - [ ] AI-powered product recommendations
+- [ ] Dashboard real metrics implementation
 
 ### P2 - Lower Priority
-- [ ] Dashboard real metrics implementation
 - [ ] Finalize Asesor role restrictions
-- [ ] Refactor server.py into modules
+- [ ] Refactor server.py into modules (routes, models, services)
 
 ## Database Schema
 
 ### users
 ```json
-{
-  "id": "uuid",
-  "email": "string",
-  "password": "hashed_string",
-  "name": "string",
-  "role": "admin|asesor",
-  "created_at": "datetime"
-}
+{ "email": "string", "name": "string", "hashed_password": "string", "role": "admin|asesor", "created_at": "datetime" }
 ```
 
 ### conversations
 ```json
-{
-  "id": "uuid",
-  "phone_number": "string",
-  "contact_name": "string",
-  "source": "string",
-  "stage": "lead|pedido|produccion|entregado|perdido",
-  "classification": "frio|tibio|caliente",
-  "last_message": "string",
-  "last_message_time": "datetime",
-  "unread_count": "int",
-  "created_at": "datetime"
-}
+{ "phone_number": "string", "contact_name": "string", "stage": "lead|pedido|produccion|entregado|perdido", "is_starred": "bool", "last_message": "string", "last_message_time": "datetime" }
 ```
 
 ### messages
 ```json
-{
-  "id": "uuid",
-  "conversation_id": "uuid",
-  "phone_number": "string",
-  "sender": "user|business",
-  "message_type": "text",
-  "content": {"text": "string"},
-  "status": "sent|delivered|failed|received",
-  "timestamp": "datetime"
-}
+{ "conversation_id": "uuid", "sender": "user|business", "content": {"text": "string"}, "timestamp": "datetime" }
 ```
 
-### automation_rules
+### conversation_states (New)
 ```json
-{
-  "id": "uuid",
-  "name": "string",
-  "trigger_type": "keyword|new_lead",
-  "keywords": ["array"],
-  "action_type": "send_message|classify_lead",
-  "action_value": "string",
-  "is_active": "boolean",
-  "created_at": "datetime"
-}
+{ "phone_number": "string", "current_step": "string", "collected_data": {}, "request_type": "string" }
 ```
 
 ## API Endpoints
@@ -141,67 +110,22 @@ Build a web-based CRM integrated with WhatsApp Business to manage a conversation
 - `POST /api/auth/login` - User login
 - `GET /api/auth/me` - Get current user
 
-### Users (Admin only)
-- `GET /api/users` - List users
-- `POST /api/users` - Create user
-- `DELETE /api/users/{id}` - Delete user
-
 ### Conversations
 - `GET /api/conversations` - List conversations
 - `GET /api/conversations/{id}/messages` - Get messages
 - `POST /api/conversations/{id}/messages` - Send message
-
-### Automations
-- `GET /api/automations` - List rules
-- `POST /api/automations` - Create rule
-- `PUT /api/automations/{id}` - Update rule
-- `DELETE /api/automations/{id}` - Delete rule
+- `POST /api/conversations/{id}/star` - Toggle star
+- `DELETE /api/conversations/{id}/messages` - Clear messages
+- `DELETE /api/conversations/{id}` - Delete conversation
 
 ### WhatsApp
 - `GET /api/webhook/whatsapp` - Webhook verification
 - `POST /api/webhook/whatsapp` - Receive messages
 
-## Environment Variables
-
-### Backend (.env)
-```
-MONGO_URL=mongodb://localhost:27017
-DB_NAME=gimmicks_crm
-JWT_SECRET_KEY=your-secret-key
-WHATSAPP_ACCESS_TOKEN=your-token
-WHATSAPP_PHONE_NUMBER_ID=your-phone-id
-WHATSAPP_VERIFY_TOKEN=your-verify-token
-```
-
-### Frontend (.env)
-```
-REACT_APP_BACKEND_URL=https://your-backend-url
-```
-
 ## Access Credentials (Development)
 - **Email**: admin@gimmicks.com
 - **Password**: admin123456
 
----
-
-## 🔴 TAREAS PENDIENTES (Última actualización: Enero 29, 2026)
-
-### 1. Configuración del Robot de Automatización
-- [ ] Probar reglas de automatización end-to-end
-- [ ] Crear reglas en Configuración → respuestas automáticas por palabras clave
-- [ ] Configurar mensaje de bienvenida automático para nuevos leads
-- [ ] Verificar que las reglas se activen cuando lleguen mensajes al webhook
-
-### 2. Configuración del Número de WhatsApp para Producción
-- [ ] Migrar de número de prueba (+1 555 167 4338) a número real de Gimmicks
-- [ ] Publicar la app en Meta para recibir mensajes de producción
-- [ ] Configurar webhook para recibir mensajes entrantes reales
-
-### 3. Credenciales de WhatsApp Configuradas
-- **WHATSAPP_PHONE_NUMBER_ID**: 932135423324087
-- **WHATSAPP_ACCESS_TOKEN**: Configurado en Railway
-- **Webhook URL**: https://gimmicks-crm-production.up.railway.app/api/webhook/whatsapp
-
-### 4. URLs de Acceso
-- **Preview (Emergent)**: https://gimmicks-bot-test.preview.emergentagent.com
+## URLs
+- **Preview**: https://gimmicks-bot-test.preview.emergentagent.com
 - **Backend (Railway)**: https://gimmicks-crm-production.up.railway.app
