@@ -225,9 +225,9 @@ export default function Dashboard() {
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Funnel Chart */}
-        <Card className="border border-zinc-100 shadow-sm">
-          <CardHeader className="border-b border-zinc-100">
-            <CardTitle className="text-lg font-semibold text-zinc-900 font-['Manrope']">
+        <Card className="bg-[#2d2d30] border-[#3d3d40] shadow-lg">
+          <CardHeader className="border-b border-[#3d3d40]">
+            <CardTitle className="text-lg font-semibold text-white font-['Manrope']">
               Leads por Etapa del Funnel
             </CardTitle>
           </CardHeader>
@@ -235,20 +235,21 @@ export default function Dashboard() {
             {funnelData.length > 0 ? (
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={funnelData} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e4e4e7" />
-                  <XAxis type="number" stroke="#71717a" fontSize={12} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#3d3d40" />
+                  <XAxis type="number" stroke="#8a8a8a" fontSize={12} />
                   <YAxis
                     type="category"
                     dataKey="name"
-                    stroke="#71717a"
+                    stroke="#8a8a8a"
                     fontSize={12}
                     width={80}
                   />
                   <Tooltip
                     contentStyle={{
-                      backgroundColor: "#fff",
-                      border: "1px solid #e4e4e7",
-                      borderRadius: "8px"
+                      backgroundColor: "#2d2d30",
+                      border: "1px solid #3d3d40",
+                      borderRadius: "8px",
+                      color: "#fff"
                     }}
                   />
                   <Bar dataKey="value" radius={[0, 4, 4, 0]}>
@@ -259,7 +260,7 @@ export default function Dashboard() {
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-[300px] flex items-center justify-center text-zinc-400">
+              <div className="h-[300px] flex items-center justify-center text-[#6b6b6b]">
                 No hay datos disponibles. Carga datos de demo.
               </div>
             )}
@@ -267,9 +268,9 @@ export default function Dashboard() {
         </Card>
 
         {/* Source Chart */}
-        <Card className="border border-zinc-100 shadow-sm">
-          <CardHeader className="border-b border-zinc-100">
-            <CardTitle className="text-lg font-semibold text-zinc-900 font-['Manrope']">
+        <Card className="bg-[#2d2d30] border-[#3d3d40] shadow-lg">
+          <CardHeader className="border-b border-[#3d3d40]">
+            <CardTitle className="text-lg font-semibold text-white font-['Manrope']">
               Leads por Fuente
             </CardTitle>
           </CardHeader>
