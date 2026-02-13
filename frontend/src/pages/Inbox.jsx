@@ -415,56 +415,56 @@ export default function Inbox() {
 
             {/* AI Suggestion Panel */}
             {aiSuggestion && (
-              <div className="p-4 bg-gradient-to-r from-purple-50 to-blue-50 border-b border-zinc-200">
+              <div className="p-4 bg-gradient-to-r from-purple-900/30 to-blue-900/30 border-b border-[#3d3d40]">
                 <div className="flex items-start gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center">
-                    <Bot className="w-4 h-4 text-purple-600" />
+                  <div className="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center">
+                    <Bot className="w-4 h-4 text-purple-400" />
                   </div>
                   <div className="flex-1">
-                    <p className="font-medium text-zinc-900 text-sm">
+                    <p className="font-medium text-white text-sm">
                       Análisis de IA
                     </p>
                     <div className="mt-2 grid grid-cols-3 gap-2 text-xs">
-                      <div className="bg-white rounded-lg p-2 border border-zinc-200">
-                        <span className="text-zinc-500">Intención:</span>
-                        <Badge className="ml-1 capitalize">
+                      <div className="bg-[#2d2d30] rounded-lg p-2 border border-[#3d3d40]">
+                        <span className="text-[#8a8a8a]">Intención:</span>
+                        <Badge className="ml-1 capitalize bg-purple-500/20 text-purple-300">
                           {aiSuggestion.intent}
                         </Badge>
                       </div>
-                      <div className="bg-white rounded-lg p-2 border border-zinc-200">
-                        <span className="text-zinc-500">Clasificación:</span>
+                      <div className="bg-[#2d2d30] rounded-lg p-2 border border-[#3d3d40]">
+                        <span className="text-[#8a8a8a]">Clasificación:</span>
                         <Badge
                           className={`ml-1 capitalize ${
                             aiSuggestion.lead_classification === "caliente"
-                              ? "bg-red-100 text-red-700"
+                              ? "bg-red-500/20 text-red-300"
                               : aiSuggestion.lead_classification === "tibio"
-                              ? "bg-orange-100 text-orange-700"
-                              : "bg-cyan-100 text-cyan-700"
+                              ? "bg-orange-500/20 text-orange-300"
+                              : "bg-cyan-500/20 text-cyan-300"
                           }`}
                         >
                           {aiSuggestion.lead_classification}
                         </Badge>
                       </div>
-                      <div className="bg-white rounded-lg p-2 border border-zinc-200">
-                        <span className="text-zinc-500">Productos:</span>
-                        <span className="ml-1 text-zinc-900">
+                      <div className="bg-[#2d2d30] rounded-lg p-2 border border-[#3d3d40]">
+                        <span className="text-[#8a8a8a]">Productos:</span>
+                        <span className="ml-1 text-white">
                           {aiSuggestion.suggested_products?.length || 0}
                         </span>
                       </div>
                     </div>
                     {aiSuggestion.suggested_response && (
-                      <div className="mt-2 p-2 bg-white rounded-lg border border-zinc-200">
-                        <p className="text-xs text-zinc-500 mb-1">
+                      <div className="mt-2 p-2 bg-[#2d2d30] rounded-lg border border-[#3d3d40]">
+                        <p className="text-xs text-[#8a8a8a] mb-1">
                           Respuesta sugerida:
                         </p>
-                        <p className="text-sm text-zinc-700">
+                        <p className="text-sm text-white">
                           {aiSuggestion.suggested_response}
                         </p>
                         <Button
                           size="sm"
                           variant="outline"
                           onClick={useSuggestedResponse}
-                          className="mt-2"
+                          className="mt-2 border-[#3d3d40] text-white hover:bg-[#3d3d40]"
                           data-testid="use-suggestion-btn"
                         >
                           Usar esta respuesta
@@ -477,7 +477,7 @@ export default function Inbox() {
             )}
 
             {/* Messages */}
-            <ScrollArea className="flex-1 p-4 chat-container">
+            <ScrollArea className="flex-1 p-4 chat-container bg-[#232326]">
               <div className="space-y-4">
                 {messages.map((msg) => (
                   <div
