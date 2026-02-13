@@ -147,7 +147,7 @@ async def format_catalog_message(products: List[Dict], category_name: str = "") 
     for i, p in enumerate(products, 1):
         code = p.get("code", "S/C")
         name = p.get("name", "Producto")
-        desc = p.get("description", "")
+        desc = p.get("description") or ""
         desc_short = f" - {desc[:60]}" if desc else ""
         lines.append(f"{i}. Codigo: {code}")
         lines.append(f"   {name}{desc_short}")
