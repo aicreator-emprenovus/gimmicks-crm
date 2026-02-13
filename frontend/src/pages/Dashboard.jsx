@@ -32,12 +32,12 @@ const FUNNEL_COLORS = {
   lead: "#3b82f6",
   pedido: "#eab308",
   produccion: "#a855f7",
-  entregado: "#10b981",
+  entregado: "#7BA899",
   perdido: "#ef4444",
-  cierre: "#22c55e"
+  cierre: "#5E8A7A"
 };
 
-const SOURCE_COLORS = ["#10b981", "#3b82f6", "#f59e0b", "#8b5cf6", "#ec4899"];
+const SOURCE_COLORS = ["#7BA899", "#3b82f6", "#f59e0b", "#8b5cf6", "#ec4899"];
 
 export default function Dashboard() {
   const { getAuthHeaders } = useAuth();
@@ -95,21 +95,21 @@ export default function Dashboard() {
 
   if (loading) {
     return (
-      <div className="p-6 flex items-center justify-center min-h-[400px] bg-[#1a1a1d]">
-        <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
+      <div className="p-6 flex items-center justify-center min-h-[400px]">
+        <Loader2 className="w-8 h-8 animate-spin text-[#7BA899]" />
       </div>
     );
   }
 
   return (
-    <div className="p-6 space-y-6 bg-[#1a1a1d] min-h-screen" data-testid="dashboard-page">
+    <div className="p-6 space-y-6 min-h-screen" data-testid="dashboard-page">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white font-['Manrope']">
+          <h1 className="text-2xl font-bold text-gray-800 font-['Manrope']">
             Dashboard
           </h1>
-          <p className="text-[#8a8a8a] text-sm">
+          <p className="text-gray-500 text-sm">
             Vista general del CRM WhatsApp
           </p>
         </div>
@@ -118,7 +118,7 @@ export default function Dashboard() {
             variant="outline"
             size="sm"
             onClick={fetchMetrics}
-            className="gap-2 border-[#3d3d40] text-[#8a8a8a] hover:text-white hover:bg-[#2d2d30]"
+            className="gap-2 border-gray-300 text-gray-600 hover:text-gray-800 hover:bg-gray-100"
             data-testid="refresh-metrics-btn"
           >
             <RefreshCw size={16} />
@@ -128,7 +128,7 @@ export default function Dashboard() {
             size="sm"
             onClick={seedDemoData}
             disabled={seeding}
-            className="bg-emerald-500 hover:bg-emerald-600 gap-2"
+            className="bg-[#7BA899] hover:bg-[#6A9688] gap-2 text-white"
             data-testid="seed-demo-btn"
           >
             {seeding ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
@@ -139,84 +139,84 @@ export default function Dashboard() {
 
       {/* Metric Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="bg-[#2d2d30] border-[#3d3d40] shadow-lg hover:shadow-xl transition-shadow">
+        <Card className="bg-white border-gray-200 shadow-sm hover:shadow-md transition-shadow">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-[#8a8a8a]">Total Leads</p>
-                <p className="text-3xl font-bold text-white font-['Manrope']">
+                <p className="text-sm text-gray-500">Total Leads</p>
+                <p className="text-3xl font-bold text-gray-800 font-['Manrope']">
                   {metrics?.total_leads || 0}
                 </p>
               </div>
-              <div className="w-12 h-12 bg-blue-500/20 rounded-xl flex items-center justify-center">
-                <Users className="w-6 h-6 text-blue-400" />
+              <div className="w-12 h-12 bg-[#7BA899]/15 rounded-xl flex items-center justify-center">
+                <Users className="w-6 h-6 text-[#7BA899]" />
               </div>
             </div>
             <div className="mt-4 flex items-center gap-1 text-sm">
-              <ArrowUpRight className="w-4 h-4 text-emerald-400" />
-              <span className="text-emerald-400 font-medium">
+              <ArrowUpRight className="w-4 h-4 text-[#7BA899]" />
+              <span className="text-[#7BA899] font-medium">
                 +{metrics?.leads_today || 0}
               </span>
-              <span className="text-[#6b6b6b]">hoy</span>
+              <span className="text-gray-400">hoy</span>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-[#2d2d30] border-[#3d3d40] shadow-lg hover:shadow-xl transition-shadow">
+        <Card className="bg-white border-gray-200 shadow-sm hover:shadow-md transition-shadow">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-[#8a8a8a]">Mensajes Hoy</p>
-                <p className="text-3xl font-bold text-white font-['Manrope']">
+                <p className="text-sm text-gray-500">Mensajes Hoy</p>
+                <p className="text-3xl font-bold text-gray-800 font-['Manrope']">
                   {metrics?.messages_today || 0}
                 </p>
               </div>
-              <div className="w-12 h-12 bg-emerald-500/20 rounded-xl flex items-center justify-center">
-                <MessageSquare className="w-6 h-6 text-emerald-400" />
+              <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center">
+                <MessageSquare className="w-6 h-6 text-blue-500" />
               </div>
             </div>
             <div className="mt-4 flex items-center gap-1 text-sm">
-              <span className="text-[#6b6b6b]">
+              <span className="text-gray-400">
                 {metrics?.active_conversations || 0} conversaciones activas
               </span>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-[#2d2d30] border-[#3d3d40] shadow-lg hover:shadow-xl transition-shadow">
+        <Card className="bg-white border-gray-200 shadow-sm hover:shadow-md transition-shadow">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-[#8a8a8a]">Tasa Conversión</p>
-                <p className="text-3xl font-bold text-white font-['Manrope']">
+                <p className="text-sm text-gray-500">Tasa Conversión</p>
+                <p className="text-3xl font-bold text-gray-800 font-['Manrope']">
                   {metrics?.conversion_rate || 0}%
                 </p>
               </div>
-              <div className="w-12 h-12 bg-purple-500/20 rounded-xl flex items-center justify-center">
-                <TrendingUp className="w-6 h-6 text-purple-400" />
+              <div className="w-12 h-12 bg-purple-50 rounded-xl flex items-center justify-center">
+                <TrendingUp className="w-6 h-6 text-purple-500" />
               </div>
             </div>
             <div className="mt-4 flex items-center gap-1 text-sm">
-              <span className="text-[#6b6b6b]">Leads convertidos a cierre</span>
+              <span className="text-gray-400">Leads convertidos a cierre</span>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-[#2d2d30] border-[#3d3d40] shadow-lg hover:shadow-xl transition-shadow">
+        <Card className="bg-white border-gray-200 shadow-sm hover:shadow-md transition-shadow">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-[#8a8a8a]">Tiempo Respuesta</p>
-                <p className="text-3xl font-bold text-white font-['Manrope']">
+                <p className="text-sm text-gray-500">Tiempo Respuesta</p>
+                <p className="text-3xl font-bold text-gray-800 font-['Manrope']">
                   {metrics?.avg_response_time || 0}m
                 </p>
               </div>
-              <div className="w-12 h-12 bg-orange-500/20 rounded-xl flex items-center justify-center">
-                <Clock className="w-6 h-6 text-orange-400" />
+              <div className="w-12 h-12 bg-orange-50 rounded-xl flex items-center justify-center">
+                <Clock className="w-6 h-6 text-orange-500" />
               </div>
             </div>
             <div className="mt-4 flex items-center gap-1 text-sm">
-              <span className="text-[#6b6b6b]">Promedio de respuesta</span>
+              <span className="text-gray-400">Promedio de respuesta</span>
             </div>
           </CardContent>
         </Card>
@@ -225,9 +225,9 @@ export default function Dashboard() {
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Funnel Chart */}
-        <Card className="bg-[#2d2d30] border-[#3d3d40] shadow-lg">
-          <CardHeader className="border-b border-[#3d3d40]">
-            <CardTitle className="text-lg font-semibold text-white font-['Manrope']">
+        <Card className="bg-white border-gray-200 shadow-sm">
+          <CardHeader className="border-b border-gray-100">
+            <CardTitle className="text-lg font-semibold text-gray-800 font-['Manrope']">
               Leads por Etapa del Funnel
             </CardTitle>
           </CardHeader>
@@ -235,21 +235,21 @@ export default function Dashboard() {
             {funnelData.length > 0 ? (
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={funnelData} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" stroke="#3d3d40" />
-                  <XAxis type="number" stroke="#8a8a8a" fontSize={12} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis type="number" stroke="#9ca3af" fontSize={12} />
                   <YAxis
                     type="category"
                     dataKey="name"
-                    stroke="#8a8a8a"
+                    stroke="#9ca3af"
                     fontSize={12}
                     width={80}
                   />
                   <Tooltip
                     contentStyle={{
-                      backgroundColor: "#2d2d30",
-                      border: "1px solid #3d3d40",
+                      backgroundColor: "#fff",
+                      border: "1px solid #e5e7eb",
                       borderRadius: "8px",
-                      color: "#fff"
+                      color: "#374151"
                     }}
                   />
                   <Bar dataKey="value" radius={[0, 4, 4, 0]}>
@@ -260,7 +260,7 @@ export default function Dashboard() {
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-[300px] flex items-center justify-center text-[#6b6b6b]">
+              <div className="h-[300px] flex items-center justify-center text-gray-400">
                 No hay datos disponibles. Carga datos de demo.
               </div>
             )}
@@ -268,9 +268,9 @@ export default function Dashboard() {
         </Card>
 
         {/* Source Chart */}
-        <Card className="bg-[#2d2d30] border-[#3d3d40] shadow-lg">
-          <CardHeader className="border-b border-[#3d3d40]">
-            <CardTitle className="text-lg font-semibold text-white font-['Manrope']">
+        <Card className="bg-white border-gray-200 shadow-sm">
+          <CardHeader className="border-b border-gray-100">
+            <CardTitle className="text-lg font-semibold text-gray-800 font-['Manrope']">
               Leads por Fuente
             </CardTitle>
           </CardHeader>
@@ -295,10 +295,10 @@ export default function Dashboard() {
                     </Pie>
                     <Tooltip
                       contentStyle={{
-                        backgroundColor: "#2d2d30",
-                        border: "1px solid #3d3d40",
+                        backgroundColor: "#fff",
+                        border: "1px solid #e5e7eb",
                         borderRadius: "8px",
-                        color: "#fff"
+                        color: "#374151"
                       }}
                     />
                   </PieChart>
@@ -310,8 +310,8 @@ export default function Dashboard() {
                         className="w-3 h-3 rounded-full"
                         style={{ backgroundColor: item.fill }}
                       />
-                      <span className="text-sm text-[#8a8a8a]">{item.name}</span>
-                      <span className="text-sm font-medium text-white ml-auto">
+                      <span className="text-sm text-gray-500">{item.name}</span>
+                      <span className="text-sm font-medium text-gray-800 ml-auto">
                         {item.value}
                       </span>
                     </div>
@@ -319,7 +319,7 @@ export default function Dashboard() {
                 </div>
               </div>
             ) : (
-              <div className="h-[300px] flex items-center justify-center text-[#6b6b6b]">
+              <div className="h-[300px] flex items-center justify-center text-gray-400">
                 No hay datos disponibles. Carga datos de demo.
               </div>
             )}
