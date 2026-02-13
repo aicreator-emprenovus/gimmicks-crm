@@ -248,31 +248,31 @@ export default function Inbox() {
   };
 
   return (
-    <div className="flex h-[calc(100vh-6rem)]" data-testid="inbox-page">
+    <div className="flex h-screen bg-[#1a1a1d]" data-testid="inbox-page">
       {/* Conversations List */}
-      <div className="w-80 border-r border-zinc-200 flex flex-col">
-        <div className="p-4 border-b border-zinc-200">
+      <div className="w-80 border-r border-[#2d2d30] flex flex-col bg-[#1a1a1d]">
+        <div className="p-4 border-b border-[#2d2d30]">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-lg font-semibold text-zinc-900 font-['Manrope']">
+            <h2 className="text-lg font-semibold text-white font-['Manrope']">
               Inbox
             </h2>
             <Button
               variant={filterStarred ? "default" : "ghost"}
               size="sm"
               onClick={() => setFilterStarred(!filterStarred)}
-              className={filterStarred ? "bg-amber-500 hover:bg-amber-600" : "text-zinc-500"}
+              className={filterStarred ? "bg-amber-500 hover:bg-amber-600" : "text-[#8a8a8a] hover:text-white hover:bg-[#2d2d30]"}
               data-testid="filter-starred-btn"
             >
               <Star className={`w-4 h-4 ${filterStarred ? "fill-white" : ""}`} />
             </Button>
           </div>
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6b6b6b]" />
             <Input
               placeholder="Buscar conversación..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9 bg-zinc-50 text-zinc-900 border-zinc-200 placeholder:text-zinc-400"
+              className="pl-9 bg-[#2d2d30] text-white border-[#3d3d40] placeholder:text-[#6b6b6b]"
               data-testid="search-conversations"
             />
           </div>
@@ -284,7 +284,7 @@ export default function Inbox() {
               <Loader2 className="w-6 h-6 animate-spin mx-auto text-emerald-500" />
             </div>
           ) : filteredConversations.length === 0 ? (
-            <div className="p-4 text-center text-zinc-400">
+            <div className="p-4 text-center text-[#6b6b6b]">
               <MessageSquare className="w-12 h-12 mx-auto mb-2 opacity-50" />
               <p>{filterStarred ? "No hay conversaciones guardadas" : "No hay conversaciones"}</p>
             </div>
