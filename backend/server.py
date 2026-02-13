@@ -576,34 +576,7 @@ async def get_leads(
     
     leads = await db.leads.find(query, {"_id": 0}).sort("updated_at", -1).skip(skip).limit(limit).to_list(limit)
     
-    result = []
-    for lead in leads:
-        created_at = lead.get("created_at")
-        updated_at = lead.get("updated_at")
-        last_message_at = lead.get("last_message_at")
-        
-        if isinstance(created_at, str):
-            created_at = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
-        if isinstance(updated_at, str):
-            updated_at = datetime.fromisoformat(updated_at.replace('Z', '+00:00'))
-        if isinstance(last_message_at, str):
-            last_message_at = datetime.fromisoformat(last_message_at.replace('Z', '+00:00'))
-        
-        result.append(LeadResponse(
-            id=lead["id"],
-            phone_number=lead["phone_number"],
-            name=lead.get("name"),
-            source=lead.get("source", "whatsapp"),
-            status=lead.get("status", "active"),
-            funnel_stage=lead.get("funnel_stage", "lead"),
-            classification=lead.get("classification", "frio"),
-            notes=lead.get("notes"),
-            created_at=created_at,
-            updated_at=updated_at,
-            last_message_at=last_message_at
-        ))
-    
-    return result
+    return [build_lead_response(lead) for lead in leads]
 
 @api_router.get("/leads/{lead_id}", response_model=LeadResponse)
 async def get_lead(lead_id: str, current_user: dict = Depends(get_current_user)):
