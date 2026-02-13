@@ -6,26 +6,26 @@
 
 @layer base {
     :root {
-        --background: 240 10% 4%;
-        --foreground: 0 0% 98%;
+        --background: 0 0% 100%;
+        --foreground: 224 10% 15%;
         --card: 0 0% 100%;
-        --card-foreground: 240 10% 4%;
+        --card-foreground: 224 10% 15%;
         --popover: 0 0% 100%;
-        --popover-foreground: 240 10% 4%;
-        --primary: 160 84% 39%;
+        --popover-foreground: 224 10% 15%;
+        --primary: 160 20% 57%;
         --primary-foreground: 0 0% 100%;
-        --secondary: 240 4% 16%;
-        --secondary-foreground: 0 0% 98%;
-        --muted: 240 4% 96%;
-        --muted-foreground: 240 4% 46%;
-        --accent: 160 84% 39%;
+        --secondary: 220 13% 95%;
+        --secondary-foreground: 224 10% 15%;
+        --muted: 220 13% 95%;
+        --muted-foreground: 220 9% 46%;
+        --accent: 160 20% 57%;
         --accent-foreground: 0 0% 100%;
         --destructive: 0 84% 60%;
         --destructive-foreground: 0 0% 98%;
-        --border: 240 6% 90%;
-        --input: 240 6% 90%;
-        --ring: 160 84% 39%;
-        --chart-1: 160 84% 39%;
+        --border: 220 13% 90%;
+        --input: 220 13% 90%;
+        --ring: 160 20% 57%;
+        --chart-1: 160 20% 57%;
         --chart-2: 173 58% 39%;
         --chart-3: 197 37% 24%;
         --chart-4: 43 74% 66%;
@@ -42,7 +42,7 @@
         @apply border-border;
     }
     body {
-        @apply bg-[#09090b] text-foreground;
+        @apply bg-[#f5f6f8] text-foreground;
         font-family: 'Inter', sans-serif;
     }
     h1, h2, h3, h4, h5, h6 {
@@ -50,32 +50,41 @@
     }
 }
 
-/* Custom scrollbar */
+/* Custom scrollbar - light theme */
 ::-webkit-scrollbar {
     width: 6px;
     height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-    background: #18181b;
+    background: #f1f1f1;
 }
 
 ::-webkit-scrollbar-thumb {
-    background: #3f3f46;
+    background: #c4c4c4;
     border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: #52525b;
+    background: #a0a0a0;
 }
 
-/* Chat message bubbles */
+/* Chat message bubbles - light theme */
+.msg-bubble-sent {
+    @apply bg-[#7BA899] text-white rounded-2xl rounded-br-md px-4 py-2;
+}
+
+.msg-bubble-received {
+    @apply bg-white text-gray-800 rounded-2xl rounded-bl-md px-4 py-2 border border-gray-200 shadow-sm;
+}
+
+/* Legacy bubbles for backwards compatibility */
 .message-bubble-user {
-    @apply bg-emerald-500 text-white rounded-2xl rounded-br-md px-4 py-2;
+    @apply bg-[#7BA899] text-white rounded-2xl rounded-br-md px-4 py-2;
 }
 
 .message-bubble-business {
-    @apply bg-[#2d2d30] text-white rounded-2xl rounded-bl-md px-4 py-2 border border-[#3d3d40];
+    @apply bg-white text-gray-800 rounded-2xl rounded-bl-md px-4 py-2 border border-gray-200 shadow-sm;
 }
 
 /* Floating card effect */
@@ -142,23 +151,29 @@
 
 /* Input focus states */
 input:focus, textarea:focus, select:focus {
-    @apply ring-2 ring-emerald-500 border-transparent;
+    @apply ring-2 ring-[#7BA899] border-transparent;
 }
 
 /* Button hover effects */
 .btn-primary {
-    @apply bg-emerald-500 hover:bg-emerald-600 text-white transition-all duration-200 active:scale-95;
+    @apply bg-[#7BA899] hover:bg-[#6A9688] text-white transition-all duration-200 active:scale-95;
 }
 
 /* Sidebar active state */
 .sidebar-item-active {
-    @apply bg-zinc-800 text-white border-l-2 border-emerald-500;
+    @apply bg-zinc-800 text-white border-l-2 border-[#7BA899];
 }
 
-/* WhatsApp-like chat interface */
+/* WhatsApp-like chat interface - light theme */
+.chat-container-light {
+    background-color: #f0f2f5;
+    background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000000' fill-opacity='0.02'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+}
+
+/* Keep dark chat container for legacy */
 .chat-container {
-    background-color: #232326;
-    background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.02'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    background-color: #f0f2f5;
+    background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000000' fill-opacity='0.02'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
 }
 
 @layer base {
