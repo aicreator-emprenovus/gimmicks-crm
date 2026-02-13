@@ -295,9 +295,10 @@ export default function Dashboard() {
                     </Pie>
                     <Tooltip
                       contentStyle={{
-                        backgroundColor: "#fff",
-                        border: "1px solid #e4e4e7",
-                        borderRadius: "8px"
+                        backgroundColor: "#2d2d30",
+                        border: "1px solid #3d3d40",
+                        borderRadius: "8px",
+                        color: "#fff"
                       }}
                     />
                   </PieChart>
@@ -309,8 +310,8 @@ export default function Dashboard() {
                         className="w-3 h-3 rounded-full"
                         style={{ backgroundColor: item.fill }}
                       />
-                      <span className="text-sm text-zinc-600">{item.name}</span>
-                      <span className="text-sm font-medium text-zinc-900 ml-auto">
+                      <span className="text-sm text-[#8a8a8a]">{item.name}</span>
+                      <span className="text-sm font-medium text-white ml-auto">
                         {item.value}
                       </span>
                     </div>
@@ -318,7 +319,7 @@ export default function Dashboard() {
                 </div>
               </div>
             ) : (
-              <div className="h-[300px] flex items-center justify-center text-zinc-400">
+              <div className="h-[300px] flex items-center justify-center text-[#6b6b6b]">
                 No hay datos disponibles. Carga datos de demo.
               </div>
             )}
