@@ -209,7 +209,8 @@ class TestLeadsPipelineStages:
         assert response.status_code == 200
         leads = response.json()
         
-        valid_stages = ["lead", "cliente_potencial", "cotizacion_generada", "pedido", "perdido"]
+        # New 5 stages + legacy stages (qualified, cierre) that may exist in old data
+        valid_stages = ["lead", "cliente_potencial", "cotizacion_generada", "pedido", "perdido", "qualified", "cierre"]
         
         for lead in leads:
             assert "funnel_stage" in lead
