@@ -514,7 +514,7 @@ export default function Inbox() {
             {/* Message Input */}
             <form
               onSubmit={sendMessage}
-              className="p-4 border-t border-zinc-200 flex gap-2"
+              className="p-4 border-t border-[#2d2d30] flex gap-2 bg-[#1a1a1d]"
             >
               <Input
                 value={newMessage}
