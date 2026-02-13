@@ -528,7 +528,7 @@ def build_lead_response(lead: dict) -> LeadResponse:
 
 # ============== LEADS ROUTES ==============
 
-FUNNEL_STAGES = ["lead", "pedido", "produccion", "entregado", "perdido", "cierre"]
+FUNNEL_STAGES = ["lead", "cliente_potencial", "cotizacion_generada", "pedido", "perdido"]
 LEAD_CLASSIFICATIONS = ["frio", "tibio", "caliente"]
 
 @api_router.post("/leads", response_model=LeadResponse)
