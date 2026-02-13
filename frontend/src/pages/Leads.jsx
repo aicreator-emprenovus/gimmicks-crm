@@ -220,7 +220,7 @@ export default function Leads() {
         <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
           <DialogTrigger asChild>
             <Button
-              className="bg-emerald-500 hover:bg-emerald-600 gap-2"
+              className="bg-[#7BA899] hover:bg-[#6A9688] gap-2 text-white"
               data-testid="create-lead-btn"
             >
               <Plus size={18} />
@@ -277,7 +277,7 @@ export default function Leads() {
               </div>
               <Button
                 onClick={createLead}
-                className="w-full bg-emerald-500 hover:bg-emerald-600"
+                className="w-full bg-[#7BA899] hover:bg-[#6A9688] text-white"
                 data-testid="submit-lead-btn"
               >
                 Crear Lead
@@ -350,7 +350,7 @@ export default function Leads() {
                       <CardContent className="p-3 space-y-2">
                         <div className="flex items-start justify-between">
                           <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center text-white text-sm font-medium">
+                            <div className="w-8 h-8 rounded-full bg-[#7BA899] flex items-center justify-center text-white text-sm font-medium">
                               {lead.name?.charAt(0)?.toUpperCase() || "?"}
                             </div>
                             <div>
