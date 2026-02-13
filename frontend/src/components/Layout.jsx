@@ -10,25 +10,29 @@ import {
   Menu,
   X,
   UserCog,
-  Shield
+  FileText,
+  ShoppingCart,
+  Users2,
+  FilePlus,
+  ClipboardList
 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { Badge } from "@/components/ui/badge";
 
-const adminNavItems = [
-  { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard", roles: ["admin"] },
+const navItems = [
+  { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard", roles: ["admin", "asesor"] },
   { to: "/inbox", icon: MessageSquare, label: "Inbox", roles: ["admin", "asesor"] },
-  { to: "/leads", icon: Users, label: "Leads", roles: ["admin"] },
+  { to: "/users", icon: Users, label: "Usuarios", roles: ["admin"] },
   { to: "/inventory", icon: Package, label: "Inventario", roles: ["admin", "asesor"] },
-  { to: "/users", icon: UserCog, label: "Usuarios", roles: ["admin"] },
+  { to: "/leads", icon: Users2, label: "Clientes", roles: ["admin", "asesor"] },
+  { to: "/quotes", icon: FileText, label: "Cotizaciones", roles: ["admin", "asesor"] },
+  { to: "/orders", icon: ShoppingCart, label: "Órdenes de Compra", roles: ["admin"] },
   { to: "/settings", icon: Settings, label: "Configuración", roles: ["admin"] },
+];
+
+const quickActions = [
+  { to: "/quotes/new", icon: FilePlus, label: "Nueva Cotización" },
+  { to: "/orders/new", icon: ClipboardList, label: "Nueva Orden" },
 ];
 
 export default function Layout() {
@@ -42,17 +46,17 @@ export default function Layout() {
   };
 
   // Filter nav items based on user role
-  const navItems = adminNavItems.filter(item => 
+  const filteredNavItems = navItems.filter(item => 
     item.roles.includes(user?.role || "asesor")
   );
 
   const isAdmin = user?.role === "admin";
 
   return (
-    <div className="min-h-screen bg-[#09090b] flex">
+    <div className="min-h-screen bg-[#1a1a1d] flex">
       {/* Mobile menu button */}
       <button
-        className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-zinc-800 rounded-lg text-white"
+        className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-[#2d2d30] rounded-lg text-white"
         onClick={() => setSidebarOpen(!sidebarOpen)}
         data-testid="mobile-menu-btn"
       >
@@ -61,95 +65,91 @@ export default function Layout() {
 
       {/* Sidebar */}
       <aside
-        className={`fixed lg:static inset-y-0 left-0 z-40 w-64 lg:w-20 bg-[#09090b] border-r border-zinc-800 transform transition-transform duration-200 ease-in-out ${
+        className={`fixed lg:static inset-y-0 left-0 z-40 w-72 bg-[#1a1a1d] border-r border-[#2d2d30] transform transition-transform duration-200 ease-in-out ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         }`}
       >
         <div className="flex flex-col h-full">
           {/* Logo */}
-          <div className="p-4 border-b border-zinc-800">
+          <div className="p-6 border-b border-[#2d2d30]">
             <img
               src="https://customer-assets.emergentagent.com/job_quote-crafter-1/artifacts/ee7e6zy2_logo-gimmicks.png"
               alt="Gimmicks"
-              className="h-10 mx-auto"
+              className="h-12 mx-auto"
               data-testid="sidebar-logo"
             />
+            <p className="text-center text-[#6b6b6b] text-xs mt-1 tracking-wider">MARKETING SERVICES</p>
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 py-4">
-            <TooltipProvider>
-              <ul className="space-y-2 px-2">
-                {navItems.map((item) => (
-                  <li key={item.to}>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <NavLink
-                          to={item.to}
-                          onClick={() => setSidebarOpen(false)}
-                          className={({ isActive }) =>
-                            `flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200 ${
-                              isActive
-                                ? "bg-zinc-800 text-white border-l-2 border-emerald-500"
-                                : "text-zinc-400 hover:text-white hover:bg-zinc-800/50"
-                            }`
-                          }
-                          data-testid={`nav-${item.label.toLowerCase()}`}
-                        >
-                          <item.icon size={22} />
-                          <span className="lg:hidden">{item.label}</span>
-                        </NavLink>
-                      </TooltipTrigger>
-                      <TooltipContent side="right" className="hidden lg:block">
-                        {item.label}
-                      </TooltipContent>
-                    </Tooltip>
-                  </li>
+          <nav className="flex-1 py-6 overflow-y-auto">
+            <ul className="space-y-1 px-4">
+              {filteredNavItems.map((item) => (
+                <li key={item.to}>
+                  <NavLink
+                    to={item.to}
+                    onClick={() => setSidebarOpen(false)}
+                    className={({ isActive }) =>
+                      `flex items-center gap-4 px-4 py-3 rounded-xl transition-all duration-200 group ${
+                        isActive
+                          ? "bg-gradient-to-r from-[#2d2d30] to-[#3d3d40] text-white border-l-4 border-emerald-400"
+                          : "text-[#8a8a8a] hover:text-white hover:bg-[#2d2d30]/50"
+                      }`
+                    }
+                    data-testid={`nav-${item.label.toLowerCase().replace(/\s+/g, '-')}`}
+                  >
+                    <item.icon size={20} className="flex-shrink-0" />
+                    <span className="font-medium text-sm">{item.label}</span>
+                  </NavLink>
+                </li>
+              ))}
+            </ul>
+
+            {/* Quick Actions */}
+            {isAdmin && (
+              <div className="mt-8 px-4 space-y-2">
+                {quickActions.map((action) => (
+                  <NavLink
+                    key={action.to}
+                    to={action.to}
+                    onClick={() => setSidebarOpen(false)}
+                    className="flex items-center gap-3 px-4 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-medium text-sm hover:from-emerald-600 hover:to-emerald-700 transition-all duration-200 shadow-lg shadow-emerald-500/20"
+                  >
+                    <action.icon size={18} />
+                    <span>{action.label}</span>
+                  </NavLink>
                 ))}
-              </ul>
-            </TooltipProvider>
+              </div>
+            )}
           </nav>
 
           {/* User section */}
-          <div className="p-4 border-t border-zinc-800">
-            <div className="flex items-center gap-3 mb-3 lg:justify-center">
-              <div className="w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center text-white font-semibold">
-                {user?.name?.charAt(0)?.toUpperCase() || "U"}
+          <div className="p-4 border-t border-[#2d2d30]">
+            <div className="flex items-center gap-3 p-3 rounded-xl bg-[#2d2d30]/50">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-white font-bold text-lg shadow-lg">
+                {user?.name?.charAt(0)?.toUpperCase() || "A"}
               </div>
-              <div className="lg:hidden">
-                <p className="text-white text-sm font-medium truncate">{user?.name}</p>
-                <div className="flex items-center gap-1">
-                  {isAdmin ? (
-                    <Badge className="bg-purple-500/20 text-purple-300 text-xs border-0">
-                      <Shield className="w-3 h-3 mr-1" />
-                      Admin
-                    </Badge>
-                  ) : (
-                    <Badge className="bg-blue-500/20 text-blue-300 text-xs border-0">
-                      Asesor
-                    </Badge>
-                  )}
-                </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-white text-sm font-semibold truncate">
+                  {user?.name || "Admin Demo"}
+                </p>
+                <p className="text-[#6b6b6b] text-xs truncate">
+                  {user?.email || "demo@gimmicks.com"}
+                </p>
+                <p className="text-emerald-400 text-xs font-medium">
+                  {isAdmin ? "Administrador" : "Asesor"}
+                </p>
               </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleLogout}
+                className="text-[#6b6b6b] hover:text-white hover:bg-[#3d3d40] rounded-lg"
+                data-testid="logout-btn"
+              >
+                <LogOut size={18} />
+              </Button>
             </div>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    onClick={handleLogout}
-                    className="w-full text-zinc-400 hover:text-white hover:bg-zinc-800 justify-center lg:justify-center"
-                    data-testid="logout-btn"
-                  >
-                    <LogOut size={20} />
-                    <span className="lg:hidden ml-2">Cerrar Sesión</span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="right" className="hidden lg:block">
-                  Cerrar Sesión
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
           </div>
         </div>
       </aside>
@@ -157,14 +157,14 @@ export default function Layout() {
       {/* Overlay for mobile */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-30 lg:hidden"
+          className="fixed inset-0 bg-black/60 z-30 lg:hidden backdrop-blur-sm"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
       {/* Main content */}
-      <main className="flex-1 p-4 lg:p-6 overflow-auto">
-        <div className="bg-white rounded-xl min-h-[calc(100vh-3rem)] shadow-xl animate-fade-in">
+      <main className="flex-1 overflow-auto bg-[#1a1a1d]">
+        <div className="min-h-screen">
           <Outlet />
         </div>
       </main>
