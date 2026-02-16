@@ -66,12 +66,9 @@ export default function PublicCatalog() {
       {/* Header */}
       <header className="bg-[#1a2332] text-white py-4 px-4 sticky top-0 z-10">
         <div className="max-w-6xl mx-auto flex items-center gap-3">
-          <div className="w-8 h-8 bg-[#7BA899] rounded-lg flex items-center justify-center">
-            <Package className="w-5 h-5 text-white" />
-          </div>
+          <img src={LOGO_URL} alt="Gimmicks" className="h-10 object-contain" />
           <div>
-            <h1 className="font-bold text-lg leading-tight">Gimmicks</h1>
-            <p className="text-xs text-zinc-400">Productos Promocionales</p>
+            <p className="text-sm text-zinc-300 font-medium">#gimmicks productos promocionales</p>
           </div>
         </div>
       </header>
