@@ -11,6 +11,7 @@ import Inventory from "@/pages/Inventory";
 import Settings from "@/pages/Settings";
 import Users from "@/pages/Users";
 import Quotes from "@/pages/Quotes";
+import PublicCatalog from "@/pages/PublicCatalog";
 import Layout from "@/components/Layout";
 
 // Auth Context
