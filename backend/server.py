@@ -2632,7 +2632,7 @@ async def run_followup_check():
             conv = await db.conversations.find_one({"phone_number": phone}, {"_id": 0, "id": 1})
             if conv:
                 try:
-                    await send_whatsapp_message(phone, "Hola! Solo para saber si pudiste revisar la info que te envie. Si quieres te ayudo con la cotizacion.")
+                    await send_whatsapp_message(phone, "Hola, solo para saber si pudiste revisar la información que te envié. Si quieres te ayudo con la cotización.")
                     
                     now_iso = now.isoformat()
                     msg_doc = {
