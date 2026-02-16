@@ -135,10 +135,13 @@ export default function PublicCatalog() {
                   {product.description && (
                     <p className="text-xs text-zinc-400 mt-1 line-clamp-2">{product.description}</p>
                   )}
-                  <div className="mt-2 inline-block bg-[#7BA899]/10 text-[#7BA899] px-2 py-1 rounded-md">
-                    <span className="text-xs font-bold font-mono" data-testid={`product-code-${product.code}`}>
-                      {product.code}
-                    </span>
+                  <div className="mt-2 flex items-center justify-between gap-2">
+                    <div className="inline-block bg-[#7BA899]/10 text-[#7BA899] px-2 py-1 rounded-md">
+                      <span className="text-xs font-bold font-mono" data-testid={`product-code-${product.code}`}>
+                        {product.code}
+                      </span>
+                    </div>
+                    <CopyCodeButton code={product.code} />
                   </div>
                 </div>
               </div>
