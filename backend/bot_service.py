@@ -364,26 +364,40 @@ async def process_ai_conversation(
                 collected_summary = "Datos recopilados: " + ", ".join(parts)
 
         catalogs_sent = state.get("catalog_sent", [])
-        catalog_info = f"Catalogos ya enviados: {', '.join(catalogs_sent)}" if catalogs_sent else "No se ha enviado catalogo aun."
+        catalog_info = f"Catalogos ya enviados: {', '.join(catalogs_sent)}" if catalogs_sent else ""
 
-        required = ["correo", "cantidad"]
-        needs_product = not collected_data.get("codigos_producto") and not collected_data.get("producto")
-        missing = [f for f in required if not collected_data.get(f)]
-        if needs_product:
-            missing.insert(0, "producto o codigos")
-
-        missing_str = f"Datos que FALTAN: {', '.join(missing)}." if missing else "Tienes todos los datos. Puedes marcar needs_quote=true."
-
-        user_prompt = f"""EJEMPLOS DE PRODUCTOS EN CATALOGO:
-{sample_text}
-
-{catalog_info}
+        # Determine next data to ask - ONE at a time in order
+        has_product = bool(collected_data.get("codigos_producto") or collected_data.get("producto"))
+        ordered_fields = [
+            ("cantidad", "cantidad de unidades"),
+            ("personalizacion", "tipo de personalizacion"),
+            ("correo", "correo electronico"),
+            ("nombre", "nombre"),
+            ("empresa", "empresa"),
+            ("ciudad", "ciudad de entrega"),
+            ("fecha_entrega", "fecha de entrega"),
+        ]
+        
+        next_to_ask = ""
+        all_required_done = False
+        if has_product:
+            for field_key, field_label in ordered_fields:
+                if not collected_data.get(field_key):
+                    next_to_ask = f"SIGUIENTE dato a pedir (solo este, nada mas): {field_label}"
+                    break
+            
+            has_min = collected_data.get("cantidad") and collected_data.get("correo")
+            if has_min and not next_to_ask:
+                all_required_done = True
+                next_to_ask = "Ya tienes todos los datos necesarios. Marca needs_quote=true."
+        
+        user_prompt = f"""{catalog_info}
 
 HISTORIAL:
 {history_text}
 
 {collected_summary}
-{missing_str}
+{next_to_ask}
 
 MENSAJE DEL CLIENTE: {message_text}"""
 
