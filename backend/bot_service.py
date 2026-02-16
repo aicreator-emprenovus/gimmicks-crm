@@ -461,7 +461,7 @@ MENSAJE DEL CLIENTE: {message_text}"""
         # Handle human transfer
         transferred = state.get("transferred_to_human", False)
         if needs_human and not transferred:
-            transfer_msg = "Voy a pasar tu caso a Ana Maria, nuestra asesora. Ella te contactara pronto!"
+            transfer_msg = "Voy a pasar tu caso a Ana María, nuestra asesora. Ella te contactará pronto."
             await send_message_fn(phone_number, conversation_id, transfer_msg)
             transferred = True
 
