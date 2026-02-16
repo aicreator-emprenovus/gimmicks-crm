@@ -1,9 +1,34 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import axios from "axios";
-import { Loader2, Search, Package } from "lucide-react";
+import { Loader2, Search, Package, Copy, Check } from "lucide-react";
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
+const LOGO_URL = "https://customer-assets.emergentagent.com/job_quote-crafter-1/artifacts/ee7e6zy2_logo-gimmicks.png";
+
+function CopyCodeButton({ code }) {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = () => {
+    navigator.clipboard.writeText(code).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    });
+  };
+  return (
+    <button
+      onClick={handleCopy}
+      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+        copied
+          ? "bg-emerald-100 text-emerald-700 border border-emerald-300"
+          : "bg-zinc-100 text-zinc-600 hover:bg-[#7BA899]/10 hover:text-[#7BA899] border border-zinc-200"
+      }`}
+      data-testid={`copy-code-${code}`}
+    >
+      {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+      {copied ? "Copiado" : "Copiar codigo"}
+    </button>
+  );
+}
 
 export default function PublicCatalog() {
   const [searchParams, setSearchParams] = useSearchParams();
