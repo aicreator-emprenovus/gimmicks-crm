@@ -269,9 +269,9 @@ async def create_pending_quote(db: AsyncIOMotorDatabase, phone_number: str, coll
 
     product_names = ", ".join([p["product_name"] for p in product_items[:3]]) if product_items else collected_data.get("producto", "productos solicitados")
     return (
-        f"Listo! Tu solicitud de cotizacion para {product_names} ha sido registrada.\n\n"
-        f"Nuestro equipo la revisara y te la enviaremos a {collected_data.get('correo', 'tu correo')} muy pronto.\n\n"
-        f"Cualquier duda adicional me escribes por aqui."
+        f"Listo, tu solicitud de cotización para {product_names} ha sido registrada.\n\n"
+        f"Nuestro equipo la revisará y te la enviaremos a {collected_data.get('correo', 'tu correo')} muy pronto.\n\n"
+        f"Cualquier duda adicional me escribes por aquí."
     )
 
 
