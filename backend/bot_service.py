@@ -353,10 +353,6 @@ async def process_ai_conversation(
         # Build context
         history_text = await get_conversation_history(db, conversation_id, limit=8)
 
-        # Get a small product sample for AI context
-        sample_products = await db.products.find({}, {"_id": 0, "code": 1, "name": 1}).limit(10).to_list(10)
-        sample_text = "\n".join([f"- {p['code']}: {p['name']}" for p in sample_products])
-
         collected_summary = ""
         if collected_data:
             parts = [f"{k}: {v}" for k, v in collected_data.items() if v]
