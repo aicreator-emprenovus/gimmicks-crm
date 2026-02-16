@@ -49,6 +49,7 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route path="/catalog" element={<PublicCatalog />} />
       <Route
         path="/"
         element={
