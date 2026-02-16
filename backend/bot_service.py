@@ -406,13 +406,21 @@ MENSAJE DEL CLIENTE: {message_text}"""
         # Send bot response
         await send_message_fn(phone_number, conversation_id, response_text)
 
-        # Handle catalog search
+        # Handle catalog search - send catalog LINK instead of text
         if catalog_search and catalog_search not in catalogs_sent:
-            products = await search_products_by_keyword(db, catalog_search, limit=8)
+            catalog_url = build_catalog_url(catalog_search)
+            products = await search_products_by_keyword(db, catalog_search, limit=3)
             if products:
-                catalog_msg = await format_catalog_message(products, catalog_search)
-                await send_message_fn(phone_number, conversation_id, catalog_msg)
-                catalogs_sent.append(catalog_search)
+                preview_names = ", ".join([p.get("name", "") for p in products[:3]])
+                catalog_msg = (
+                    f"Aqui tienes el catalogo de {catalog_search}: {catalog_url}\n\n"
+                    f"Encontraras opciones como: {preview_names}.\n\n"
+                    f"Revisa las fotos y comparteme los codigos de los que te gusten para cotizarlos."
+                )
+            else:
+                catalog_msg = f"Revisa nuestro catalogo aqui: {catalog_url}\n\nDime los codigos que te interesen."
+            await send_message_fn(phone_number, conversation_id, catalog_msg)
+            catalogs_sent.append(catalog_search)
 
         # Handle quote
         if needs_quote and not state.get("quote_generated"):
