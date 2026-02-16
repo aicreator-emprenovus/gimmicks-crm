@@ -220,7 +220,9 @@ async def create_pending_quote(db: AsyncIOMotorDatabase, phone_number: str, coll
     product_items = []
 
     if codes_raw:
-        code_list = [c.strip() for c in str(codes_raw).replace(",", " ").split() if c.strip()]
+        # Clean codes string - handle list format ['X', 'Y'] or comma/space separated
+        clean = str(codes_raw).replace("[", "").replace("]", "").replace("'", "").replace('"', '')
+        code_list = [c.strip() for c in re.split(r'[,\s]+', clean) if c.strip()]
         products = await validate_product_codes(db, code_list)
         for p in products:
             product_items.append({
