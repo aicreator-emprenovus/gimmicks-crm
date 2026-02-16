@@ -486,7 +486,7 @@ MENSAJE DEL CLIENTE: {message_text}"""
     except Exception as e:
         logger.error(f"Error in AI conversation for {phone_number}: {e}", exc_info=True)
         try:
-            await send_message_fn(phone_number, conversation_id, "Disculpa, tuve un inconveniente. Un asesor te contactara pronto.")
+            await send_message_fn(phone_number, conversation_id, "Disculpa, tuve un inconveniente. Un asesor te contactará pronto.")
         except Exception:
             pass
 
