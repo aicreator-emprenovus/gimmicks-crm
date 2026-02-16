@@ -153,7 +153,7 @@ async def format_catalog_message(products: List[Dict], category_name: str = "") 
         lines.append(f"   {name}{desc_short}")
         lines.append("")
 
-    lines.append("Revisalo y dime los codigos que te gusten para cotizarlos.")
+    lines.append("Revísalo y dime los códigos que te gusten para cotizarlos.")
     return "\n".join(lines)
 
 
