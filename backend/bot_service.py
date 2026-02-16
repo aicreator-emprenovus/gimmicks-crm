@@ -436,12 +436,12 @@ MENSAJE DEL CLIENTE: {message_text}"""
             if products:
                 preview_names = ", ".join([p.get("name", "") for p in products[:3]])
                 catalog_msg = (
-                    f"Aqui tienes el catalogo de {catalog_search}: {catalog_url}\n\n"
-                    f"Encontraras opciones como: {preview_names}.\n\n"
-                    f"Revisa las fotos y comparteme los codigos de los que te gusten para cotizarlos."
+                    f"Aquí tienes el catálogo de {catalog_search}: {catalog_url}\n\n"
+                    f"Encontrarás opciones como: {preview_names}.\n\n"
+                    f"Revisa las fotos y compárteme los códigos de los que te gusten para cotizarlos."
                 )
             else:
-                catalog_msg = f"Revisa nuestro catalogo aqui: {catalog_url}\n\nDime los codigos que te interesen."
+                catalog_msg = f"Revisa nuestro catálogo aquí: {catalog_url}\n\nDime los códigos que te interesen."
             await send_message_fn(phone_number, conversation_id, catalog_msg)
             catalogs_sent.append(catalog_search)
 
