@@ -12,66 +12,87 @@ Build a web-based CRM integrated with WhatsApp Business to manage a conversation
 
 ## What's Been Implemented
 
-### Completed (January 2026)
+### Core System
 - [x] Backend API with FastAPI + JWT auth
-- [x] WhatsApp webhook configured with permanent token
-- [x] Core UI pages: Login, Dashboard, Inbox, Leads, Inventory, Settings, Users
-- [x] Real-time conversation display and message sending
-- [x] Automation rules (keyword-based, new lead triggers)
-- [x] Conversation management (star/save, clear, delete)
+- [x] WhatsApp webhook with permanent token
+- [x] Core UI: Login, Dashboard, Inbox, Leads, Inventory, Settings, Users
+- [x] Real-time conversations, message sending
+- [x] Collapsible sidebar, light theme, teal palette (#7BA899)
 
-### Completed (February 13, 2026)
-- [x] Sidebar cleanup + collapsible sidebar
-- [x] Light theme for content areas + teal color palette (#7BA899)
-- [x] Rule-based bot flow (now superseded by AI bot)
+### AI Bot (bot_service.py)
+- [x] GPT-4o-mini powered conversational bot via emergentintegrations
+- [x] Human-like tone - acts as sales advisor "Ana"
+- [x] Natural language understanding - no rigid state machine
+- [x] Progressive lead data extraction: nombre, empresa, ciudad, correo, producto, codigos_producto, cantidad, fecha_entrega, personalizacion
+- [x] Lead quality scoring: caliente / tibio / frio
+- [x] Auto-categorization: cotizacion_directa, solicitud_catalogo, consulta_ideas, pedido_estacional, otra
+- [x] **Dynamic catalog links**: When client asks about a product, sends public catalog URL
+- [x] **Code-based quoting**: Validates product codes, creates pending quote for admin review
+- [x] Redirects any question back to commercial action
 
-### Completed (February 13, 2026 - AI Bot)
-- [x] **AI-powered conversational bot** (bot_service.py):
-  - Uses GPT-4o-mini via emergentintegrations LlmChat
-  - Natural language understanding - no rigid state machine
-  - Extracts lead data progressively from conversation: nombre, empresa, ciudad, correo, producto, cantidad, fecha_entrega, presupuesto, personalizacion
-  - Classifies lead quality: caliente / tibio / frio
-  - Auto-categorizes: cotizacion_directa / solicitud_catalogo / consulta_ideas / pedido_estacional / otra
-  - Generates quotes when enough data collected (nombre + empresa + correo + producto + cantidad)
-  - Auto-transfers to Ana Maria with summary after quote
-  - Updates lead record in real-time with AI-extracted data
-- [x] **Lead model enhanced** with new fields: ai_category, empresa, ciudad, correo, producto_interes, cantidad_estimada, presupuesto
-- [x] **Leads UI updated** (Leads.jsx):
-  - Quality badges (Frio/Tibio/Caliente) with color-coded dots
-  - AI category tags visible on cards
-  - Empresa, ciudad, producto shown on cards
-  - Detail dialog (eye icon) showing all collected data
-  - All existing functionality preserved (Kanban, filters, search, edit, delete)
+### Public Catalog (/catalog?q=keyword)
+- [x] Public page - NO login required
+- [x] Shows filtered products with photo, name, description, and CODE
+- [x] Responsive design (mobile-friendly for WhatsApp users)
+- [x] Search functionality
+- [x] Backend: /api/catalog/public endpoint (no auth)
+- [x] Placeholder for products without images
 
-## Bot Flow (AI-Driven)
-1. Customer writes anything -> AI understands intent naturally
-2. AI responds conversationally, asks for missing data
-3. Extracts entities from each message (name, company, email, etc.)
-4. Updates lead quality and category in real-time
-5. When 5 required fields collected -> Generates quote -> Sends to customer
-6. Transfers to Ana Maria with full summary -> Lead marked as "pedido"
+### Quotes Management (/quotes)
+- [x] Quotes page for admin review
+- [x] Pending/Sent status badges
+- [x] View detail dialog with all client data and products
+- [x] Edit dialog (total, notes)
+- [x] "Enviar" button to send quote via email (requires SMTP config)
+- [x] Delete quote functionality
+
+### Pipeline CRM (Auto)
+- [x] 5 stages: Lead > Cliente Potencial > Cotizacion Generada > Pedido > Perdido
+- [x] Bot auto-updates pipeline based on conversation progress
+- [x] Kanban board in Leads page with all stages
+- [x] Legacy data migrated to new stages
+
+### Follow-up System
+- [x] Background task checks every 30 minutes
+- [x] 4-hour reminder via WhatsApp
+- [x] 24-hour mark as "Perdido"
+- [x] Auto-reactivation when client responds
+- [x] Manual trigger: POST /api/followup/check
+- [x] Audit logs for all actions
+
+### Bot Flow
+1. Client writes -> AI understands intent
+2. If asks about products -> sends public catalog LINK with photos and codes
+3. Client reviews catalog -> shares codes back
+4. Bot collects: codes + cantidad + correo + ciudad + personalizacion + fecha
+5. Creates pending quote for admin review
+6. Admin reviews -> edits total/notes -> sends to client email
 
 ## Pending Tasks
 
+### P0 - Immediate
+- [ ] Configure SMTP credentials for email sending
+- [ ] Deploy to production (Save to GitHub -> Railway)
+
 ### P1 - Medium Priority
-- [ ] Implement Excel inventory upload (UI + backend connection)
-- [ ] Dashboard real metrics implementation
-- [ ] Deploy AI bot to production Railway (currently local only)
+- [ ] Excel inventory upload UI
+- [ ] Dashboard real metrics
+- [ ] CATALOG_BASE_URL update for production domain
 
 ### P2 - Lower Priority
-- [ ] Finalize Asesor role restrictions
-- [ ] Refactor server.py into modules (routes, models, services)
-
-## Access Credentials
-- **Email**: admin@gimmicks.com
-- **Password**: admin123456
-
-## URLs
-- **Preview**: https://whatsapp-crm-flow.preview.emergentagent.com
-- **Backend (Railway)**: https://gimmicks-crm-production.up.railway.app
+- [ ] Asesor role restrictions
+- [ ] Refactor server.py into modules
 
 ## Key Files
 - `/app/backend/server.py` - Main API server
-- `/app/backend/bot_service.py` - AI bot service (NEW)
-- `/app/frontend/src/pages/Leads.jsx` - Leads page with AI data
-- `/app/frontend/src/components/Layout.jsx` - Sidebar layout
+- `/app/backend/bot_service.py` - AI bot service
+- `/app/frontend/src/pages/PublicCatalog.jsx` - Public catalog
+- `/app/frontend/src/pages/Quotes.jsx` - Quotes management
+- `/app/frontend/src/pages/Leads.jsx` - Leads with pipeline
+- `/app/frontend/src/components/Layout.jsx` - Sidebar
+
+## Access
+- **Email**: admin@gimmicks.com / **Password**: admin123456
+- **Preview**: https://whatsapp-crm-flow.preview.emergentagent.com
+- **Public Catalog**: https://whatsapp-crm-flow.preview.emergentagent.com/catalog?q=jarro
+- **Backend (Railway)**: https://gimmicks-crm-production.up.railway.app
