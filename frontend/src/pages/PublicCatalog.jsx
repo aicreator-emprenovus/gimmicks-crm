@@ -92,14 +92,19 @@ export default function PublicCatalog() {
                 className="bg-white border border-zinc-100 rounded-xl overflow-hidden hover:shadow-lg transition-shadow"
                 data-testid={`catalog-product-${product.code}`}
               >
-                <div className="aspect-square bg-zinc-50 relative overflow-hidden">
-                  <img
-                    src={product.image_url}
-                    alt={product.name}
-                    className="w-full h-full object-contain p-2"
-                    loading="lazy"
-                    onError={(e) => { e.target.src = ""; e.target.className = "hidden"; }}
-                  />
+                <div className="aspect-square bg-zinc-50 relative overflow-hidden flex items-center justify-center">
+                  {product.image_url && product.image_url !== "N/A" ? (
+                    <img
+                      src={product.image_url}
+                      alt={product.name}
+                      className="w-full h-full object-contain p-2"
+                      loading="lazy"
+                      onError={(e) => { e.target.style.display = "none"; e.target.nextSibling.style.display = "flex"; }}
+                    />
+                  ) : null}
+                  <div className={`${product.image_url && product.image_url !== "N/A" ? "hidden" : "flex"} items-center justify-center w-full h-full`}>
+                    <Package className="w-12 h-12 text-zinc-300" />
+                  </div>
                 </div>
                 <div className="p-3">
                   <p className="font-medium text-zinc-900 text-sm leading-tight line-clamp-2" data-testid={`product-name-${product.code}`}>
