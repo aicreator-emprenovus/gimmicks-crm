@@ -2641,7 +2641,7 @@ async def run_followup_check():
                         "phone_number": phone,
                         "sender": "business",
                         "message_type": "text",
-                        "content": {"text": "Hola! Solo para saber si pudiste revisar la info que te envie. Si quieres te ayudo con la cotizacion 😊"},
+                        "content": {"text": "Hola! Solo para saber si pudiste revisar la info que te envie. Si quieres te ayudo con la cotizacion."},
                         "status": "sent",
                         "is_automated": True,
                         "is_followup": True,
