@@ -86,6 +86,17 @@ Ejemplo: si pide "termos" -> catalog_search: "termo". Si pide "gorras" -> catalo
 Si no pide catalogo, deja null."""
 
 
+def build_catalog_url(keyword: str) -> str:
+    """Build public catalog URL for the given product keyword"""
+    from urllib.parse import quote
+    base_url = os.environ.get("CATALOG_BASE_URL", os.environ.get("FRONTEND_URL", ""))
+    if not base_url:
+        base_url = os.environ.get("REACT_APP_BACKEND_URL", "").replace("/api", "")
+        if base_url.endswith("/"):
+            base_url = base_url[:-1]
+    return f"{base_url}/catalog?q={quote(keyword)}"
+
+
 def format_price_ecuador(price: float) -> str:
     if price <= 0:
         return "Precio por confirmar"
