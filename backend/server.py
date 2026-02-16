@@ -2388,6 +2388,28 @@ async def seed_demo_data(current_user: dict = Depends(get_current_user)):
         "rules_created": rules_created
     }
 
+# ============== PUBLIC CATALOG (NO AUTH) ==============
+
+@api_router.get("/catalog/public")
+async def public_catalog(q: str = "", limit: int = 40):
+    """Public endpoint - no auth required. Returns filtered products for WhatsApp catalog links."""
+    if not q.strip():
+        return []
+    
+    words = q.strip().split()
+    regex = "|".join([re.escape(w) for w in words])
+    
+    products = await db.products.find(
+        {"$or": [
+            {"name": {"$regex": regex, "$options": "i"}},
+            {"description": {"$regex": regex, "$options": "i"}},
+            {"code": {"$regex": regex, "$options": "i"}}
+        ]},
+        {"_id": 0, "code": 1, "name": 1, "description": 1, "image_url": 1, "price": 1}
+    ).limit(limit).to_list(limit)
+    
+    return products
+
 # ============== QUOTES MANAGEMENT ROUTES ==============
 
 class QuoteResponse(BaseModel):
