@@ -410,10 +410,20 @@ MENSAJE DEL CLIENTE: {message_text}"""
         needs_quote = ai_result.get("needs_quote", False)
         needs_human = ai_result.get("needs_human", False)
 
-        # Merge extracted data
+        # Merge extracted data - normalize field names
+        field_aliases = {
+            "tipo_de_personalizacion": "personalizacion",
+            "tipo_personalizacion": "personalizacion",
+            "email": "correo",
+            "mail": "correo",
+            "codigos": "codigos_producto",
+            "codigo": "codigos_producto",
+            "nombre_empresa": "empresa",
+        }
         for key, value in extracted.items():
             if value and str(value).strip() and str(value).lower() not in ["null", "none", "n/a", ""]:
-                collected_data[key] = str(value).strip()
+                normalized_key = field_aliases.get(key, key)
+                collected_data[normalized_key] = str(value).strip()
 
         # Send bot response
         await send_message_fn(phone_number, conversation_id, response_text)
