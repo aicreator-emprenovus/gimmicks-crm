@@ -502,8 +502,8 @@ async def process_ai_conversation(
         collected_data = state.get("collected_data", {})
         msg_count = state.get("message_count", 0) + 1
 
-        # Build context
-        history_text = await get_conversation_history(db, conversation_id, limit=8)
+        # Build context - load FULL conversation history
+        history_text = await get_conversation_history(db, conversation_id, limit=40)
 
         collected_summary = ""
         if collected_data:
