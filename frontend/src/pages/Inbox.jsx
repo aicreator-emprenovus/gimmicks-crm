@@ -285,6 +285,25 @@ export default function Inbox() {
               data-testid="search-conversations"
             />
           </div>
+          <div className="flex flex-wrap gap-1 mt-2" data-testid="stage-filters">
+            <button
+              onClick={() => setFilterStage(null)}
+              className={`px-2 py-0.5 text-xs rounded-full transition-colors ${!filterStage ? "bg-[#7BA899] text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
+              data-testid="filter-all"
+            >
+              Todos
+            </button>
+            {Object.entries(STAGE_CONFIG).map(([key, cfg]) => (
+              <button
+                key={key}
+                onClick={() => setFilterStage(filterStage === key ? null : key)}
+                className={`px-2 py-0.5 text-xs rounded-full transition-colors ${filterStage === key ? "bg-[#7BA899] text-white" : `${cfg.color} hover:opacity-80`}`}
+                data-testid={`filter-${key}`}
+              >
+                {cfg.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         <ScrollArea className="flex-1">
