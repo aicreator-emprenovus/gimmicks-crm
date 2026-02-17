@@ -3114,6 +3114,104 @@ async def followup_background_task():
 @app.on_event("startup")
 async def start_followup_task():
     asyncio.create_task(followup_background_task())
+    await seed_system_automation_rules()
+
+
+async def seed_system_automation_rules():
+    """Seed all system automation rules on startup if they don't exist"""
+    system_rules = [
+        {
+            "name": "Bienvenida automatica",
+            "trigger_type": "new_lead",
+            "trigger_value": None,
+            "action_type": "ai_response",
+            "action_value": "Saluda al cliente, presentate como Ana de Gimmicks y pregunta en que puedes ayudar.",
+            "is_active": True
+        },
+        {
+            "name": "Envio de catalogo",
+            "trigger_type": "ai_intent",
+            "trigger_value": "solicitud_catalogo",
+            "action_type": "ai_response",
+            "action_value": "Cuando el cliente mencione un tipo de producto (jarros, termos, gorras, etc.), envia automaticamente el link del catalogo publico filtrado por ese producto.",
+            "is_active": True
+        },
+        {
+            "name": "Recopilacion de datos",
+            "trigger_type": "ai_intent",
+            "trigger_value": "cotizacion_directa",
+            "action_type": "ai_response",
+            "action_value": "Recopila datos del cliente UNO a la vez en este orden: cantidad, personalizacion, correo, nombre/empresa, ciudad/fecha. No repitas datos ya proporcionados.",
+            "is_active": True
+        },
+        {
+            "name": "Generacion de cotizacion",
+            "trigger_type": "ai_intent",
+            "trigger_value": "datos_completos",
+            "action_type": "ai_response",
+            "action_value": "Cuando se tengan producto/codigos + cantidad + correo, genera automaticamente una cotizacion pendiente para revision del admin.",
+            "is_active": True
+        },
+        {
+            "name": "Primer recordatorio (4 horas)",
+            "trigger_type": "no_response",
+            "trigger_value": "4",
+            "action_type": "send_message",
+            "action_value": "Hola, solo para saber si pudiste revisar la informacion que te envie. Si quieres te ayudo con la cotizacion.",
+            "is_active": True
+        },
+        {
+            "name": "Segundo recordatorio (24 horas)",
+            "trigger_type": "no_response",
+            "trigger_value": "24",
+            "action_type": "send_message",
+            "action_value": "Hola de nuevo, queria saber si aun tienes interes en los productos. Estoy aqui para ayudarte cuando lo necesites.",
+            "is_active": True
+        },
+        {
+            "name": "Marcar como perdido",
+            "trigger_type": "no_response",
+            "trigger_value": "48",
+            "action_type": "change_stage",
+            "action_value": "perdido",
+            "is_active": True
+        },
+        {
+            "name": "Reanudar conversacion (12h inactiva)",
+            "trigger_type": "no_response",
+            "trigger_value": "12",
+            "action_type": "ai_response",
+            "action_value": "Si la conversacion estuvo inactiva 12+ horas y tenia datos pendientes, pregunta al cliente si quiere retomar donde quedo o empezar una nueva consulta.",
+            "is_active": True
+        },
+        {
+            "name": "Transferir a humano",
+            "trigger_type": "ai_intent",
+            "trigger_value": "queja,problema,reclamo",
+            "action_type": "assign_agent",
+            "action_value": "Transfiere la conversacion a un asesor humano cuando el bot detecta una queja, problema complejo o solicitud explicita de hablar con una persona.",
+            "is_active": True
+        },
+        {
+            "name": "Respuesta a consulta de precios",
+            "trigger_type": "keyword",
+            "trigger_value": "precio,costo,cuanto,cotizacion",
+            "action_type": "ai_response",
+            "action_value": "Cuando el cliente pregunte por precios, guialo hacia la cotizacion: pregunta que producto necesita y en que cantidad para poder generar una cotizacion personalizada.",
+            "is_active": True
+        },
+    ]
+    now = datetime.now(timezone.utc)
+    created = 0
+    for rule in system_rules:
+        existing = await db.automation_rules.find_one({"name": rule["name"]})
+        if not existing:
+            rule["id"] = str(uuid.uuid4())
+            rule["created_at"] = now.isoformat()
+            await db.automation_rules.insert_one(rule)
+            created += 1
+    if created:
+        logger.info(f"Seeded {created} system automation rules")
 
 
 app.add_middleware(
