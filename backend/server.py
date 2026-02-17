@@ -2642,16 +2642,20 @@ async def run_followup_check():
         if not last_interaction:
             continue
         
+        # Skip conversations that already generated a quote
+        if state.get("quote_generated"):
+            continue
+        
         if isinstance(last_interaction, str):
             last_dt = datetime.fromisoformat(last_interaction.replace('Z', '+00:00'))
         else:
             last_dt = last_interaction
         
         hours_inactive = (now - last_dt).total_seconds() / 3600
-        reminder_sent = state.get("reminder_sent", False)
+        reminder_count = state.get("reminder_count", 0)
         
-        # 4 hours: send reminder
-        if 4 <= hours_inactive < 24 and not reminder_sent:
+        # First reminder at 4 hours (only if no reminders sent yet)
+        if 4 <= hours_inactive and reminder_count == 0:
             conv = await db.conversations.find_one({"phone_number": phone}, {"_id": 0, "id": 1})
             if conv:
                 try:
@@ -2673,36 +2677,73 @@ async def run_followup_check():
                     await db.messages.insert_one(msg_doc)
                     await db.conversation_states.update_one(
                         {"phone_number": phone},
-                        {"$set": {"reminder_sent": True, "reminder_time": now_iso}}
+                        {"$set": {"reminder_count": 1, "first_reminder_time": now_iso}}
                     )
-                    
-                    await db.audit_logs.insert_one({
-                        "id": str(uuid.uuid4()),
-                        "action": "followup_reminder",
-                        "phone_number": phone,
-                        "timestamp": now_iso
-                    })
-                    
                     results["reminders_sent"] += 1
                 except Exception as e:
                     logger.error(f"Failed to send reminder to {phone}: {e}")
         
-        # 24 hours: mark as lost
-        elif hours_inactive >= 24 and reminder_sent:
-            lead = await db.leads.find_one({"phone_number": phone}, {"_id": 0})
-            if lead and lead.get("funnel_stage") != "perdido" and lead.get("funnel_stage") != "pedido":
-                await db.leads.update_one(
-                    {"phone_number": phone},
-                    {"$set": {"funnel_stage": "perdido", "updated_at": now.isoformat()}}
-                )
-                await db.audit_logs.insert_one({
-                    "id": str(uuid.uuid4()),
-                    "action": "lead_marked_lost",
-                    "phone_number": phone,
-                    "reason": "24h_inactivity",
-                    "timestamp": now.isoformat()
-                })
-                results["marked_lost"] += 1
+        # Second reminder 24 hours after first reminder
+        elif reminder_count == 1:
+            first_reminder_time = state.get("first_reminder_time")
+            if first_reminder_time:
+                if isinstance(first_reminder_time, str):
+                    first_dt = datetime.fromisoformat(first_reminder_time.replace('Z', '+00:00'))
+                else:
+                    first_dt = first_reminder_time
+                hours_since_first = (now - first_dt).total_seconds() / 3600
+                if hours_since_first >= 24:
+                    conv = await db.conversations.find_one({"phone_number": phone}, {"_id": 0, "id": 1})
+                    if conv:
+                        try:
+                            await send_whatsapp_message(phone, "Hola de nuevo, quería saber si aún tienes interés en los productos. Estoy aquí para ayudarte cuando lo necesites.")
+                            
+                            now_iso = now.isoformat()
+                            msg_doc = {
+                                "id": str(uuid.uuid4()),
+                                "conversation_id": conv["id"],
+                                "phone_number": phone,
+                                "sender": "business",
+                                "message_type": "text",
+                                "content": {"text": "Hola de nuevo, quería saber si aún tienes interés en los productos. Estoy aquí para ayudarte cuando lo necesites."},
+                                "status": "sent",
+                                "is_automated": True,
+                                "is_followup": True,
+                                "timestamp": now_iso
+                            }
+                            await db.messages.insert_one(msg_doc)
+                            await db.conversation_states.update_one(
+                                {"phone_number": phone},
+                                {"$set": {"reminder_count": 2, "second_reminder_time": now_iso}}
+                            )
+                            results["reminders_sent"] += 1
+                        except Exception as e:
+                            logger.error(f"Failed to send 2nd reminder to {phone}: {e}")
+        
+        # Mark as lost 24 hours after second reminder
+        elif reminder_count >= 2:
+            second_reminder_time = state.get("second_reminder_time")
+            if second_reminder_time:
+                if isinstance(second_reminder_time, str):
+                    second_dt = datetime.fromisoformat(second_reminder_time.replace('Z', '+00:00'))
+                else:
+                    second_dt = second_reminder_time
+                hours_since_second = (now - second_dt).total_seconds() / 3600
+                if hours_since_second >= 24:
+                    lead = await db.leads.find_one({"phone_number": phone}, {"_id": 0})
+                    if lead and lead.get("funnel_stage") not in ("perdido", "pedido", "cotizacion_generada"):
+                        await db.leads.update_one(
+                            {"phone_number": phone},
+                            {"$set": {"funnel_stage": "perdido", "updated_at": now.isoformat()}}
+                        )
+                        await db.audit_logs.insert_one({
+                            "id": str(uuid.uuid4()),
+                            "action": "lead_marked_lost",
+                            "phone_number": phone,
+                            "reason": "no_response_after_2_reminders",
+                            "timestamp": now.isoformat()
+                        })
+                        results["marked_lost"] += 1
     
     return results
 
