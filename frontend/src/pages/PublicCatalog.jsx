@@ -150,7 +150,7 @@ export default function PublicCatalog() {
         {products.length > 0 && (
           <div className="text-center mt-8 py-4 border-t border-zinc-100">
             <p className="text-sm text-zinc-500">
-              Comparte los codigos de los productos que te interesen con tu asesor por WhatsApp
+              Comparte los códigos de los productos que te interesen con tu asesor por WhatsApp
             </p>
           </div>
         )}
