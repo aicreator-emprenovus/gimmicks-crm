@@ -58,6 +58,8 @@ Una vez que el cliente haya indicado qué producto quiere, pide los datos que fa
 4. Nombre y empresa
 5. Ciudad de entrega y fecha
 
+REGLA CRITICA: Si un dato ya aparece en DATOS RECOPILADOS, NUNCA lo vuelvas a pedir. Tampoco confirmes datos ya conocidos. Simplemente avanza al siguiente dato faltante.
+
 COTIZACIÓN:
 Marca needs_quote=true solo cuando tengas: producto o códigos + cantidad + correo.
 
