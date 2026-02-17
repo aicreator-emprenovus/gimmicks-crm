@@ -68,7 +68,7 @@ export default function Layout() {
             <img
               src="https://customer-assets.emergentagent.com/job_quote-crafter-1/artifacts/ee7e6zy2_logo-gimmicks.png"
               alt="Gimmicks"
-              className={collapsed ? "h-8" : "h-10"}
+              className={`object-contain ${collapsed ? "w-10 h-auto" : "h-10"}`}
               data-testid="sidebar-logo"
             />
           </div>
