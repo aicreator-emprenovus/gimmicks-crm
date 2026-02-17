@@ -355,79 +355,59 @@ export default function Leads() {
                         onDragStart={(e) => handleDragStart(e, lead.id)}
                         data-testid={`lead-card-${lead.id}`}
                       >
-                        <CardContent className="p-3 space-y-2">
-                          {/* Header: avatar + name + quality badge */}
-                          <div className="flex items-start justify-between gap-1">
-                            <div className="flex items-center gap-2 min-w-0">
-                              <div className="w-8 h-8 rounded-full bg-[#7BA899] flex items-center justify-center text-white text-sm font-medium shrink-0">
-                                {lead.name?.charAt(0)?.toUpperCase() || "?"}
-                              </div>
-                              <div className="min-w-0">
-                                <p className="font-medium text-zinc-900 text-sm truncate" data-testid={`lead-name-${lead.id}`}>
-                                  {lead.name || "Sin nombre"}
-                                </p>
-                                <p className="text-xs text-zinc-500 flex items-center gap-1">
-                                  <Phone className="w-3 h-3" />
-                                  {lead.phone_number}
-                                </p>
-                              </div>
-                            </div>
-                            <div className="flex items-center shrink-0">
-                              <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold border ${cls.color}`} data-testid={`lead-quality-${lead.id}`}>
-                                <span className={`w-1.5 h-1.5 rounded-full ${cls.dot}`} />
-                                {cls.label}
-                              </span>
-                            </div>
+                        <CardContent className="p-2.5 space-y-1.5">
+                          {/* Name + quality */}
+                          <div className="flex items-center justify-between gap-1">
+                            <p className="font-semibold text-zinc-900 text-xs truncate" data-testid={`lead-name-${lead.id}`}>
+                              {lead.name || "Sin nombre"}
+                            </p>
+                            <span className={`shrink-0 inline-flex items-center gap-0.5 px-1 py-0 rounded-full text-[9px] font-semibold border ${cls.color}`} data-testid={`lead-quality-${lead.id}`}>
+                              <span className={`w-1.5 h-1.5 rounded-full ${cls.dot}`} />
+                              {cls.label}
+                            </span>
                           </div>
+
+                          {/* Phone */}
+                          <p className="text-[10px] text-zinc-500 truncate">
+                            {lead.phone_number}
+                          </p>
 
                           {/* AI Category */}
                           {cat && (
-                            <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-medium ${cat.color}`} data-testid={`lead-category-${lead.id}`}>
+                            <span className={`inline-block px-1.5 py-0 rounded text-[9px] font-medium ${cat.color}`} data-testid={`lead-category-${lead.id}`}>
                               {cat.label}
                             </span>
                           )}
 
-                          {/* Key collected data */}
-                          <div className="space-y-0.5 text-[11px] text-zinc-500">
-                            {lead.empresa && (
-                              <div className="flex items-center gap-1"><Building2 className="w-3 h-3" />{lead.empresa}</div>
-                            )}
-                            {lead.ciudad && (
-                              <div className="flex items-center gap-1"><MapPin className="w-3 h-3" />{lead.ciudad}</div>
-                            )}
-                            {lead.producto_interes && (
-                              <div className="flex items-center gap-1"><Package className="w-3 h-3" /><span className="truncate">{lead.producto_interes}</span></div>
-                            )}
+                          {/* Key data - compact */}
+                          {(lead.empresa || lead.ciudad || lead.producto_interes) && (
+                            <div className="text-[10px] text-zinc-500 space-y-0.5">
+                              {lead.empresa && <p className="truncate">{lead.empresa}</p>}
+                              {lead.ciudad && <p className="truncate">{lead.ciudad}</p>}
+                              {lead.producto_interes && <p className="truncate">{lead.producto_interes}</p>}
+                            </div>
+                          )}
+
+                          {/* Date + Actions row */}
+                          <div className="flex items-center justify-between pt-1 border-t border-zinc-100">
+                            <span className="text-[9px] text-zinc-400">{formatDate(lead.created_at)}</span>
+                            <div className="flex">
+                              <button className="p-0.5 text-zinc-400 hover:text-zinc-700" onClick={() => setDetailLead(lead)} data-testid={`view-lead-${lead.id}`}><Eye className="w-3 h-3" /></button>
+                              <button className="p-0.5 text-zinc-400 hover:text-zinc-700" onClick={() => openEditDialog(lead)} data-testid={`edit-lead-${lead.id}`}><Edit className="w-3 h-3" /></button>
+                              <button className="p-0.5 text-[#7BA899] hover:text-[#4A7566]" onClick={() => navigate(`/inbox?phone=${lead.phone_number}`)} data-testid={`chat-lead-${lead.id}`} title="Ver chat"><MessageSquare className="w-3 h-3" /></button>
+                              <button className="p-0.5 text-red-400 hover:text-red-600" onClick={() => deleteLead(lead.id)} data-testid={`delete-lead-${lead.id}`}><Trash2 className="w-3 h-3" /></button>
+                            </div>
                           </div>
 
-                          {/* Date */}
-                          <div className="flex items-center gap-2 text-xs text-zinc-400">
-                            <Calendar className="w-3 h-3" />
-                            {formatDate(lead.created_at)}
-                          </div>
-
-                          {/* Actions */}
-                          <div className="flex gap-1">
-                            <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => setDetailLead(lead)} data-testid={`view-lead-${lead.id}`}>
-                              <Eye className="w-3 h-3" />
-                            </Button>
-                            <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => openEditDialog(lead)} data-testid={`edit-lead-${lead.id}`}>
-                              <Edit className="w-3 h-3" />
-                            </Button>
-                            <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-[#5E8A7A] hover:text-[#4A7566]" onClick={() => navigate(`/inbox?phone=${lead.phone_number}`)} data-testid={`chat-lead-${lead.id}`} title="Ver chat">
-                              <MessageSquare className="w-3 h-3" />
-                            </Button>
-                            <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-red-500 hover:text-red-600" onClick={() => deleteLead(lead.id)} data-testid={`delete-lead-${lead.id}`}>
-                              <Trash2 className="w-3 h-3" />
-                            </Button>
-                            <Select value={lead.funnel_stage} onValueChange={(v) => updateLeadStage(lead.id, v)}>
-                              <SelectTrigger className="h-7 text-xs flex-1">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {FUNNEL_STAGES.map(s => (<SelectItem key={s.value} value={s.value} className="text-xs">{s.label}</SelectItem>))}
-                              </SelectContent>
-                            </Select>
+                          {/* Stage selector */}
+                          <Select value={lead.funnel_stage} onValueChange={(v) => updateLeadStage(lead.id, v)}>
+                            <SelectTrigger className="h-6 text-[10px] w-full">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {FUNNEL_STAGES.map(s => (<SelectItem key={s.value} value={s.value} className="text-xs">{s.label}</SelectItem>))}
+                            </SelectContent>
+                          </Select>
                           </div>
                         </CardContent>
                       </Card>
