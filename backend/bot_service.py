@@ -502,7 +502,21 @@ MENSAJE DEL CLIENTE: {message_text}"""
         # Call AI
         ai_result = await call_llm(SYSTEM_PROMPT, user_prompt)
 
-        response_text = ai_result.get("response", "Gracias por escribirnos! Como puedo ayudarte?")
+        # If LLM failed, respond with friendly greeting
+        if ai_result is None:
+            is_first_msg = msg_count <= 1
+            if is_first_msg:
+                fallback = "Hola, gracias por contactarnos. ¿En qué te puedo ayudar?"
+            else:
+                fallback = "Gracias por tu mensaje. ¿En qué más te puedo ayudar?"
+            await send_message_fn(phone_number, conversation_id, fallback)
+            await db.conversation_states.update_one(
+                {"phone_number": phone_number},
+                {"$set": {"message_count": msg_count, "last_interaction": now.isoformat()}}
+            )
+            return
+
+        response_text = ai_result.get("response", "Hola, gracias por contactarnos. ¿En qué te puedo ayudar?")
         extracted = ai_result.get("extracted_data", {})
         catalog_search = ai_result.get("catalog_search")
         lead_quality = ai_result.get("lead_quality", state.get("lead_quality", "frio"))
