@@ -49,6 +49,8 @@ const FUNNEL_STAGES = [
   { value: "cliente_potencial", label: "Cliente Potencial", color: "bg-yellow-100 text-yellow-700 border-yellow-200" },
   { value: "cotizacion_generada", label: "Cotizacion Generada", color: "bg-purple-100 text-purple-700 border-purple-200" },
   { value: "pedido", label: "Pedido", color: "bg-emerald-100 text-emerald-700 border-emerald-200" },
+  { value: "produccion", label: "Produccion", color: "bg-orange-100 text-orange-700 border-orange-200" },
+  { value: "entregado", label: "Entregado", color: "bg-teal-100 text-teal-700 border-teal-200" },
   { value: "perdido", label: "Perdido", color: "bg-red-100 text-red-700 border-red-200" }
 ];
 
