@@ -414,6 +414,9 @@ export default function Leads() {
                             <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => openEditDialog(lead)} data-testid={`edit-lead-${lead.id}`}>
                               <Edit className="w-3 h-3" />
                             </Button>
+                            <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-[#5E8A7A] hover:text-[#4A7566]" onClick={() => navigate(`/inbox?phone=${lead.phone_number}`)} data-testid={`chat-lead-${lead.id}`} title="Ver chat">
+                              <MessageSquare className="w-3 h-3" />
+                            </Button>
                             <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-red-500 hover:text-red-600" onClick={() => deleteLead(lead.id)} data-testid={`delete-lead-${lead.id}`}>
                               <Trash2 className="w-3 h-3" />
                             </Button>
