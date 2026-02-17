@@ -534,10 +534,12 @@ async def process_ai_conversation(
         
         user_prompt = f"""{catalog_info}
 
-HISTORIAL:
+HISTORIAL DE CONVERSACION:
 {history_text}
 
-{collected_summary}
+DATOS YA RECOPILADOS (NO vuelvas a pedir estos datos):
+{collected_summary if collected_summary else "Ninguno aun"}
+
 {next_to_ask}
 
 MENSAJE DEL CLIENTE: {message_text}"""
