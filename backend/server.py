@@ -3157,7 +3157,7 @@ async def seed_system_automation_rules():
             "trigger_type": "no_response",
             "trigger_value": "4",
             "action_type": "send_message",
-            "action_value": "Hola, solo para saber si pudiste revisar la informacion que te envie. Si quieres te ayudo con la cotizacion.",
+            "action_value": "Hola, solo para saber si pudiste revisar la información que te envié. Si quieres te ayudo con la cotización.",
             "is_active": True
         },
         {
