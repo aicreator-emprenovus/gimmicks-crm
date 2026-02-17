@@ -524,14 +524,16 @@ async def process_ai_conversation(
         has_product = bool(collected_data.get("codigos_producto") or collected_data.get("producto"))
         ordered_fields = [
             ("cantidad", "cantidad de unidades"),
-            ("personalizacion", "tipo de personalizacion"),
-            ("correo", "correo electronico"),
+            ("personalizacion", "tipo de personalización"),
+            ("correo", "correo electrónico"),
             ("nombre", "nombre"),
             ("empresa", "empresa"),
             ("ciudad", "ciudad de entrega"),
             ("fecha_entrega", "fecha de entrega"),
         ]
         
+        next_to_ask = ""
+        all_required_done = False
         missing_fields = []
         if has_product:
             for field_key, field_label in ordered_fields:
