@@ -176,6 +176,33 @@ export default function Leads() {
     setFormData({ phone_number: "", name: "", source: "whatsapp", notes: "" });
   };
 
+  const handleDragStart = (e, leadId) => {
+    e.dataTransfer.setData("text/plain", leadId);
+    e.dataTransfer.effectAllowed = "move";
+  };
+
+  const handleDragOver = (e, stageValue) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    setDragOverStage(stageValue);
+  };
+
+  const handleDragLeave = () => {
+    setDragOverStage(null);
+  };
+
+  const handleDrop = (e, stageValue) => {
+    e.preventDefault();
+    setDragOverStage(null);
+    const leadId = e.dataTransfer.getData("text/plain");
+    if (leadId) {
+      const lead = leads.find(l => l.id === leadId);
+      if (lead && lead.funnel_stage !== stageValue) {
+        updateLeadStage(leadId, stageValue);
+      }
+    }
+  };
+
   const openEditDialog = (lead) => {
     setEditingLead(lead);
     setFormData({
