@@ -3197,7 +3197,7 @@ async def seed_system_automation_rules():
             "trigger_type": "keyword",
             "trigger_value": "precio,costo,cuanto,cotizacion",
             "action_type": "ai_response",
-            "action_value": "Cuando el cliente pregunte por precios, guialo hacia la cotizacion: pregunta que producto necesita y en que cantidad para poder generar una cotizacion personalizada.",
+            "action_value": "Cuando el cliente pregunte por precios, guíalo hacia la cotización: pregunta qué producto necesita y en qué cantidad para poder generar una cotización personalizada.",
             "is_active": True
         },
     ]
