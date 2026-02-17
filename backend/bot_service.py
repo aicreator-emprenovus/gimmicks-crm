@@ -315,39 +315,117 @@ async def process_ai_conversation(
         state = await db.conversation_states.find_one({"phone_number": phone_number}, {"_id": 0})
 
         if not state:
-            state = {
-                "phone_number": phone_number,
-                "collected_data": {},
-                "lead_quality": "frio",
-                "category": None,
-                "catalog_sent": [],
-                "quote_generated": False,
-                "transferred_to_human": False,
-                "message_count": 0,
-                "last_interaction": now.isoformat()
-            }
+            # Brand new conversation
+            state = _new_state(phone_number, now)
             await db.conversation_states.update_one(
                 {"phone_number": phone_number},
                 {"$set": state},
                 upsert=True
             )
+        else:
+            # Check how long since last interaction
+            last_interaction = state.get("last_interaction")
+            hours_inactive = 0
+            if last_interaction:
+                if isinstance(last_interaction, str):
+                    last_dt = datetime.fromisoformat(last_interaction.replace('Z', '+00:00'))
+                else:
+                    last_dt = last_interaction
+                hours_inactive = (now - last_dt).total_seconds() / 3600
 
-        # If transferred, don't auto-respond
+            had_pending_data = bool(state.get("collected_data"))
+            was_completed = state.get("quote_generated") or state.get("transferred_to_human")
+
+            # If 12+ hours inactive: ask to resume or start new
+            if hours_inactive >= 12:
+                if had_pending_data and not was_completed:
+                    # Had pending conversation - ask if they want to resume
+                    collected = state.get("collected_data", {})
+                    nombre = collected.get("nombre", "")
+                    saludo = f"Hola{' ' + nombre if nombre else ''}, "
+                    producto = collected.get("producto") or collected.get("codigos_producto") or ""
+                    if producto:
+                        resume_msg = (
+                            f"{saludo}veo que estábamos avanzando con una consulta sobre {producto}. "
+                            f"¿Te gustaría que retomemos donde quedamos o prefieres empezar una nueva consulta?"
+                        )
+                    else:
+                        resume_msg = (
+                            f"{saludo}teníamos una conversación pendiente. "
+                            f"¿Quieres que la retomemos o prefieres empezar de cero?"
+                        )
+                    await send_message_fn(phone_number, conversation_id, resume_msg)
+                    # Mark as waiting for resume decision
+                    await db.conversation_states.update_one(
+                        {"phone_number": phone_number},
+                        {"$set": {
+                            "waiting_resume_decision": True,
+                            "last_interaction": now.isoformat(),
+                            "transferred_to_human": False,
+                            "reminder_sent": False
+                        }}
+                    )
+                    return
+                else:
+                    # Was completed or no data - start fresh
+                    state = _new_state(phone_number, now)
+                    await db.conversation_states.replace_one(
+                        {"phone_number": phone_number},
+                        state,
+                        upsert=True
+                    )
+
+            # Handle resume decision
+            if state.get("waiting_resume_decision"):
+                msg_lower = message_text.lower().strip()
+                wants_new = any(w in msg_lower for w in ["nueva", "nuevo", "cero", "empezar", "otra", "diferente", "no"])
+                if wants_new:
+                    state = _new_state(phone_number, now)
+                    await db.conversation_states.replace_one(
+                        {"phone_number": phone_number},
+                        state,
+                        upsert=True
+                    )
+                    await send_message_fn(phone_number, conversation_id, "Perfecto, empezamos de cero. ¿En qué te puedo ayudar?")
+                    return
+                else:
+                    # Resume - clear the flag and continue normally
+                    await db.conversation_states.update_one(
+                        {"phone_number": phone_number},
+                        {"$unset": {"waiting_resume_decision": ""}, "$set": {"last_interaction": now.isoformat()}}
+                    )
+                    state.pop("waiting_resume_decision", None)
+                    await send_message_fn(phone_number, conversation_id, "Perfecto, retomamos donde quedamos.")
+                    # Fall through to normal processing
+
+        # Reactivate if was perdido or transferred
         if state.get("transferred_to_human"):
-            return
+            # Check inactivity - if 12h+ auto-reactivate, else ignore
+            last_interaction = state.get("last_interaction", "")
+            if last_interaction:
+                if isinstance(last_interaction, str):
+                    last_dt = datetime.fromisoformat(last_interaction.replace('Z', '+00:00'))
+                else:
+                    last_dt = last_interaction
+                hours = (now - last_dt).total_seconds() / 3600
+                if hours >= 12:
+                    state = _new_state(phone_number, now)
+                    await db.conversation_states.replace_one(
+                        {"phone_number": phone_number},
+                        state,
+                        upsert=True
+                    )
+                else:
+                    return
+            else:
+                return
 
-        # If was marked as "perdido" but client responds, reactivate
         lead = await db.leads.find_one({"phone_number": phone_number}, {"_id": 0})
         if lead and lead.get("funnel_stage") == "perdido":
             await db.leads.update_one(
                 {"phone_number": phone_number},
                 {"$set": {"funnel_stage": "lead", "status": "active", "updated_at": now.isoformat()}}
             )
-            await db.conversation_states.update_one(
-                {"phone_number": phone_number},
-                {"$set": {"transferred_to_human": False, "quote_generated": False}}
-            )
-            state["transferred_to_human"] = False
             state["quote_generated"] = False
 
         collected_data = state.get("collected_data", {})
