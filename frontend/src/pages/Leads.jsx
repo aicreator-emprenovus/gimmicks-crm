@@ -311,7 +311,7 @@ export default function Leads() {
         </Select>
         <Select value={filterClassification} onValueChange={setFilterClassification}>
           <SelectTrigger className="w-[160px]" data-testid="filter-class-select">
-            <SelectValue placeholder="Clasificacion" />
+            <SelectValue placeholder="Clasificación" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todas</SelectItem>
