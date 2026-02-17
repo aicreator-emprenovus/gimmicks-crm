@@ -300,6 +300,22 @@ def determine_pipeline_stage(collected_data: Dict, quote_generated: bool, lead_q
 
 # ============== MAIN CONVERSATION HANDLER ==============
 
+def _new_state(phone_number: str, now: datetime) -> dict:
+    """Create a fresh conversation state"""
+    return {
+        "phone_number": phone_number,
+        "collected_data": {},
+        "lead_quality": "frio",
+        "category": None,
+        "catalog_sent": [],
+        "quote_generated": False,
+        "transferred_to_human": False,
+        "message_count": 0,
+        "reminder_sent": False,
+        "last_interaction": now.isoformat()
+    }
+
+
 async def process_ai_conversation(
     db: AsyncIOMotorDatabase,
     phone_number: str,
