@@ -601,8 +601,9 @@ async def update_lead(lead_id: str, update_data: LeadUpdate, current_user: dict 
     if "name" in update_dict:
         phone = lead.get("phone_number")
         if phone:
-            await db.conversations.update_one(
-                {"phone_number": phone},
+            phone_variants = [phone, phone.lstrip("+"), "+" + phone.lstrip("+")]
+            await db.conversations.update_many(
+                {"phone_number": {"$in": phone_variants}},
                 {"$set": {"contact_name": update_dict["name"]}}
             )
     
