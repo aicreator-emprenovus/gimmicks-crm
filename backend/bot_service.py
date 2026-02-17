@@ -177,7 +177,7 @@ async def format_catalog_message(products: List[Dict], category_name: str = "") 
     return "\n".join(lines)
 
 
-async def get_conversation_history(db: AsyncIOMotorDatabase, conversation_id: str, limit: int = 20) -> str:
+async def get_conversation_history(db: AsyncIOMotorDatabase, conversation_id: str, limit: int = 50) -> str:
     """Get recent messages formatted as conversation text"""
     messages = await db.messages.find(
         {"conversation_id": conversation_id},
@@ -190,7 +190,7 @@ async def get_conversation_history(db: AsyncIOMotorDatabase, conversation_id: st
         role = "Cliente" if msg["sender"] == "user" else "Ana (Gimmicks)"
         text = msg.get("content", {}).get("text", "")
         if text:
-            lines.append(f"{role}: {text[:200]}")
+            lines.append(f"{role}: {text}")
     return "\n".join(lines)
 
 
