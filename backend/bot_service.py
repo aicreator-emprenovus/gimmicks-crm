@@ -174,42 +174,47 @@ async def get_conversation_history(db: AsyncIOMotorDatabase, conversation_id: st
     return "\n".join(lines)
 
 
-async def call_llm(system_msg: str, user_msg: str) -> Dict:
-    """Call LLM and parse JSON response"""
-    from emergentintegrations.llm.chat import LlmChat, UserMessage
+async def call_llm(system_msg: str, user_msg: str) -> Optional[Dict]:
+    """Call LLM and parse JSON response. Returns None on failure."""
+    try:
+        from emergentintegrations.llm.chat import LlmChat, UserMessage
 
-    api_key = os.environ.get("EMERGENT_LLM_KEY")
-    if not api_key:
-        raise Exception("EMERGENT_LLM_KEY not configured")
+        api_key = os.environ.get("EMERGENT_LLM_KEY")
+        if not api_key:
+            logger.error("EMERGENT_LLM_KEY not configured")
+            return None
 
-    session_id = f"bot-{uuid.uuid4().hex[:8]}"
-    chat = LlmChat(
-        api_key=api_key,
-        session_id=session_id,
-        system_message=system_msg
-    )
-    chat.with_model("openai", "gpt-4o-mini")
+        session_id = f"bot-{uuid.uuid4().hex[:8]}"
+        chat = LlmChat(
+            api_key=api_key,
+            session_id=session_id,
+            system_message=system_msg
+        )
+        chat.with_model("openai", "gpt-4o-mini")
 
-    response_text = await chat.send_message(UserMessage(text=user_msg))
+        response_text = await chat.send_message(UserMessage(text=user_msg))
 
-    json_match = re.search(r'\{[\s\S]*\}', response_text)
-    if json_match:
-        try:
-            return json.loads(json_match.group())
-        except json.JSONDecodeError:
-            pass
+        json_match = re.search(r'\{[\s\S]*\}', response_text)
+        if json_match:
+            try:
+                return json.loads(json_match.group())
+            except json.JSONDecodeError:
+                pass
 
-    return {
-        "response": response_text,
-        "extracted_data": {},
-        "catalog_search": None,
-        "intent": "otra",
-        "lead_quality": "frio",
-        "category": "otra",
-        "needs_quote": False,
-        "needs_human": False,
-        "conversation_summary": ""
-    }
+        return {
+            "response": response_text,
+            "extracted_data": {},
+            "catalog_search": None,
+            "intent": "otra",
+            "lead_quality": "frio",
+            "category": "otra",
+            "needs_quote": False,
+            "needs_human": False,
+            "conversation_summary": ""
+        }
+    except Exception as e:
+        logger.error(f"LLM call failed: {e}")
+        return None
 
 
 async def create_pending_quote(db: AsyncIOMotorDatabase, phone_number: str, collected_data: Dict, conversation_id: str) -> str:
