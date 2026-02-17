@@ -357,6 +357,11 @@ export default function Inbox() {
                           {conv.unread_count} nuevos
                         </Badge>
                       )}
+                      {conv.funnel_stage && STAGE_CONFIG[conv.funnel_stage] && (
+                        <Badge className={`mt-1 ml-1 text-xs ${STAGE_CONFIG[conv.funnel_stage].color}`} data-testid={`stage-badge-${conv.id}`}>
+                          {STAGE_CONFIG[conv.funnel_stage].label}
+                        </Badge>
+                      )}
                     </div>
                   </div>
                 </button>
