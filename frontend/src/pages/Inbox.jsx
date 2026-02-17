@@ -127,22 +127,13 @@ export default function Inbox() {
 
     setAnalyzing(true);
     try {
-      const lastUserMessage = [...messages]
-        .reverse()
-        .find((m) => m.sender === "user");
-      
-      if (!lastUserMessage) {
-        toast.info("No hay mensajes del usuario para analizar");
-        return;
-      }
-
       const response = await axios.post(
         `${API_URL}/api/ai/analyze-message`,
         null,
         {
           headers: getAuthHeaders(),
           params: {
-            message: lastUserMessage.content?.text || "",
+            message: "",
             conversation_id: selectedConv?.id
           }
         }
