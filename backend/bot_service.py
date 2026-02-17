@@ -218,8 +218,8 @@ async def load_known_client_data(db: AsyncIOMotorDatabase, phone_number: str) ->
     return known
 
 
-async def call_llm(system_msg: str, user_msg: str) -> Optional[Dict]:
-    """Call LLM and parse JSON response. Returns None on failure."""
+async def call_llm(system_msg: str, user_msg: str, phone_number: str = "") -> Optional[Dict]:
+    """Call LLM and parse JSON response. Uses persistent session per phone for memory."""
     try:
         from emergentintegrations.llm.chat import LlmChat, UserMessage
 
@@ -228,13 +228,13 @@ async def call_llm(system_msg: str, user_msg: str) -> Optional[Dict]:
             logger.error("EMERGENT_LLM_KEY not configured")
             return None
 
-        session_id = f"bot-{uuid.uuid4().hex[:8]}"
+        session_id = f"gimmicks-{phone_number}" if phone_number else f"bot-{uuid.uuid4().hex[:8]}"
         chat = LlmChat(
             api_key=api_key,
             session_id=session_id,
             system_message=system_msg
         )
-        chat.with_model("openai", "gpt-4o-mini")
+        chat.with_model("openai", "gpt-4o")
 
         response_text = await chat.send_message(UserMessage(text=user_msg))
 
