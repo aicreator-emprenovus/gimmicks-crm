@@ -1106,10 +1106,29 @@ async def create_automation_rule(rule_data: AutomationRuleCreate, current_user: 
     )
 
 @api_router.patch("/automation-rules/{rule_id}")
-async def update_automation_rule(rule_id: str, is_active: bool, current_user: dict = Depends(get_current_user)):
+async def update_automation_rule(
+    rule_id: str,
+    rule_data: Optional[AutomationRuleCreate] = None,
+    is_active: Optional[bool] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    update_fields = {}
+    if rule_data:
+        update_fields = {
+            "name": rule_data.name,
+            "trigger_type": rule_data.trigger_type,
+            "trigger_value": rule_data.trigger_value,
+            "action_type": rule_data.action_type,
+            "action_value": rule_data.action_value,
+            "is_active": rule_data.is_active,
+        }
+    elif is_active is not None:
+        update_fields = {"is_active": is_active}
+    else:
+        raise HTTPException(status_code=400, detail="Nada que actualizar")
     result = await db.automation_rules.update_one(
         {"id": rule_id},
-        {"$set": {"is_active": is_active}}
+        {"$set": update_fields}
     )
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Regla no encontrada")
