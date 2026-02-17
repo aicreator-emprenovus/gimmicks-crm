@@ -437,28 +437,28 @@ export default function Inbox() {
               </div>
             </div>
 
-            {/* AI Suggestion Panel */}
+            {/* AI Analysis Panel */}
             {aiSuggestion && (
               <div className="p-4 bg-[#7BA899]/10 border-b border-[#7BA899]/20">
                 <div className="flex items-start gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-[#7BA899]/20 flex items-center justify-center">
+                  <div className="w-8 h-8 rounded-lg bg-[#7BA899]/20 flex items-center justify-center flex-shrink-0">
                     <Bot className="w-4 h-4 text-[#5E8A7A]" />
                   </div>
                   <div className="flex-1">
                     <p className="font-medium text-gray-800 text-sm">
-                      Análisis de IA
+                      Análisis de conversación
                     </p>
-                    <div className="mt-2 grid grid-cols-3 gap-2 text-xs">
+                    <div className="mt-2 grid grid-cols-2 lg:grid-cols-4 gap-2 text-xs">
                       <div className="bg-white rounded-lg p-2 border border-gray-200">
-                        <span className="text-gray-500">Intención:</span>
-                        <Badge className="ml-1 capitalize bg-[#7BA899]/15 text-[#5E8A7A]">
+                        <span className="text-gray-500 block">Intención</span>
+                        <Badge className="mt-0.5 capitalize bg-[#7BA899]/15 text-[#5E8A7A]">
                           {aiSuggestion.intent}
                         </Badge>
                       </div>
                       <div className="bg-white rounded-lg p-2 border border-gray-200">
-                        <span className="text-gray-500">Clasificación:</span>
+                        <span className="text-gray-500 block">Clasificación</span>
                         <Badge
-                          className={`ml-1 capitalize ${
+                          className={`mt-0.5 capitalize ${
                             aiSuggestion.lead_classification === "caliente"
                               ? "bg-red-100 text-red-700"
                               : aiSuggestion.lead_classification === "tibio"
@@ -470,12 +470,50 @@ export default function Inbox() {
                         </Badge>
                       </div>
                       <div className="bg-white rounded-lg p-2 border border-gray-200">
-                        <span className="text-gray-500">Productos:</span>
-                        <span className="ml-1 text-gray-800">
+                        <span className="text-gray-500 block">Cotización</span>
+                        <Badge className={`mt-0.5 ${
+                          aiSuggestion.quote_status === "ya_cotizado" ? "bg-emerald-100 text-emerald-700" :
+                          aiSuggestion.quote_status === "listo_para_cotizar" ? "bg-amber-100 text-amber-700" :
+                          aiSuggestion.quote_status === "datos_parciales" ? "bg-blue-100 text-blue-700" :
+                          "bg-gray-100 text-gray-600"
+                        }`}>
+                          {aiSuggestion.quote_status === "ya_cotizado" ? "Ya cotizado" :
+                           aiSuggestion.quote_status === "listo_para_cotizar" ? "Listo para cotizar" :
+                           aiSuggestion.quote_status === "datos_parciales" ? "Datos parciales" :
+                           "Sin datos"}
+                        </Badge>
+                      </div>
+                      <div className="bg-white rounded-lg p-2 border border-gray-200">
+                        <span className="text-gray-500 block">Productos</span>
+                        <span className="mt-0.5 text-gray-800 font-medium">
                           {aiSuggestion.suggested_products?.length || 0}
                         </span>
                       </div>
                     </div>
+                    {/* Next action */}
+                    {aiSuggestion.next_action && (
+                      <div className="mt-2 p-2 bg-amber-50 rounded-lg border border-amber-200 flex items-start gap-2">
+                        <ArrowRight className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                        <div>
+                          <p className="text-xs font-medium text-amber-800">Acción recomendada</p>
+                          <p className="text-xs text-amber-700 mt-0.5">{aiSuggestion.next_action}</p>
+                        </div>
+                      </div>
+                    )}
+                    {/* Missing data */}
+                    {aiSuggestion.missing_data?.length > 0 && (
+                      <div className="mt-2 p-2 bg-blue-50 rounded-lg border border-blue-200 flex items-start gap-2">
+                        <AlertCircle className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
+                        <div>
+                          <p className="text-xs font-medium text-blue-800">Datos faltantes</p>
+                          <p className="text-xs text-blue-700 mt-0.5">{aiSuggestion.missing_data.join(", ")}</p>
+                        </div>
+                      </div>
+                    )}
+                    {/* Analysis notes */}
+                    {aiSuggestion.analysis_notes && (
+                      <p className="mt-2 text-xs text-gray-600 italic">{aiSuggestion.analysis_notes}</p>
+                    )}
                     {aiSuggestion.suggested_response && (
                       <div className="mt-2 p-2 bg-white rounded-lg border border-gray-200">
                         <p className="text-xs text-gray-500 mb-1">
