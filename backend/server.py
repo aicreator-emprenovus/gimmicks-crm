@@ -612,6 +612,7 @@ async def delete_lead(lead_id: str, current_user: dict = Depends(get_current_use
 @api_router.get("/conversations", response_model=List[ConversationResponse])
 async def get_conversations(
     status: Optional[str] = None,
+    funnel_stage: Optional[str] = None,
     skip: int = 0,
     limit: int = 50,
     current_user: dict = Depends(get_current_user)
@@ -621,6 +622,11 @@ async def get_conversations(
         query["status"] = status
     
     conversations = await db.conversations.find(query, {"_id": 0}).sort("last_message_time", -1).skip(skip).limit(limit).to_list(limit)
+    
+    # Batch-load lead stages for all phone numbers
+    phone_numbers = [c["phone_number"] for c in conversations]
+    leads_cursor = db.leads.find({"phone_number": {"$in": phone_numbers}}, {"_id": 0, "phone_number": 1, "funnel_stage": 1})
+    stage_map = {l["phone_number"]: l.get("funnel_stage", "lead") async for l in leads_cursor}
     
     result = []
     for conv in conversations:
@@ -632,6 +638,12 @@ async def get_conversations(
         if isinstance(last_message_time, str):
             last_message_time = datetime.fromisoformat(last_message_time.replace('Z', '+00:00'))
         
+        conv_stage = stage_map.get(conv["phone_number"], "lead")
+        
+        # Apply funnel_stage filter if provided
+        if funnel_stage and conv_stage != funnel_stage:
+            continue
+        
         result.append(ConversationResponse(
             id=conv["id"],
             phone_number=conv["phone_number"],
@@ -641,6 +653,7 @@ async def get_conversations(
             status=conv.get("status", "active"),
             unread_count=conv.get("unread_count", 0),
             lead_id=conv.get("lead_id"),
+            funnel_stage=conv_stage,
             created_at=created_at
         ))
     
