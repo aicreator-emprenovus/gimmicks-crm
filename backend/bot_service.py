@@ -171,7 +171,7 @@ async def format_catalog_message(products: List[Dict], category_name: str = "") 
     return "\n".join(lines)
 
 
-async def get_conversation_history(db: AsyncIOMotorDatabase, conversation_id: str, limit: int = 10) -> str:
+async def get_conversation_history(db: AsyncIOMotorDatabase, conversation_id: str, limit: int = 20) -> str:
     """Get recent messages formatted as conversation text"""
     messages = await db.messages.find(
         {"conversation_id": conversation_id},
@@ -186,6 +186,30 @@ async def get_conversation_history(db: AsyncIOMotorDatabase, conversation_id: st
         if text:
             lines.append(f"{role}: {text[:200]}")
     return "\n".join(lines)
+
+
+async def load_known_client_data(db: AsyncIOMotorDatabase, phone_number: str) -> Dict:
+    """Load previously saved data for a returning client from leads collection"""
+    lead = await db.leads.find_one({"phone_number": phone_number}, {"_id": 0})
+    if not lead:
+        return {}
+    known = {}
+    field_map = {
+        "name": "nombre",
+        "empresa": "empresa",
+        "ciudad": "ciudad",
+        "correo": "correo",
+        "producto_interes": "producto",
+        "codigos_producto": "codigos_producto",
+        "cantidad_estimada": "cantidad",
+        "fecha_entrega": "fecha_entrega",
+        "personalizacion": "personalizacion",
+    }
+    for src, dst in field_map.items():
+        val = lead.get(src)
+        if val and str(val).strip() and str(val).lower() not in ("none", "null", "n/a"):
+            known[dst] = str(val).strip()
+    return known
 
 
 async def call_llm(system_msg: str, user_msg: str) -> Optional[Dict]:
