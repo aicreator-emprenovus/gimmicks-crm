@@ -45,6 +45,14 @@ import {
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
+const STAGE_CONFIG = {
+  lead: { label: "Lead", color: "bg-gray-100 text-gray-700" },
+  cliente_potencial: { label: "Potencial", color: "bg-blue-100 text-blue-700" },
+  cotizacion_generada: { label: "Cotizado", color: "bg-emerald-100 text-emerald-700" },
+  pedido: { label: "Pedido", color: "bg-purple-100 text-purple-700" },
+  perdido: { label: "Perdido", color: "bg-red-100 text-red-700" },
+};
+
 export default function Inbox() {
   const { getAuthHeaders } = useAuth();
   const [conversations, setConversations] = useState([]);
@@ -59,6 +67,7 @@ export default function Inbox() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showClearDialog, setShowClearDialog] = useState(false);
   const [filterStarred, setFilterStarred] = useState(false);
+  const [filterStage, setFilterStage] = useState(null);
   const messagesEndRef = useRef(null);
 
   const fetchConversations = async () => {
