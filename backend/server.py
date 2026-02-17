@@ -3057,7 +3057,7 @@ async def catalog_page(q: str = ""):
 
     results_text = f'{count} producto(s) para "{q}"' if q else ""
     grid_html = f"<div class='grid'>{products_html}</div>" if products_html else "<div class='empty'><p>" + ("No se encontraron productos" if q else "Busca un producto para ver opciones") + "</p></div>"
-    footer_html = "<div class='footer'>Comparte los codigos de los productos que te interesen con tu asesor por WhatsApp</div>" if products_html else ""
+    footer_html = "<div class='footer'>Comparte los códigos de los productos que te interesen con tu asesor por WhatsApp</div>" if products_html else ""
 
     css = """*{margin:0;padding:0;box-sizing:border-box}body{font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;background:#fff;color:#222}
     header{background:#1a2332;padding:14px 16px;position:sticky;top:0;z-index:10}header img{height:40px}
@@ -3081,7 +3081,7 @@ async def catalog_page(q: str = ""):
     .footer{text-align:center;margin-top:30px;padding:16px;border-top:1px solid #f0f0f0;color:#888;font-size:13px}
     .empty{text-align:center;padding:60px 20px;color:#aaa}.empty p{font-size:16px}"""
 
-    js = """function copyCode(btn,code){navigator.clipboard.writeText(code);btn.textContent="Copiado";btn.classList.add("copied");setTimeout(function(){btn.textContent="Copiar codigo";btn.classList.remove("copied")},1500)}"""
+    js = """function copyCode(btn,code){navigator.clipboard.writeText(code);btn.textContent="Copiado";btn.classList.add("copied");setTimeout(function(){btn.textContent="Copiar código";btn.classList.remove("copied")},1500)}"""
 
     html = (
         '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">'
