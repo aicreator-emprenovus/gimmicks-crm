@@ -3131,7 +3131,7 @@ async def seed_system_automation_rules():
     """Seed all system automation rules on startup if they don't exist"""
     system_rules = [
         {
-            "name": "Bienvenida automatica",
+            "name": "Bienvenida automática",
             "trigger_type": "new_lead",
             "trigger_value": None,
             "action_type": "ai_response",
@@ -3205,7 +3205,7 @@ async def seed_system_automation_rules():
         {
             "name": "Respuesta a consulta de precios",
             "trigger_type": "keyword",
-            "trigger_value": "precio,costo,cuanto,cotizacion",
+            "trigger_value": "precio,costo,cuánto,cotización",
             "action_type": "ai_response",
             "action_value": "Cuando el cliente pregunte por precios, guíalo hacia la cotización: pregunta qué producto necesita y en qué cantidad para poder generar una cotización personalizada.",
             "is_active": True
