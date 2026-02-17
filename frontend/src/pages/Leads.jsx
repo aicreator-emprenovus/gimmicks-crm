@@ -297,7 +297,7 @@ export default function Leads() {
       <div className="flex flex-wrap gap-3">
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
-          <Input placeholder="Buscar por nombre o telefono..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-9" data-testid="search-leads-input" />
+          <Input placeholder="Buscar por nombre o teléfono..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-9" data-testid="search-leads-input" />
         </div>
         <Select value={filterStage} onValueChange={setFilterStage}>
           <SelectTrigger className="w-[160px]" data-testid="filter-stage-select">
