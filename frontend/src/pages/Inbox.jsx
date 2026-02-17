@@ -495,12 +495,6 @@ export default function Inbox() {
                            "Sin datos"}
                         </Badge>
                       </div>
-                      <div className="bg-white rounded-lg p-2 border border-gray-200">
-                        <span className="text-gray-500 block">Productos</span>
-                        <span className="mt-0.5 text-gray-800 font-medium">
-                          {aiSuggestion.suggested_products?.length || 0}
-                        </span>
-                      </div>
                     </div>
                     {/* Next action */}
                     {aiSuggestion.next_action && (
