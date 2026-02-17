@@ -233,7 +233,8 @@ export default function Inbox() {
       const matchesSearch = conv.contact_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         conv.phone_number.includes(searchTerm);
       const matchesStarred = filterStarred ? conv.is_starred : true;
-      return matchesSearch && matchesStarred;
+      const matchesStage = filterStage ? conv.funnel_stage === filterStage : true;
+      return matchesSearch && matchesStarred && matchesStage;
     }
   );
 
