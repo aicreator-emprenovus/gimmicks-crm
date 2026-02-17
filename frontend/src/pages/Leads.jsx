@@ -408,7 +408,6 @@ export default function Leads() {
                               {FUNNEL_STAGES.map(s => (<SelectItem key={s.value} value={s.value} className="text-xs">{s.label}</SelectItem>))}
                             </SelectContent>
                           </Select>
-                          </div>
                         </CardContent>
                       </Card>
                     );
