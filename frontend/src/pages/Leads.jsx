@@ -85,6 +85,7 @@ export default function Leads() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingLead, setEditingLead] = useState(null);
   const [detailLead, setDetailLead] = useState(null);
+  const [dragOverStage, setDragOverStage] = useState(null);
   const [formData, setFormData] = useState({
     phone_number: "",
     name: "",
