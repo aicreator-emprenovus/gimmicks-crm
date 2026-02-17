@@ -43,7 +43,6 @@ export default function Dashboard() {
   const { getAuthHeaders } = useAuth();
   const [metrics, setMetrics] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [seeding, setSeeding] = useState(false);
 
   const fetchMetrics = async () => {
     try {
