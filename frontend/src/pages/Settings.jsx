@@ -33,7 +33,8 @@ import {
   Loader2,
   Webhook,
   Key,
-  AlertTriangle
+  AlertTriangle,
+  Pencil
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -42,31 +43,34 @@ const API_URL = process.env.REACT_APP_BACKEND_URL;
 const TRIGGER_TYPES = [
   { value: "keyword", label: "Palabra clave", description: "Cuando el mensaje contiene ciertas palabras" },
   { value: "new_lead", label: "Nuevo lead", description: "Cuando llega un nuevo contacto" },
-  { value: "ai_intent", label: "Consulta de producto (IA)", description: "Cuando el cliente pregunta por productos" },
+  { value: "ai_intent", label: "Intención IA", description: "Cuando la IA detecta una intención específica" },
   { value: "funnel_change", label: "Cambio de etapa", description: "Cuando un lead cambia de etapa" },
-  { value: "no_response", label: "Sin respuesta", description: "Cuando no hay respuesta en X tiempo" }
+  { value: "no_response", label: "Sin respuesta", description: "Cuando no hay respuesta en X horas" }
 ];
 
 const ACTION_TYPES = [
   { value: "send_message", label: "Enviar mensaje", description: "Envía un mensaje automático" },
-  { value: "ai_response", label: "Respuesta IA + Productos", description: "IA busca productos y responde" },
+  { value: "ai_response", label: "Respuesta IA", description: "IA procesa y responde inteligentemente" },
   { value: "change_stage", label: "Cambiar etapa", description: "Mueve el lead a otra etapa" },
   { value: "assign_agent", label: "Asignar agente", description: "Asigna a un agente humano" }
 ];
+
+const EMPTY_FORM = {
+  name: "",
+  trigger_type: "keyword",
+  trigger_value: "",
+  action_type: "send_message",
+  action_value: "",
+  is_active: true
+};
 
 export default function Settings() {
   const { getAuthHeaders, user } = useAuth();
   const [rules, setRules] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [formData, setFormData] = useState({
-    name: "",
-    trigger_type: "keyword",
-    trigger_value: "",
-    action_type: "send_message",
-    action_value: "",
-    is_active: true
-  });
+  const [editingRule, setEditingRule] = useState(null);
+  const [formData, setFormData] = useState({ ...EMPTY_FORM });
 
   const fetchRules = async () => {
     try {
