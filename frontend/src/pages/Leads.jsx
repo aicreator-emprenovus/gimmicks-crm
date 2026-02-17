@@ -521,7 +521,7 @@ export default function Leads() {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Clasificacion</Label>
+              <Label>Clasificación</Label>
               <Select value={formData.classification} onValueChange={(v) => setFormData({ ...formData, classification: v })}>
                 <SelectTrigger data-testid="edit-lead-class"><SelectValue /></SelectTrigger>
                 <SelectContent>
