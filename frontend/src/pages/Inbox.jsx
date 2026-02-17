@@ -215,6 +215,17 @@ export default function Inbox() {
   }, []);
 
   useEffect(() => {
+    const phone = searchParams.get("phone");
+    if (phone && conversations.length > 0 && !selectedConv) {
+      const match = conversations.find(c => c.phone_number === phone);
+      if (match) {
+        setSelectedConv(match);
+        setSearchParams({}, { replace: true });
+      }
+    }
+  }, [conversations, searchParams]);
+
+  useEffect(() => {
     if (selectedConv) {
       fetchMessages(selectedConv.id);
     }
