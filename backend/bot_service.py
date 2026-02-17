@@ -505,11 +505,17 @@ async def process_ai_conversation(
         # Build context - load FULL conversation history
         history_text = await get_conversation_history(db, conversation_id, limit=40)
 
+        # Refresh collected_data from lead (in case admin updated it)
+        known_data = await load_known_client_data(db, phone_number)
+        for k, v in known_data.items():
+            if v and not collected_data.get(k):
+                collected_data[k] = v
+
         collected_summary = ""
         if collected_data:
             parts = [f"{k}: {v}" for k, v in collected_data.items() if v]
             if parts:
-                collected_summary = "Datos recopilados: " + ", ".join(parts)
+                collected_summary = "\n".join(parts)
 
         catalogs_sent = state.get("catalog_sent", [])
         catalog_info = f"Catalogos ya enviados: {', '.join(catalogs_sent)}" if catalogs_sent else ""
