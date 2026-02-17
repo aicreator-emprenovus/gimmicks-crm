@@ -431,8 +431,11 @@ async def process_ai_conversation(
                     )
                     return
                 else:
-                    # Was completed or no data - start fresh
+                    # Was completed or no data - start fresh but load known client data
                     state = _new_state(phone_number, now)
+                    known_data = await load_known_client_data(db, phone_number)
+                    if known_data:
+                        state["collected_data"] = known_data
                     await db.conversation_states.replace_one(
                         {"phone_number": phone_number},
                         state,
