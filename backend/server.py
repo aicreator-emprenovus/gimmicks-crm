@@ -3125,31 +3125,31 @@ async def seed_system_automation_rules():
             "trigger_type": "new_lead",
             "trigger_value": None,
             "action_type": "ai_response",
-            "action_value": "Saluda al cliente, presentate como Ana de Gimmicks y pregunta en que puedes ayudar.",
+            "action_value": "Saluda al cliente, preséntate como Ana de Gimmicks y pregunta en qué puedes ayudar.",
             "is_active": True
         },
         {
-            "name": "Envio de catalogo",
+            "name": "Envío de catálogo",
             "trigger_type": "ai_intent",
             "trigger_value": "solicitud_catalogo",
             "action_type": "ai_response",
-            "action_value": "Cuando el cliente mencione un tipo de producto (jarros, termos, gorras, etc.), envia automaticamente el link del catalogo publico filtrado por ese producto.",
+            "action_value": "Cuando el cliente mencione un tipo de producto (jarros, termos, gorras, etc.), envía automáticamente el link del catálogo público filtrado por ese producto.",
             "is_active": True
         },
         {
-            "name": "Recopilacion de datos",
+            "name": "Recopilación de datos",
             "trigger_type": "ai_intent",
             "trigger_value": "cotizacion_directa",
             "action_type": "ai_response",
-            "action_value": "Recopila datos del cliente UNO a la vez en este orden: cantidad, personalizacion, correo, nombre/empresa, ciudad/fecha. No repitas datos ya proporcionados.",
+            "action_value": "Recopila datos del cliente UNO a la vez en este orden: cantidad, personalización, correo, nombre/empresa, ciudad/fecha. No repitas datos ya proporcionados.",
             "is_active": True
         },
         {
-            "name": "Generacion de cotizacion",
+            "name": "Generación de cotización",
             "trigger_type": "ai_intent",
             "trigger_value": "datos_completos",
             "action_type": "ai_response",
-            "action_value": "Cuando se tengan producto/codigos + cantidad + correo, genera automaticamente una cotizacion pendiente para revision del admin.",
+            "action_value": "Cuando se tengan producto/códigos + cantidad + correo, genera automáticamente una cotización pendiente para revisión del admin.",
             "is_active": True
         },
         {
