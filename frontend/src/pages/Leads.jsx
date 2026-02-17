@@ -323,22 +323,35 @@ export default function Leads() {
           <Loader2 className="w-8 h-8 animate-spin text-[#7BA899]" />
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3">
           {FUNNEL_STAGES.map(stage => (
-            <div key={stage.value} className="space-y-3">
+            <div
+              key={stage.value}
+              className={`space-y-2 rounded-lg transition-colors ${dragOverStage === stage.value ? 'bg-[#7BA899]/10 ring-2 ring-[#7BA899]/30' : ''}`}
+              onDragOver={(e) => handleDragOver(e, stage.value)}
+              onDragLeave={handleDragLeave}
+              onDrop={(e) => handleDrop(e, stage.value)}
+              data-testid={`stage-column-${stage.value}`}
+            >
               <div className={`flex items-center gap-2 p-2 rounded-lg ${stage.color} border`}>
-                <span className="font-medium text-sm">{stage.label}</span>
-                <Badge variant="secondary" className="ml-auto">
+                <span className="font-medium text-xs">{stage.label}</span>
+                <Badge variant="secondary" className="ml-auto text-xs">
                   {leadsByStage[stage.value]?.length || 0}
                 </Badge>
               </div>
               <ScrollArea className="h-[500px]">
-                <div className="space-y-2 pr-2">
+                <div className="space-y-2 pr-1">
                   {leadsByStage[stage.value]?.map(lead => {
                     const cls = getClassification(lead.classification);
                     const cat = getCategoryLabel(lead.ai_category);
                     return (
-                      <Card key={lead.id} className="border border-zinc-200 hover:shadow-md transition-shadow" data-testid={`lead-card-${lead.id}`}>
+                      <Card
+                        key={lead.id}
+                        className="border border-zinc-200 hover:shadow-md transition-shadow cursor-grab active:cursor-grabbing"
+                        draggable
+                        onDragStart={(e) => handleDragStart(e, lead.id)}
+                        data-testid={`lead-card-${lead.id}`}
+                      >
                         <CardContent className="p-3 space-y-2">
                           {/* Header: avatar + name + quality badge */}
                           <div className="flex items-start justify-between gap-1">
