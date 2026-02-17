@@ -46,10 +46,10 @@ import {
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
 const STAGE_CONFIG = {
-  lead: { label: "Lead", color: "bg-gray-100 text-gray-700" },
-  cliente_potencial: { label: "Potencial", color: "bg-blue-100 text-blue-700" },
-  cotizacion_generada: { label: "Cotizado", color: "bg-emerald-100 text-emerald-700" },
-  pedido: { label: "Pedido", color: "bg-purple-100 text-purple-700" },
+  lead: { label: "Lead", color: "bg-blue-100 text-blue-700" },
+  cliente_potencial: { label: "Potencial", color: "bg-yellow-100 text-yellow-700" },
+  cotizacion_generada: { label: "Cotizado", color: "bg-purple-100 text-purple-700" },
+  pedido: { label: "Pedido", color: "bg-emerald-100 text-emerald-700" },
   perdido: { label: "Perdido", color: "bg-red-100 text-red-700" },
 };
 
