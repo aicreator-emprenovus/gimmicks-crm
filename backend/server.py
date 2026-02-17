@@ -131,6 +131,7 @@ class ConversationResponse(BaseModel):
     unread_count: int
     lead_id: Optional[str]
     is_starred: Optional[bool] = False
+    funnel_stage: Optional[str] = None
     created_at: datetime
 
 # Product/Inventory Models
