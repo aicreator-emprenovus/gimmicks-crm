@@ -564,8 +564,8 @@ async def process_ai_conversation(
 
 MENSAJE ACTUAL DEL CLIENTE: {message_text}"""
 
-        # Call AI
-        ai_result = await call_llm(SYSTEM_PROMPT, user_prompt)
+        # Call AI with persistent session per phone
+        ai_result = await call_llm(SYSTEM_PROMPT, user_prompt, phone_number)
 
         # If LLM failed, respond with friendly greeting
         if ai_result is None:
