@@ -37,6 +37,10 @@ Sistema CRM con bot conversacional inteligente para WhatsApp Business, enfocado 
 - [x] Sin emojis en respuestas del bot
 - [x] Logica de reanudacion 12h+
 
+## Completado (Feb 17, 2026)
+- [x] Sincronizacion nombre lead -> chat: al cambiar nombre en Leads, se actualiza automaticamente en Inbox
+- [x] Fix: normalización de formato telefónico (+593 vs 593) en sincronización lead-conversación
+
 ## Pendiente
 - [ ] P1: Configuracion SMTP para envio de cotizaciones (necesita credenciales)
 - [ ] P1: Mejorar UI de carga de inventario (Inventory.jsx)
