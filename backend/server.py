@@ -2388,6 +2388,24 @@ async def seed_demo_data(current_user: dict = Depends(get_current_user)):
         "rules_created": rules_created
     }
 
+# ============== ADMIN: RESET CONVERSATION STATES ==============
+
+@api_router.post("/admin/reset-conversation-states")
+async def reset_conversation_states(current_user: dict = Depends(get_current_user)):
+    """Reset all conversation states so bot responds to everyone again"""
+    if current_user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Solo administradores")
+    result = await db.conversation_states.delete_many({})
+    return {"message": f"Estados de conversación limpiados: {result.deleted_count} eliminados"}
+
+@api_router.post("/admin/reset-conversation/{phone_number}")
+async def reset_single_conversation(phone_number: str, current_user: dict = Depends(get_current_user)):
+    """Reset conversation state for a specific phone number"""
+    if current_user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Solo administradores")
+    await db.conversation_states.delete_one({"phone_number": phone_number})
+    return {"message": f"Estado de conversación de {phone_number} reiniciado"}
+
 # ============== PUBLIC CATALOG (NO AUTH) ==============
 
 @api_router.get("/catalog/public")
