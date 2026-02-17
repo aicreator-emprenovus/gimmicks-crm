@@ -2947,39 +2947,45 @@ async def catalog_page(q: str = ""):
             </div>'''
 
     results_text = f'{count} producto(s) para "{q}"' if q else ""
-    html = f'''<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Cat\u00e1logo Gimmicks</title><style>
-    *{{margin:0;padding:0;box-sizing:border-box}}body{{font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;background:#fff;color:#222}}
-    header{{background:#1a2332;padding:14px 16px;position:sticky;top:0;z-index:10}}header img{{height:40px}}
-    .wrap{{max-width:1100px;margin:0 auto;padding:20px 16px}}
-    .search{{display:block;width:100%;max-width:400px;margin:0 auto 16px;padding:12px 16px;border:1px solid #ddd;border-radius:12px;font-size:14px;outline:none}}
-    .search:focus{{border-color:#7BA899;box-shadow:0 0 0 2px rgba(123,168,153,0.2)}}
-    .info-text{{text-align:center;color:#888;font-size:13px;margin-bottom:16px}}
-    .grid{{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}}
-    @media(min-width:640px){{.grid{{grid-template-columns:repeat(3,1fr)}}}}
-    @media(min-width:900px){{.grid{{grid-template-columns:repeat(4,1fr)}}}}
-    .card{{border:1px solid #f0f0f0;border-radius:12px;overflow:hidden;transition:box-shadow .2s}}.card:hover{{box-shadow:0 4px 16px rgba(0,0,0,0.08)}}
-    .img{{aspect-ratio:1;background:#fafafa;display:flex;align-items:center;justify-content:center;overflow:hidden}}
-    .img img{{width:100%;height:100%;object-fit:contain;padding:8px}}.no-img{{color:#ccc;font-size:13px}}
-    .info{{padding:10px}}.name{{font-weight:600;font-size:13px;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}}
-    .desc{{font-size:11px;color:#888;margin-top:4px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}}
-    .code-row{{display:flex;align-items:center;gap:6px;margin-top:8px;flex-wrap:wrap}}
-    .code{{background:rgba(123,168,153,0.1);color:#7BA899;padding:4px 8px;border-radius:6px;font-size:11px;font-weight:700;font-family:monospace}}
-    .copy-btn{{padding:4px 10px;border:1px solid #ddd;border-radius:8px;font-size:11px;cursor:pointer;background:#fff;color:#555;transition:all .2s}}
-    .copy-btn:hover{{background:rgba(123,168,153,0.1);color:#7BA899;border-color:#7BA899}}
-    .copy-btn.copied{{background:#e8f5e9;color:#2e7d32;border-color:#a5d6a7}}
-    .footer{{text-align:center;margin-top:30px;padding:16px;border-top:1px solid #f0f0f0;color:#888;font-size:13px}}
-    .empty{{text-align:center;padding:60px 20px;color:#aaa}}.empty p{{font-size:16px}}
-    </style></head><body>
-    <header><img src="{LOGO_URL}" alt="Gimmicks"></header>
-    <div class="wrap">
-        <form method="get" action="/catalog"><input class="search" type="text" name="q" value="{q}" placeholder="Buscar productos..."></form>
-        <p class="info-text">{results_text}</p>
-        {"<div class='grid'>" + products_html + "</div>" if products_html else "<div class='empty'><p>" + ("No se encontraron productos" if q else "Busca un producto para ver opciones") + "</p></div>"}
-        {"<div class='footer'>Comparte los c\u00f3digos de los productos que te interesen con tu asesor por WhatsApp</div>" if products_html else ""}
-    </div>
-    <script>function copyCode(btn,code){navigator.clipboard.writeText(code);btn.textContent="Copiado";btn.classList.add("copied");setTimeout(function(){btn.textContent="Copiar c\u00f3digo";btn.classList.remove("copied")},1500)}</script>
-    </body></html>'''
+    grid_html = f"<div class='grid'>{products_html}</div>" if products_html else "<div class='empty'><p>" + ("No se encontraron productos" if q else "Busca un producto para ver opciones") + "</p></div>"
+    footer_html = "<div class='footer'>Comparte los codigos de los productos que te interesen con tu asesor por WhatsApp</div>" if products_html else ""
+
+    css = """*{margin:0;padding:0;box-sizing:border-box}body{font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;background:#fff;color:#222}
+    header{background:#1a2332;padding:14px 16px;position:sticky;top:0;z-index:10}header img{height:40px}
+    .wrap{max-width:1100px;margin:0 auto;padding:20px 16px}
+    .search{display:block;width:100%;max-width:400px;margin:0 auto 16px;padding:12px 16px;border:1px solid #ddd;border-radius:12px;font-size:14px;outline:none}
+    .search:focus{border-color:#7BA899;box-shadow:0 0 0 2px rgba(123,168,153,0.2)}
+    .info-text{text-align:center;color:#888;font-size:13px;margin-bottom:16px}
+    .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+    @media(min-width:640px){.grid{grid-template-columns:repeat(3,1fr)}}
+    @media(min-width:900px){.grid{grid-template-columns:repeat(4,1fr)}}
+    .card{border:1px solid #f0f0f0;border-radius:12px;overflow:hidden;transition:box-shadow .2s}.card:hover{box-shadow:0 4px 16px rgba(0,0,0,0.08)}
+    .img{aspect-ratio:1;background:#fafafa;display:flex;align-items:center;justify-content:center;overflow:hidden}
+    .img img{width:100%;height:100%;object-fit:contain;padding:8px}.no-img{color:#ccc;font-size:13px}
+    .info{padding:10px}.name{font-weight:600;font-size:13px;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+    .desc{font-size:11px;color:#888;margin-top:4px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+    .code-row{display:flex;align-items:center;gap:6px;margin-top:8px;flex-wrap:wrap}
+    .code{background:rgba(123,168,153,0.1);color:#7BA899;padding:4px 8px;border-radius:6px;font-size:11px;font-weight:700;font-family:monospace}
+    .copy-btn{padding:4px 10px;border:1px solid #ddd;border-radius:8px;font-size:11px;cursor:pointer;background:#fff;color:#555;transition:all .2s}
+    .copy-btn:hover{background:rgba(123,168,153,0.1);color:#7BA899;border-color:#7BA899}
+    .copy-btn.copied{background:#e8f5e9;color:#2e7d32;border-color:#a5d6a7}
+    .footer{text-align:center;margin-top:30px;padding:16px;border-top:1px solid #f0f0f0;color:#888;font-size:13px}
+    .empty{text-align:center;padding:60px 20px;color:#aaa}.empty p{font-size:16px}"""
+
+    js = """function copyCode(btn,code){navigator.clipboard.writeText(code);btn.textContent="Copiado";btn.classList.add("copied");setTimeout(function(){btn.textContent="Copiar codigo";btn.classList.remove("copied")},1500)}"""
+
+    html = (
+        '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">'
+        '<meta name="viewport" content="width=device-width,initial-scale=1">'
+        '<title>Catalogo Gimmicks</title>'
+        '<style>' + css + '</style></head><body>'
+        '<header><img src="' + LOGO_URL + '" alt="Gimmicks"></header>'
+        '<div class="wrap">'
+        '<form method="get" action="/catalog"><input class="search" type="text" name="q" value="' + q + '" placeholder="Buscar productos..."></form>'
+        '<p class="info-text">' + results_text + '</p>'
+        + grid_html + footer_html +
+        '</div><script>' + js + '</script></body></html>'
+    )
     return HTMLResponse(content=html)
 
 # Background follow-up task
