@@ -1490,7 +1490,7 @@ async def generate_quote_message(phone_number: str, collected_data: Dict) -> str
         
     except Exception as e:
         logger.error(f"Error generating quote: {e}")
-        return "Hubo un error al generar la cotización. Un asesor te contactará pronto."
+        return "Gracias por contactarnos, en un momento atenderemos tu requerimiento."
 
 async def get_catalog_message(request_type: str, product_need: str = "") -> str:
     try:
