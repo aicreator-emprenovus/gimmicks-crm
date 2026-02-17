@@ -93,6 +93,6 @@ Build a web-based CRM integrated with WhatsApp Business to manage a conversation
 
 ## Access
 - **Email**: admin@gimmicks.com / **Password**: admin123456
-- **Preview**: https://whatsapp-crm-flow.preview.emergentagent.com
-- **Public Catalog**: https://whatsapp-crm-flow.preview.emergentagent.com/catalog?q=jarro
+- **Preview**: https://lead-genius-23.preview.emergentagent.com
+- **Public Catalog**: https://lead-genius-23.preview.emergentagent.com/catalog?q=jarro
 - **Backend (Railway)**: https://gimmicks-crm-production.up.railway.app
