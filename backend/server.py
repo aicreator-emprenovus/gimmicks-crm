@@ -1618,23 +1618,22 @@ async def transfer_to_human(phone_number: str, collected_data: Dict, conversatio
 
 async def send_bot_message(phone_number: str, conversation_id: str, message: str):
     """Send a message from the bot and save it to DB"""
+    now = datetime.now(timezone.utc)
+    
+    # Always save to DB first
+    msg_doc = {
+        "id": str(uuid.uuid4()),
+        "conversation_id": conversation_id,
+        "phone_number": phone_number,
+        "sender": "business",
+        "message_type": "text",
+        "content": {"text": message},
+        "status": "sent",
+        "is_automated": True,
+        "timestamp": now.isoformat()
+    }
     try:
-        await send_whatsapp_message(phone_number, message)
-        
-        now = datetime.now(timezone.utc)
-        msg_doc = {
-            "id": str(uuid.uuid4()),
-            "conversation_id": conversation_id,
-            "phone_number": phone_number,
-            "sender": "business",
-            "message_type": "text",
-            "content": {"text": message},
-            "status": "sent",
-            "is_automated": True,
-            "timestamp": now.isoformat()
-        }
         await db.messages.insert_one(msg_doc)
-        
         await db.conversations.update_one(
             {"id": conversation_id},
             {"$set": {
@@ -1642,9 +1641,15 @@ async def send_bot_message(phone_number: str, conversation_id: str, message: str
                 "last_message_time": now.isoformat()
             }}
         )
+    except Exception as e:
+        logger.error(f"Error saving bot message to DB: {e}")
+    
+    # Then try to send via WhatsApp
+    try:
+        await send_whatsapp_message(phone_number, message)
         logger.info(f"Bot message sent to {phone_number}: {message[:60]}...")
     except Exception as e:
-        logger.error(f"Error sending bot message to {phone_number}: {e}")
+        logger.warning(f"WhatsApp send failed for {phone_number}: {e}")
 
 async def process_intelligent_conversation(phone_number: str, message_text: str, conversation_id: str, is_new_lead: bool = False):
     """Main intelligent conversation handler - single entry point for all bot logic"""
