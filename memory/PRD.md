@@ -24,6 +24,7 @@ Sistema CRM con bot conversacional inteligente para WhatsApp Business, enfocado 
 
 ## Completado (Feb 2026)
 - [x] P0: Fix enlace catalogo publico (URL encoding + limpieza datos test + verificacion flujo completo)
+- [x] P0: Reconectar frontend a Railway (produccion) para mostrar conversaciones reales - fork habia reseteado REACT_APP_BACKEND_URL
 - [x] Bot IA con recopilacion de datos paso a paso
 - [x] Correccion requirements.txt (emergentintegrations)
 - [x] Sistema de cotizaciones pendientes
