@@ -3177,11 +3177,11 @@ async def seed_system_automation_rules():
             "is_active": True
         },
         {
-            "name": "Reanudar conversacion (12h inactiva)",
+            "name": "Reanudar conversación (12h inactiva)",
             "trigger_type": "no_response",
             "trigger_value": "12",
             "action_type": "ai_response",
-            "action_value": "Si la conversacion estuvo inactiva 12+ horas y tenia datos pendientes, pregunta al cliente si quiere retomar donde quedo o empezar una nueva consulta.",
+            "action_value": "Si la conversación estuvo inactiva 12+ horas y tenía datos pendientes, pregunta al cliente si quiere retomar donde quedó o empezar una nueva consulta.",
             "is_active": True
         },
         {
