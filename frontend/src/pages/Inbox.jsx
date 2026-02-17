@@ -460,7 +460,7 @@ export default function Inbox() {
                         <X className="w-4 h-4" />
                       </button>
                     </div>
-                    <div className="mt-2 grid grid-cols-2 lg:grid-cols-4 gap-2 text-xs">
+                    <div className="mt-2 grid grid-cols-3 gap-2 text-xs">
                       <div className="bg-white rounded-lg p-2 border border-gray-200">
                         <span className="text-gray-500 block">Intención</span>
                         <Badge className="mt-0.5 capitalize bg-[#7BA899]/15 text-[#5E8A7A]">
