@@ -24,7 +24,7 @@ const navItems = [
   { to: "/inventory", icon: Package, label: "Inventario", roles: ["admin", "asesor"] },
   { to: "/leads", icon: Users2, label: "Leads", roles: ["admin", "asesor"] },
   { to: "/quotes", icon: FileText, label: "Cotizaciones", roles: ["admin", "asesor"] },
-  { to: "/settings", icon: Settings, label: "Configuracion", roles: ["admin"] },
+  { to: "/settings", icon: Settings, label: "Configuración", roles: ["admin"] },
 ];
 
 export default function Layout() {

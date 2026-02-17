@@ -52,7 +52,7 @@ const STAGE_CONFIG = {
   cliente_potencial: { label: "Potencial", color: "bg-yellow-100 text-yellow-700" },
   cotizacion_generada: { label: "Cotizado", color: "bg-purple-100 text-purple-700" },
   pedido: { label: "Pedido", color: "bg-emerald-100 text-emerald-700" },
-  produccion: { label: "Produccion", color: "bg-orange-100 text-orange-700" },
+  produccion: { label: "Producción", color: "bg-orange-100 text-orange-700" },
   entregado: { label: "Entregado", color: "bg-teal-100 text-teal-700" },
   perdido: { label: "Perdido", color: "bg-red-100 text-red-700" },
 };

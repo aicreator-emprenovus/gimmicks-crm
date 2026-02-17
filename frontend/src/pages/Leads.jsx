@@ -49,9 +49,9 @@ const API_URL = process.env.REACT_APP_BACKEND_URL;
 const FUNNEL_STAGES = [
   { value: "lead", label: "Lead", color: "bg-blue-100 text-blue-700 border-blue-200" },
   { value: "cliente_potencial", label: "Cliente Potencial", color: "bg-yellow-100 text-yellow-700 border-yellow-200" },
-  { value: "cotizacion_generada", label: "Cotizacion Generada", color: "bg-purple-100 text-purple-700 border-purple-200" },
+  { value: "cotizacion_generada", label: "Cotización Generada", color: "bg-purple-100 text-purple-700 border-purple-200" },
   { value: "pedido", label: "Pedido", color: "bg-emerald-100 text-emerald-700 border-emerald-200" },
-  { value: "produccion", label: "Produccion", color: "bg-orange-100 text-orange-700 border-orange-200" },
+  { value: "produccion", label: "Producción", color: "bg-orange-100 text-orange-700 border-orange-200" },
   { value: "entregado", label: "Entregado", color: "bg-teal-100 text-teal-700 border-teal-200" },
   { value: "perdido", label: "Perdido", color: "bg-red-100 text-red-700 border-red-200" }
 ];
@@ -63,7 +63,7 @@ const CLASSIFICATIONS = [
 ];
 
 const CATEGORIES = [
-  { value: "cotizacion_directa", label: "Cotizacion", color: "text-emerald-600 bg-emerald-50" },
+  { value: "cotizacion_directa", label: "Cotización", color: "text-emerald-600 bg-emerald-50" },
   { value: "solicitud_catalogo", label: "Catalogo", color: "text-blue-600 bg-blue-50" },
   { value: "consulta_ideas", label: "Ideas", color: "text-violet-600 bg-violet-50" },
   { value: "pedido_estacional", label: "Estacional", color: "text-orange-600 bg-orange-50" },
@@ -246,7 +246,7 @@ export default function Leads() {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-zinc-900 font-['Manrope']" data-testid="leads-title">
-            Gestion de Leads
+            Gestión de Leads
           </h1>
           <p className="text-zinc-500 text-sm">
             Funnel de ventas con IA
