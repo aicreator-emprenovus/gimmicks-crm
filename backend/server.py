@@ -597,6 +597,15 @@ async def update_lead(lead_id: str, update_data: LeadUpdate, current_user: dict 
     
     await db.leads.update_one({"id": lead_id}, {"$set": update_dict})
     
+    # Sync name to conversation if changed
+    if "name" in update_dict:
+        phone = lead.get("phone_number")
+        if phone:
+            await db.conversations.update_one(
+                {"phone_number": phone},
+                {"$set": {"contact_name": update_dict["name"]}}
+            )
+    
     updated_lead = await db.leads.find_one({"id": lead_id}, {"_id": 0})
     return build_lead_response(updated_lead)
 
