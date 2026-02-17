@@ -2129,85 +2129,117 @@ NO uses formato markdown, solo texto plano."""
 
 @api_router.post("/ai/analyze-message")
 async def analyze_message(
-    message: str,
+    message: str = "",
     conversation_id: Optional[str] = None,
     current_user: dict = Depends(get_current_user)
 ):
-    """Analyze a message using AI to classify intent and suggest products"""
+    """Analyze full conversation context using AI to provide actionable insights"""
     try:
-        from openai import OpenAI
+        from emergentintegrations.llm.chat import LlmChat, UserMessage
         
-        api_key = os.environ.get("OPENAI_API_KEY") or os.environ.get("EMERGENT_LLM_KEY")
+        api_key = os.environ.get("EMERGENT_LLM_KEY")
         if not api_key:
-            # Return basic analysis if no API key
             return {
                 "intent": "consulta",
                 "lead_classification": "tibio",
                 "suggested_products": [],
-                "suggested_response": f"Gracias por tu mensaje. Un asesor te contactará pronto.",
-                "analysis_notes": "Análisis básico - API key no configurada"
+                "suggested_response": "Gracias por tu mensaje. Un asesor te contactará pronto.",
+                "analysis_notes": "API key no configurada",
+                "next_action": "Configurar EMERGENT_LLM_KEY",
+                "quote_status": "sin_datos"
             }
         
-        # Get products for context
-        products = await db.products.find({}, {"_id": 0, "name": 1, "description": 1, "category_1": 1, "category_2": 1}).limit(50).to_list(50)
-        products_context = "\n".join([f"- {p['name']}: {p.get('description', '')[:100]}" for p in products])
+        # Build full conversation context
+        conversation_text = ""
+        lead_context = ""
+        state_context = ""
         
-        system_message = f"""Eres un asistente de ventas de Gimmicks Marketing Services, una empresa de productos promocionales.
+        if conversation_id:
+            # Get all messages
+            msgs = await db.messages.find(
+                {"conversation_id": conversation_id},
+                {"_id": 0, "sender": 1, "content": 1, "timestamp": 1}
+            ).sort("timestamp", 1).to_list(50)
+            
+            lines = []
+            for m in msgs:
+                role = "Cliente" if m["sender"] == "user" else "Bot/Asesor"
+                text = m.get("content", {}).get("text", "")
+                if text:
+                    lines.append(f"{role}: {text[:300]}")
+            conversation_text = "\n".join(lines)
+            
+            # Get conversation phone number
+            conv = await db.conversations.find_one({"id": conversation_id}, {"_id": 0, "phone_number": 1})
+            if conv:
+                phone = conv["phone_number"]
+                # Get lead data
+                lead = await db.leads.find_one({"phone_number": phone}, {"_id": 0})
+                if lead:
+                    lead_parts = []
+                    for k in ["name", "empresa", "correo", "ciudad", "funnel_stage", "classification", "producto_interes", "cantidad_estimada", "personalizacion"]:
+                        v = lead.get(k)
+                        if v and str(v).strip():
+                            lead_parts.append(f"{k}: {v}")
+                    lead_context = "\n".join(lead_parts) if lead_parts else "Sin datos previos"
+                
+                # Get conversation state
+                state = await db.conversation_states.find_one({"phone_number": phone}, {"_id": 0})
+                if state:
+                    state_context = f"Cotizacion generada: {'Si' if state.get('quote_generated') else 'No'}\nDatos recopilados: {json.dumps(state.get('collected_data', {}), ensure_ascii=False)}"
         
-Tu tarea es analizar mensajes de clientes y:
-1. Clasificar la intención del mensaje (consulta, cotización, queja, seguimiento, otro)
-2. Determinar la clasificación del lead (frio, tibio, caliente)
-3. Sugerir productos relevantes de nuestro catálogo si aplica
-4. Generar una respuesta sugerida profesional
+        system_msg = """Eres un analista comercial de Gimmicks Marketing Services. Analiza la conversacion completa con el cliente y proporciona un diagnostico accionable para el asesor.
 
-Productos disponibles:
-{products_context}
-
-Responde SIEMPRE en formato JSON con esta estructura:
-{{
-    "intent": "consulta|cotizacion|queja|seguimiento|otro",
+Responde SIEMPRE en JSON valido:
+{
+    "intent": "cotizacion|consulta|queja|seguimiento|informacion|otro",
     "lead_classification": "frio|tibio|caliente",
-    "suggested_products": ["producto1", "producto2"],
-    "suggested_response": "texto de respuesta sugerida",
-    "analysis_notes": "notas sobre el análisis"
-}}"""
-        
-        client = OpenAI(api_key=api_key)
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": system_message},
-                {"role": "user", "content": f"Analiza este mensaje del cliente: \"{message}\""}
-            ],
-            temperature=0.7
+    "quote_status": "sin_datos|datos_parciales|listo_para_cotizar|ya_cotizado",
+    "missing_data": ["lista de datos que faltan para cotizar"],
+    "next_action": "accion concreta que debe tomar el asesor",
+    "suggested_response": "respuesta sugerida para el asesor",
+    "suggested_products": ["productos relevantes si aplica"],
+    "analysis_notes": "resumen ejecutivo del estado de la conversacion"
+}"""
+
+        user_msg = f"""CONVERSACION COMPLETA:
+{conversation_text if conversation_text else f'Ultimo mensaje: {message}'}
+
+DATOS DEL LEAD:
+{lead_context if lead_context else 'Sin datos previos'}
+
+ESTADO DE LA CONVERSACION:
+{state_context if state_context else 'Sin estado'}
+
+Analiza: 1) El cliente tiene intencion de cotizar? 2) Ya cotizo? 3) Que datos faltan? 4) Cual es la mejor accion siguiente?"""
+
+        chat = LlmChat(
+            api_key=api_key,
+            session_id=f"analyze-{uuid.uuid4().hex[:8]}",
+            system_message=system_msg
         )
+        chat.with_model("openai", "gpt-4o-mini")
         
-        response_text = response.choices[0].message.content
+        response_text = await chat.send_message(UserMessage(text=user_msg))
         
-        # Parse response
-        try:
-            import re
-            json_match = re.search(r'\{[\s\S]*\}', response_text)
-            if json_match:
+        json_match = re.search(r'\{[\s\S]*\}', response_text)
+        if json_match:
+            try:
                 result = json.loads(json_match.group())
-            else:
-                result = {
-                    "intent": "otro",
-                    "lead_classification": "frio",
-                    "suggested_products": [],
-                    "suggested_response": response_text,
-                    "analysis_notes": "No se pudo parsear la respuesta JSON"
-                }
-        except json.JSONDecodeError:
-            result = {
-                "intent": "otro",
-                "lead_classification": "frio",
-                "suggested_products": [],
-                "suggested_response": response_text,
-                "analysis_notes": "No se pudo parsear la respuesta JSON"
-            }
+                return result
+            except json.JSONDecodeError:
+                pass
         
-        return result
+        return {
+            "intent": "otro",
+            "lead_classification": "frio",
+            "suggested_products": [],
+            "suggested_response": response_text,
+            "analysis_notes": "Respuesta sin formato JSON",
+            "next_action": "Revisar manualmente",
+            "quote_status": "sin_datos",
+            "missing_data": []
+        }
         
     except Exception as e:
         logger.error(f"AI analysis error: {str(e)}")
@@ -2216,7 +2248,10 @@ Responde SIEMPRE en formato JSON con esta estructura:
             "lead_classification": "tibio",
             "suggested_products": [],
             "suggested_response": "Gracias por tu mensaje. Un asesor te contactará pronto.",
-            "analysis_notes": f"Error en análisis: {str(e)}"
+            "analysis_notes": f"Error en análisis: {str(e)}",
+            "next_action": "Revisar manualmente",
+            "quote_status": "sin_datos",
+            "missing_data": []
         }
 
 @api_router.post("/ai/recommend-products")
