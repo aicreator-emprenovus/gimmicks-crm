@@ -79,6 +79,7 @@ const SOURCES = [
 
 export default function Leads() {
   const { getAuthHeaders } = useAuth();
+  const navigate = useNavigate();
   const [leads, setLeads] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
