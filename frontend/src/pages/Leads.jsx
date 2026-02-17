@@ -265,7 +265,7 @@ export default function Leads() {
             </DialogHeader>
             <div className="space-y-4 mt-4">
               <div className="space-y-2">
-                <Label>Telefono *</Label>
+                <Label>Teléfono *</Label>
                 <Input placeholder="+593999999999" value={formData.phone_number} onChange={(e) => setFormData({ ...formData, phone_number: e.target.value })} data-testid="lead-phone-input" />
               </div>
               <div className="space-y-2">
@@ -450,7 +450,7 @@ export default function Leads() {
               )}
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div className="space-y-1">
-                  <span className="text-zinc-400 text-xs flex items-center gap-1"><Phone className="w-3 h-3" />Telefono</span>
+                  <span className="text-zinc-400 text-xs flex items-center gap-1"><Phone className="w-3 h-3" />Teléfono</span>
                   <p className="text-zinc-800 font-medium" data-testid="detail-lead-phone">{detailLead.phone_number}</p>
                 </div>
                 <div className="space-y-1">
@@ -504,7 +504,7 @@ export default function Leads() {
           </DialogHeader>
           <div className="space-y-4 mt-4">
             <div className="space-y-2">
-              <Label>Telefono</Label>
+              <Label>Teléfono</Label>
               <Input value={formData.phone_number} disabled className="bg-zinc-50" />
             </div>
             <div className="space-y-2">

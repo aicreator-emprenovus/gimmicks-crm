@@ -231,7 +231,7 @@ export default function Quotes() {
                 <div><span className="text-zinc-400 text-xs">Ciudad</span><p className="font-medium">{selectedQuote.client_ciudad || "-"}</p></div>
                 <div><span className="text-zinc-400 text-xs">Cantidad</span><p className="font-medium">{selectedQuote.cantidad || "-"}</p></div>
                 <div><span className="text-zinc-400 text-xs">Fecha entrega</span><p className="font-medium">{selectedQuote.fecha_entrega || "-"}</p></div>
-                <div className="col-span-2"><span className="text-zinc-400 text-xs">Personalizacion</span><p className="font-medium">{selectedQuote.personalizacion || "-"}</p></div>
+                <div className="col-span-2"><span className="text-zinc-400 text-xs">Personalización</span><p className="font-medium">{selectedQuote.personalizacion || "-"}</p></div>
               </div>
               <div>
                 <span className="text-zinc-400 text-xs">Productos</span>
