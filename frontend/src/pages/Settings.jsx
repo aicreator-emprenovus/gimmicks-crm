@@ -99,6 +99,35 @@ export default function Settings() {
     }
   };
 
+  const updateRule = async () => {
+    if (!editingRule) return;
+    try {
+      await axios.patch(
+        `${API_URL}/api/automation-rules/${editingRule}`,
+        formData,
+        { headers: getAuthHeaders() }
+      );
+      toast.success("Regla actualizada");
+      setEditingRule(null);
+      resetForm();
+      fetchRules();
+    } catch (error) {
+      toast.error("Error al actualizar regla");
+    }
+  };
+
+  const openEditDialog = (rule) => {
+    setFormData({
+      name: rule.name,
+      trigger_type: rule.trigger_type,
+      trigger_value: rule.trigger_value || "",
+      action_type: rule.action_type,
+      action_value: rule.action_value,
+      is_active: rule.is_active
+    });
+    setEditingRule(rule.id);
+  };
+
   const toggleRule = async (ruleId, isActive) => {
     try {
       await axios.patch(
