@@ -532,30 +532,35 @@ async def process_ai_conversation(
             ("fecha_entrega", "fecha de entrega"),
         ]
         
-        next_to_ask = ""
-        all_required_done = False
+        missing_fields = []
         if has_product:
             for field_key, field_label in ordered_fields:
                 if not collected_data.get(field_key):
-                    next_to_ask = f"SIGUIENTE dato a pedir (solo este, nada mas): {field_label}"
-                    break
+                    missing_fields.append(field_label)
             
             has_min = collected_data.get("cantidad") and collected_data.get("correo")
-            if has_min and not next_to_ask:
+            if has_min and not missing_fields:
                 all_required_done = True
                 next_to_ask = "Ya tienes todos los datos necesarios. Marca needs_quote=true."
+            elif missing_fields:
+                next_to_ask = f"SIGUIENTE dato a pedir (SOLO este, nada más): {missing_fields[0]}"
         
-        user_prompt = f"""{catalog_info}
+        user_prompt = f"""INSTRUCCIÓN: Revisa TODO el historial y los datos recopilados. NO pidas nada que ya se haya proporcionado. Haz UNA sola pregunta.
 
-HISTORIAL DE CONVERSACION:
+{catalog_info}
+
+=== HISTORIAL COMPLETO DE LA CONVERSACIÓN ===
 {history_text}
 
-DATOS YA RECOPILADOS (NO vuelvas a pedir estos datos):
-{collected_summary if collected_summary else "Ninguno aun"}
+=== DATOS YA RECOPILADOS (PROHIBIDO volver a pedir estos) ===
+{collected_summary if collected_summary else "Ninguno aún"}
+
+=== DATOS QUE AÚN FALTAN ===
+{', '.join(missing_fields) if missing_fields else 'Ninguno' if all_required_done else 'Aún no se ha definido el producto'}
 
 {next_to_ask}
 
-MENSAJE DEL CLIENTE: {message_text}"""
+MENSAJE ACTUAL DEL CLIENTE: {message_text}"""
 
         # Call AI
         ai_result = await call_llm(SYSTEM_PROMPT, user_prompt)
