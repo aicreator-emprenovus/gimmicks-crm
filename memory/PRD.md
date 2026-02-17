@@ -1,98 +1,46 @@
-# Gimmicks CRM - WhatsApp Business Integration
+# Gimmicks CRM - WhatsApp Business - PRD
 
-## Original Problem Statement
-Build a web-based CRM integrated with WhatsApp Business to manage a conversational sales funnel for Gimmicks Marketing Services.
+## Problema Original
+Sistema CRM con bot conversacional inteligente para WhatsApp Business, enfocado en flujo de ventas comerciales para Gimmicks Marketing Services (Ecuador).
 
-## Tech Stack
-- **Backend**: FastAPI, Python, Motor (async MongoDB), JWT Auth
-- **Frontend**: React, TailwindCSS, Shadcn UI
-- **Database**: MongoDB
-- **Integrations**: WhatsApp Business Cloud API, OpenAI GPT-4o-mini (via Emergent LLM Key)
-- **AI Library**: emergentintegrations (LlmChat)
+## Arquitectura
+- **Backend**: FastAPI + MongoDB (Motor async)
+- **Frontend**: React + Tailwind CSS + Shadcn/UI
+- **IA**: OpenAI (gpt-4o-mini) via Emergent LLM Key
+- **Produccion**: Railway (solo backend)
+- **Preview**: Emergent (frontend + backend)
 
-## What's Been Implemented
+## Funcionalidades Implementadas
+- Bot conversacional con IA (bot_service.py)
+- Sistema de cotizaciones con revision admin (Quotes.jsx)
+- Catalogo publico sin login (PublicCatalog.jsx + /catalog endpoint HTML)
+- Pipeline de leads automatizado
+- Gestion de usuarios (admin/asesor)
+- Webhook WhatsApp Business API
+- Carga de inventario via Excel
+- Dashboard con metricas basicas
+- Manejo de conversaciones inactivas (12h resume, 4h reminder, 24h perdido)
+- Resilencia del bot (fallback sin errores tecnicos)
 
-### Core System
-- [x] Backend API with FastAPI + JWT auth
-- [x] WhatsApp webhook with permanent token
-- [x] Core UI: Login, Dashboard, Inbox, Leads, Inventory, Settings, Users
-- [x] Real-time conversations, message sending
-- [x] Collapsible sidebar, light theme, teal palette (#7BA899)
+## Completado (Feb 2026)
+- [x] P0: Fix enlace catalogo publico (URL encoding + backend HTML endpoint)
+- [x] Bot IA con recopilacion de datos paso a paso
+- [x] Correccion requirements.txt (emergentintegrations)
+- [x] Sistema de cotizaciones pendientes
+- [x] Ortografia impecable (tildes)
+- [x] Sin emojis en respuestas del bot
+- [x] Logica de reanudacion 12h+
 
-### AI Bot (bot_service.py)
-- [x] GPT-4o-mini powered conversational bot via emergentintegrations
-- [x] Human-like tone - acts as sales advisor "Ana"
-- [x] Natural language understanding - no rigid state machine
-- [x] Progressive lead data extraction: nombre, empresa, ciudad, correo, producto, codigos_producto, cantidad, fecha_entrega, personalizacion
-- [x] Lead quality scoring: caliente / tibio / frio
-- [x] Auto-categorization: cotizacion_directa, solicitud_catalogo, consulta_ideas, pedido_estacional, otra
-- [x] **Dynamic catalog links**: When client asks about a product, sends public catalog URL
-- [x] **Code-based quoting**: Validates product codes, creates pending quote for admin review
-- [x] Redirects any question back to commercial action
+## Pendiente
+- [ ] P1: Configuracion SMTP para envio de cotizaciones (necesita credenciales)
+- [ ] P1: Mejorar UI de carga de inventario (Inventory.jsx)
+- [ ] P2: Dashboard con metricas reales
+- [ ] Restricciones completas rol "Asesor"
+- [ ] Refactorizar server.py en modulos (routes, models, services)
 
-### Public Catalog (/catalog?q=keyword)
-- [x] Public page - NO login required
-- [x] Shows filtered products with photo, name, description, and CODE
-- [x] Responsive design (mobile-friendly for WhatsApp users)
-- [x] Search functionality
-- [x] Backend: /api/catalog/public endpoint (no auth)
-- [x] Placeholder for products without images
+## Credenciales Test
+- Email: admin@gimmicks.com
+- Password: admin123456
 
-### Quotes Management (/quotes)
-- [x] Quotes page for admin review
-- [x] Pending/Sent status badges
-- [x] View detail dialog with all client data and products
-- [x] Edit dialog (total, notes)
-- [x] "Enviar" button to send quote via email (requires SMTP config)
-- [x] Delete quote functionality
-
-### Pipeline CRM (Auto)
-- [x] 5 stages: Lead > Cliente Potencial > Cotizacion Generada > Pedido > Perdido
-- [x] Bot auto-updates pipeline based on conversation progress
-- [x] Kanban board in Leads page with all stages
-- [x] Legacy data migrated to new stages
-
-### Follow-up System
-- [x] Background task checks every 30 minutes
-- [x] 4-hour reminder via WhatsApp
-- [x] 24-hour mark as "Perdido"
-- [x] Auto-reactivation when client responds
-- [x] Manual trigger: POST /api/followup/check
-- [x] Audit logs for all actions
-
-### Bot Flow
-1. Client writes -> AI understands intent
-2. If asks about products -> sends public catalog LINK with photos and codes
-3. Client reviews catalog -> shares codes back
-4. Bot collects: codes + cantidad + correo + ciudad + personalizacion + fecha
-5. Creates pending quote for admin review
-6. Admin reviews -> edits total/notes -> sends to client email
-
-## Pending Tasks
-
-### P0 - Immediate
-- [ ] Configure SMTP credentials for email sending
-- [ ] Deploy to production (Save to GitHub -> Railway)
-
-### P1 - Medium Priority
-- [ ] Excel inventory upload UI
-- [ ] Dashboard real metrics
-- [ ] CATALOG_BASE_URL update for production domain
-
-### P2 - Lower Priority
-- [ ] Asesor role restrictions
-- [ ] Refactor server.py into modules
-
-## Key Files
-- `/app/backend/server.py` - Main API server
-- `/app/backend/bot_service.py` - AI bot service
-- `/app/frontend/src/pages/PublicCatalog.jsx` - Public catalog
-- `/app/frontend/src/pages/Quotes.jsx` - Quotes management
-- `/app/frontend/src/pages/Leads.jsx` - Leads with pipeline
-- `/app/frontend/src/components/Layout.jsx` - Sidebar
-
-## Access
-- **Email**: admin@gimmicks.com / **Password**: admin123456
-- **Preview**: https://lead-genius-23.preview.emergentagent.com
-- **Public Catalog**: https://lead-genius-23.preview.emergentagent.com/catalog?q=jarro
-- **Backend (Railway)**: https://gimmicks-crm-production.up.railway.app
+## Nota Critica
+Los cambios NO estan desplegados en Railway. El usuario debe hacer "Save to GitHub" para desplegar.
