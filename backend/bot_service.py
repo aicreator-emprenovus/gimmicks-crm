@@ -91,14 +91,14 @@ Responde SIEMPRE en JSON válido:
 
 def build_catalog_url(keyword: str) -> str:
     """Build public catalog URL for the given product keyword"""
+    from urllib.parse import quote
     base_url = os.environ.get("CATALOG_BASE_URL", "").strip().rstrip("/")
     if not base_url:
         base_url = "https://gimmicks-crm-production.up.railway.app"
-    # Clean keyword: take only the first word to avoid encoding issues
     clean = keyword.strip().split(",")[0].split("/")[0].strip()
     if not clean:
         clean = keyword.strip()
-    return f"{base_url}/catalog?q={clean}"
+    return f"{base_url}/catalog?q={quote(clean)}"
 
 
 def format_price_ecuador(price: float) -> str:
