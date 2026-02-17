@@ -446,9 +446,18 @@ export default function Inbox() {
                     <Bot className="w-4 h-4 text-[#5E8A7A]" />
                   </div>
                   <div className="flex-1">
-                    <p className="font-medium text-gray-800 text-sm">
-                      Análisis de conversación
-                    </p>
+                    <div className="flex items-center justify-between">
+                      <p className="font-medium text-gray-800 text-sm">
+                        Análisis de conversación
+                      </p>
+                      <button
+                        onClick={() => setAiSuggestion(null)}
+                        className="p-1 rounded-md hover:bg-gray-200 text-gray-400 hover:text-gray-600 transition-colors"
+                        data-testid="close-ai-panel"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
                     <div className="mt-2 grid grid-cols-2 lg:grid-cols-4 gap-2 text-xs">
                       <div className="bg-white rounded-lg p-2 border border-gray-200">
                         <span className="text-gray-500 block">Intención</span>
