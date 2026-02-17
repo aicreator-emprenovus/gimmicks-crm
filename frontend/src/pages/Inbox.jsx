@@ -59,6 +59,7 @@ const STAGE_CONFIG = {
 
 export default function Inbox() {
   const { getAuthHeaders } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [conversations, setConversations] = useState([]);
   const [selectedConv, setSelectedConv] = useState(null);
   const [messages, setMessages] = useState([]);
