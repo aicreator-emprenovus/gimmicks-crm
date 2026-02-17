@@ -72,10 +72,10 @@ export default function Quotes() {
     setSending(quoteId);
     try {
       await axios.post(`${API_URL}/api/quotes/${quoteId}/send`, {}, { headers: getAuthHeaders() });
-      toast.success("Cotizacion enviada al correo del cliente");
+      toast.success("Cotización enviada al correo del cliente");
       fetchQuotes();
     } catch (err) {
-      const msg = err.response?.data?.detail || "Error al enviar cotizacion";
+      const msg = err.response?.data?.detail || "Error al enviar cotización";
       toast.error(msg);
     } finally {
       setSending(null);
@@ -86,7 +86,7 @@ export default function Quotes() {
     if (!editingQuote) return;
     try {
       await axios.patch(`${API_URL}/api/quotes/${editingQuote.id}`, editData, { headers: getAuthHeaders() });
-      toast.success("Cotizacion actualizada");
+      toast.success("Cotización actualizada");
       setEditingQuote(null);
       fetchQuotes();
     } catch {
@@ -95,10 +95,10 @@ export default function Quotes() {
   };
 
   const deleteQuote = async (quoteId) => {
-    if (!confirm("Eliminar esta cotizacion?")) return;
+    if (!confirm("¿Eliminar esta cotización?")) return;
     try {
       await axios.delete(`${API_URL}/api/quotes/${quoteId}`, { headers: getAuthHeaders() });
-      toast.success("Cotizacion eliminada");
+      toast.success("Cotización eliminada");
       fetchQuotes();
     } catch {
       toast.error("Error al eliminar");
@@ -121,7 +121,7 @@ export default function Quotes() {
           <h1 className="text-2xl font-bold text-zinc-900 font-['Manrope']" data-testid="quotes-title">
             Cotizaciones
           </h1>
-          <p className="text-zinc-500 text-sm">Revisa y envia cotizaciones generadas por el bot</p>
+          <p className="text-zinc-500 text-sm">Revisa y envía cotizaciones generadas por el bot</p>
         </div>
         <Select value={filterStatus} onValueChange={setFilterStatus}>
           <SelectTrigger className="w-[180px]" data-testid="filter-status-select">
@@ -220,7 +220,7 @@ export default function Quotes() {
       <Dialog open={!!selectedQuote} onOpenChange={(o) => !o && setSelectedQuote(null)}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle className="font-['Manrope']">Detalle de Cotizacion</DialogTitle>
+            <DialogTitle className="font-['Manrope']">Detalle de Cotización</DialogTitle>
           </DialogHeader>
           {selectedQuote && (
             <div className="space-y-4 text-sm" data-testid="quote-detail">
@@ -261,7 +261,7 @@ export default function Quotes() {
       <Dialog open={!!editingQuote} onOpenChange={(o) => !o && setEditingQuote(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle className="font-['Manrope']">Editar Cotizacion</DialogTitle>
+            <DialogTitle className="font-['Manrope']">Editar Cotización</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 mt-2">
             <div className="space-y-2">
