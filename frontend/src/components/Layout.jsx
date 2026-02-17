@@ -22,7 +22,7 @@ const navItems = [
   { to: "/inbox", icon: MessageSquare, label: "Inbox", roles: ["admin", "asesor"] },
   { to: "/users", icon: Users, label: "Usuarios", roles: ["admin"] },
   { to: "/inventory", icon: Package, label: "Inventario", roles: ["admin", "asesor"] },
-  { to: "/leads", icon: Users2, label: "Clientes", roles: ["admin", "asesor"] },
+  { to: "/leads", icon: Users2, label: "Leads", roles: ["admin", "asesor"] },
   { to: "/quotes", icon: FileText, label: "Cotizaciones", roles: ["admin", "asesor"] },
   { to: "/settings", icon: Settings, label: "Configuracion", roles: ["admin"] },
 ];
