@@ -16,7 +16,11 @@ import {
   Star,
   Trash2,
   Eraser,
-  MoreVertical
+  MoreVertical,
+  Filter,
+  AlertCircle,
+  CheckCircle2,
+  ArrowRight
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
