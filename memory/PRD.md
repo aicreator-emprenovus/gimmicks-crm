@@ -24,7 +24,11 @@ Sistema CRM con bot conversacional inteligente para WhatsApp Business, enfocado 
 
 ## Completado (Feb 2026)
 - [x] P0: Fix enlace catalogo publico (URL encoding + limpieza datos test + verificacion flujo completo)
-- [x] P0: Reconectar frontend a Railway (produccion) para mostrar conversaciones reales - fork habia reseteado REACT_APP_BACKEND_URL
+- [x] P0: Reconectar frontend a Railway (produccion) para mostrar conversaciones reales
+- [x] Bot no repetitivo: carga datos previos del lead (load_known_client_data), historial ampliado a 20 msgs, prompt reforzado para NO repetir datos
+- [x] Recordatorios inteligentes: skip conversaciones cotizadas, reminder_count (0->1->2->perdido), 4h->24h->24h->marca perdido
+- [x] Etiquetas funnel_stage en Inbox: filtros por Lead/Potencial/Cotizado/Pedido/Perdido, badges por conversacion
+- [x] Analizar con IA mejorado: contexto completo (todos los msgs + lead + state), devuelve quote_status, next_action, missing_data
 - [x] Bot IA con recopilacion de datos paso a paso
 - [x] Correccion requirements.txt (emergentintegrations)
 - [x] Sistema de cotizaciones pendientes
