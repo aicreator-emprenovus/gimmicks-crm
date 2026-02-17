@@ -159,14 +159,8 @@ export default function Settings() {
   };
 
   const resetForm = () => {
-    setFormData({
-      name: "",
-      trigger_type: "keyword",
-      trigger_value: "",
-      action_type: "send_message",
-      action_value: "",
-      is_active: true
-    });
+    setFormData({ ...EMPTY_FORM });
+    setEditingRule(null);
   };
 
   useEffect(() => {
