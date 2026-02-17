@@ -326,99 +326,101 @@ export default function Leads() {
           <Loader2 className="w-8 h-8 animate-spin text-[#7BA899]" />
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3">
-          {FUNNEL_STAGES.map(stage => (
-            <div
-              key={stage.value}
-              className={`space-y-2 rounded-lg transition-colors ${dragOverStage === stage.value ? 'bg-[#7BA899]/10 ring-2 ring-[#7BA899]/30' : ''}`}
-              onDragOver={(e) => handleDragOver(e, stage.value)}
-              onDragLeave={handleDragLeave}
-              onDrop={(e) => handleDrop(e, stage.value)}
-              data-testid={`stage-column-${stage.value}`}
-            >
-              <div className={`flex items-center gap-2 p-2 rounded-lg ${stage.color} border`}>
-                <span className="font-medium text-xs">{stage.label}</span>
-                <Badge variant="secondary" className="ml-auto text-xs">
-                  {leadsByStage[stage.value]?.length || 0}
-                </Badge>
-              </div>
-              <ScrollArea className="h-[500px]">
-                <div className="space-y-2 pr-1">
-                  {leadsByStage[stage.value]?.map(lead => {
-                    const cls = getClassification(lead.classification);
-                    const cat = getCategoryLabel(lead.ai_category);
-                    return (
-                      <Card
-                        key={lead.id}
-                        className="border border-zinc-200 hover:shadow-md transition-shadow cursor-grab active:cursor-grabbing"
-                        draggable
-                        onDragStart={(e) => handleDragStart(e, lead.id)}
-                        data-testid={`lead-card-${lead.id}`}
-                      >
-                        <CardContent className="p-2.5 space-y-1.5">
-                          {/* Name + quality */}
-                          <div className="flex items-center justify-between gap-1">
-                            <p className="font-semibold text-zinc-900 text-xs truncate" data-testid={`lead-name-${lead.id}`}>
-                              {lead.name || "Sin nombre"}
-                            </p>
-                            <span className={`shrink-0 inline-flex items-center gap-0.5 px-1 py-0 rounded-full text-[9px] font-semibold border ${cls.color}`} data-testid={`lead-quality-${lead.id}`}>
-                              <span className={`w-1.5 h-1.5 rounded-full ${cls.dot}`} />
-                              {cls.label}
-                            </span>
-                          </div>
-
-                          {/* Phone */}
-                          <p className="text-[10px] text-zinc-500 truncate">
-                            {lead.phone_number}
-                          </p>
-
-                          {/* AI Category */}
-                          {cat && (
-                            <span className={`inline-block px-1.5 py-0 rounded text-[9px] font-medium ${cat.color}`} data-testid={`lead-category-${lead.id}`}>
-                              {cat.label}
-                            </span>
-                          )}
-
-                          {/* Key data - compact */}
-                          {(lead.empresa || lead.ciudad || lead.producto_interes) && (
-                            <div className="text-[10px] text-zinc-500 space-y-0.5">
-                              {lead.empresa && <p className="truncate">{lead.empresa}</p>}
-                              {lead.ciudad && <p className="truncate">{lead.ciudad}</p>}
-                              {lead.producto_interes && <p className="truncate">{lead.producto_interes}</p>}
-                            </div>
-                          )}
-
-                          {/* Date + Actions row */}
-                          <div className="flex items-center justify-between pt-1 border-t border-zinc-100">
-                            <span className="text-[9px] text-zinc-400">{formatDate(lead.created_at)}</span>
-                            <div className="flex">
-                              <button className="p-0.5 text-zinc-400 hover:text-zinc-700" onClick={() => setDetailLead(lead)} data-testid={`view-lead-${lead.id}`}><Eye className="w-3 h-3" /></button>
-                              <button className="p-0.5 text-zinc-400 hover:text-zinc-700" onClick={() => openEditDialog(lead)} data-testid={`edit-lead-${lead.id}`}><Edit className="w-3 h-3" /></button>
-                              <button className="p-0.5 text-[#7BA899] hover:text-[#4A7566]" onClick={() => navigate(`/inbox?phone=${lead.phone_number}`)} data-testid={`chat-lead-${lead.id}`} title="Ver chat"><MessageSquare className="w-3 h-3" /></button>
-                              <button className="p-0.5 text-red-400 hover:text-red-600" onClick={() => deleteLead(lead.id)} data-testid={`delete-lead-${lead.id}`}><Trash2 className="w-3 h-3" /></button>
-                            </div>
-                          </div>
-
-                          {/* Stage selector */}
-                          <Select value={lead.funnel_stage} onValueChange={(v) => updateLeadStage(lead.id, v)}>
-                            <SelectTrigger className="h-6 text-[10px] w-full">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {FUNNEL_STAGES.map(s => (<SelectItem key={s.value} value={s.value} className="text-xs">{s.label}</SelectItem>))}
-                            </SelectContent>
-                          </Select>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                  {leadsByStage[stage.value]?.length === 0 && (
-                    <div className="text-center py-4 text-zinc-400 text-sm">Sin leads</div>
-                  )}
+        <div className="overflow-x-auto pb-4" data-testid="kanban-scroll-container">
+          <div className="flex gap-4" style={{ minWidth: "fit-content" }}>
+            {FUNNEL_STAGES.map(stage => (
+              <div
+                key={stage.value}
+                className={`shrink-0 w-[240px] space-y-2 rounded-lg transition-colors ${dragOverStage === stage.value ? 'bg-[#7BA899]/10 ring-2 ring-[#7BA899]/30' : ''}`}
+                onDragOver={(e) => handleDragOver(e, stage.value)}
+                onDragLeave={handleDragLeave}
+                onDrop={(e) => handleDrop(e, stage.value)}
+                data-testid={`stage-column-${stage.value}`}
+              >
+                <div className={`flex items-center gap-2 p-2.5 rounded-lg ${stage.color} border`}>
+                  <span className="font-semibold text-xs">{stage.label}</span>
+                  <Badge variant="secondary" className="ml-auto text-xs">
+                    {leadsByStage[stage.value]?.length || 0}
+                  </Badge>
                 </div>
-              </ScrollArea>
-            </div>
-          ))}
+                <ScrollArea className="h-[calc(100vh-280px)]">
+                  <div className="space-y-2 pr-1">
+                    {leadsByStage[stage.value]?.map(lead => {
+                      const cls = getClassification(lead.classification);
+                      const cat = getCategoryLabel(lead.ai_category);
+                      return (
+                        <Card
+                          key={lead.id}
+                          className="border border-zinc-200 hover:shadow-md transition-shadow cursor-grab active:cursor-grabbing"
+                          draggable
+                          onDragStart={(e) => handleDragStart(e, lead.id)}
+                          data-testid={`lead-card-${lead.id}`}
+                        >
+                          <CardContent className="p-3 space-y-2">
+                            {/* Name + quality */}
+                            <div className="flex items-center justify-between gap-1">
+                              <p className="font-semibold text-zinc-900 text-sm truncate" data-testid={`lead-name-${lead.id}`}>
+                                {lead.name || "Sin nombre"}
+                              </p>
+                              <span className={`shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold border ${cls.color}`} data-testid={`lead-quality-${lead.id}`}>
+                                <span className={`w-1.5 h-1.5 rounded-full ${cls.dot}`} />
+                                {cls.label}
+                              </span>
+                            </div>
+
+                            {/* Phone */}
+                            <p className="text-xs text-zinc-500">
+                              {lead.phone_number}
+                            </p>
+
+                            {/* AI Category */}
+                            {cat && (
+                              <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-medium ${cat.color}`} data-testid={`lead-category-${lead.id}`}>
+                                {cat.label}
+                              </span>
+                            )}
+
+                            {/* Key data */}
+                            {(lead.empresa || lead.ciudad || lead.producto_interes) && (
+                              <div className="text-xs text-zinc-500 space-y-0.5">
+                                {lead.empresa && <p className="truncate">{lead.empresa}</p>}
+                                {lead.ciudad && <p className="truncate">{lead.ciudad}</p>}
+                                {lead.producto_interes && <p className="truncate">{lead.producto_interes}</p>}
+                              </div>
+                            )}
+
+                            {/* Date + Actions row */}
+                            <div className="flex items-center justify-between pt-1.5 border-t border-zinc-100">
+                              <span className="text-[10px] text-zinc-400">{formatDate(lead.created_at)}</span>
+                              <div className="flex gap-1">
+                                <button className="p-1 text-zinc-400 hover:text-zinc-700 rounded hover:bg-zinc-100" onClick={() => setDetailLead(lead)} data-testid={`view-lead-${lead.id}`}><Eye className="w-3.5 h-3.5" /></button>
+                                <button className="p-1 text-zinc-400 hover:text-zinc-700 rounded hover:bg-zinc-100" onClick={() => openEditDialog(lead)} data-testid={`edit-lead-${lead.id}`}><Edit className="w-3.5 h-3.5" /></button>
+                                <button className="p-1 text-[#7BA899] hover:text-[#4A7566] rounded hover:bg-emerald-50" onClick={() => navigate(`/inbox?phone=${lead.phone_number}`)} data-testid={`chat-lead-${lead.id}`} title="Ver chat"><MessageSquare className="w-3.5 h-3.5" /></button>
+                                <button className="p-1 text-red-400 hover:text-red-600 rounded hover:bg-red-50" onClick={() => deleteLead(lead.id)} data-testid={`delete-lead-${lead.id}`}><Trash2 className="w-3.5 h-3.5" /></button>
+                              </div>
+                            </div>
+
+                            {/* Stage selector */}
+                            <Select value={lead.funnel_stage} onValueChange={(v) => updateLeadStage(lead.id, v)}>
+                              <SelectTrigger className="h-7 text-xs w-full">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {FUNNEL_STAGES.map(s => (<SelectItem key={s.value} value={s.value} className="text-xs">{s.label}</SelectItem>))}
+                              </SelectContent>
+                            </Select>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                    {leadsByStage[stage.value]?.length === 0 && (
+                      <div className="text-center py-6 text-zinc-400 text-sm">Sin leads</div>
+                    )}
+                  </div>
+                </ScrollArea>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
