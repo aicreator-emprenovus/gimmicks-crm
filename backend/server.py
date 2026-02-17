@@ -1480,7 +1480,7 @@ async def generate_quote_message(phone_number: str, collected_data: Dict) -> str
             delivery = "7-10 días hábiles"
         
         quote_lines.append(f"Tiempo de entrega: {delivery}")
-        quote_lines.append(f"\n*Precios incluyen IVA*")
+        quote_lines.append("\n*Precios incluyen IVA*")
         quote_lines.append("Cotización válida por 15 días")
         
         # Save quote to DB
@@ -1842,7 +1842,7 @@ async def process_intelligent_conversation(phone_number: str, message_text: str,
                 collected_data["personalizacion"] = personalizacion
             
             # Show data summary for confirmation
-            summary = f"Perfecto, tengo todos tus datos. Déjame confirmar:\n\n"
+            summary = "Perfecto, tengo todos tus datos. Déjame confirmar:\n\n"
             summary += f"Nombre: {collected_data.get('nombre', '-')}\n"
             summary += f"Empresa: {collected_data.get('empresa', '-')}\n"
             summary += f"Ciudad: {collected_data.get('ciudad', '-')}\n"
@@ -1852,7 +1852,7 @@ async def process_intelligent_conversation(phone_number: str, message_text: str,
             summary += f"Fecha entrega: {collected_data.get('fecha_entrega', '-')}\n"
             summary += f"Presupuesto: {collected_data.get('presupuesto', '-')}\n"
             summary += f"Personalización: {collected_data.get('personalizacion', '-')}\n"
-            summary += f"\n¿Los datos son correctos? (sí/no)"
+            summary += "\n¿Los datos son correctos? (sí/no)"
             
             response = summary
             next_step = "confirm_data"
@@ -2376,7 +2376,7 @@ async def seed_demo_data(current_user: dict = Depends(get_current_user)):
             "id": conv_id,
             "phone_number": data["phone"],
             "contact_name": data["name"],
-            "last_message": f"Hola, estoy interesado en productos promocionales",
+            "last_message": "Hola, estoy interesado en productos promocionales",
             "last_message_time": now.isoformat(),
             "status": "active",
             "unread_count": 1,
