@@ -124,16 +124,6 @@ export default function Dashboard() {
             <RefreshCw size={16} />
             Actualizar
           </Button>
-          <Button
-            size="sm"
-            onClick={seedDemoData}
-            disabled={seeding}
-            className="bg-[#7BA899] hover:bg-[#6A9688] gap-2 text-white"
-            data-testid="seed-demo-btn"
-          >
-            {seeding ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-            Cargar Demo
-          </Button>
         </div>
       </div>
 
