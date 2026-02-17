@@ -1918,7 +1918,7 @@ async def process_intelligent_conversation(phone_number: str, message_text: str,
         logger.error(f"Error in intelligent conversation for {phone_number}: {e}", exc_info=True)
         try:
             await send_bot_message(phone_number, conversation_id, 
-                "Disculpa, tuve un problema procesando tu mensaje. Un asesor te contactará pronto.")
+                "Gracias por contactarnos, en un momento atenderemos tu requerimiento.")
         except:
             pass
 
