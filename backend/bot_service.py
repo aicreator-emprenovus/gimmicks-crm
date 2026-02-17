@@ -374,8 +374,11 @@ async def process_ai_conversation(
         state = await db.conversation_states.find_one({"phone_number": phone_number}, {"_id": 0})
 
         if not state:
-            # Brand new conversation
+            # Brand new conversation - but check if client has previous data
             state = _new_state(phone_number, now)
+            known_data = await load_known_client_data(db, phone_number)
+            if known_data:
+                state["collected_data"] = known_data
             await db.conversation_states.update_one(
                 {"phone_number": phone_number},
                 {"$set": state},
