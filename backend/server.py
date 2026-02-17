@@ -2978,7 +2978,7 @@ async def catalog_page(q: str = ""):
         {"<div class='grid'>" + products_html + "</div>" if products_html else "<div class='empty'><p>" + ("No se encontraron productos" if q else "Busca un producto para ver opciones") + "</p></div>"}
         {"<div class='footer'>Comparte los c\u00f3digos de los productos que te interesen con tu asesor por WhatsApp</div>" if products_html else ""}
     </div>
-    <script>function copyCode(btn,code){{navigator.clipboard.writeText(code);btn.textContent="Copiado";btn.classList.add("copied");setTimeout(()=>{{btn.textContent="Copiar c\u00f3digo";btn.classList.remove("copied")}},1500)}}</script>
+    <script>function copyCode(btn,code){navigator.clipboard.writeText(code);btn.textContent="Copiado";btn.classList.add("copied");setTimeout(function(){btn.textContent="Copiar c\u00f3digo";btn.classList.remove("copied")},1500)}</script>
     </body></html>'''
     return HTMLResponse(content=html)
 
