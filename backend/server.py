@@ -3165,7 +3165,7 @@ async def seed_system_automation_rules():
             "trigger_type": "no_response",
             "trigger_value": "24",
             "action_type": "send_message",
-            "action_value": "Hola de nuevo, queria saber si aun tienes interes en los productos. Estoy aqui para ayudarte cuando lo necesites.",
+            "action_value": "Hola de nuevo, quería saber si aún tienes interés en los productos. Estoy aquí para ayudarte cuando lo necesites.",
             "is_active": True
         },
         {
