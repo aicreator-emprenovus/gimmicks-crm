@@ -57,21 +57,6 @@ export default function Dashboard() {
     }
   };
 
-  const seedDemoData = async () => {
-    setSeeding(true);
-    try {
-      await axios.post(`${API_URL}/api/seed-demo-data`, {}, {
-        headers: getAuthHeaders()
-      });
-      toast.success("Datos de demostración creados");
-      fetchMetrics();
-    } catch (error) {
-      toast.error("Error al crear datos de demostración");
-    } finally {
-      setSeeding(false);
-    }
-  };
-
   useEffect(() => {
     fetchMetrics();
   }, []);
