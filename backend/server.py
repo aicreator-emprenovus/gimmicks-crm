@@ -3189,7 +3189,7 @@ async def seed_system_automation_rules():
             "trigger_type": "ai_intent",
             "trigger_value": "queja,problema,reclamo",
             "action_type": "assign_agent",
-            "action_value": "Transfiere la conversacion a un asesor humano cuando el bot detecta una queja, problema complejo o solicitud explicita de hablar con una persona.",
+            "action_value": "Transfiere la conversación a un asesor humano cuando el bot detecta una queja, problema complejo o solicitud explícita de hablar con una persona.",
             "is_active": True
         },
         {
