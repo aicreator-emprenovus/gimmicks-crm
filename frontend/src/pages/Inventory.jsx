@@ -493,8 +493,8 @@ function ProductModal({ product, onClose, onSave }) {
               className="mb-1"
               data-testid="image-url-input"
             />
-            <p className="text-xs text-gray-400 flex items-start gap-1 mt-1">
-              <span className="text-amber-400 text-base leading-none flex-shrink-0" style={{fontFamily:'serif'}}>i</span>
+            <p className="text-xs text-gray-400 flex items-center gap-1 mt-1">
+              <Lightbulb size={14} className="text-amber-400 flex-shrink-0" />
               <span>Tip: Pega el link completo de Google Drive y se convertirá automáticamente</span>
             </p>
           </div>
