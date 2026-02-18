@@ -661,30 +661,44 @@ MENSAJE ACTUAL DEL CLIENTE: {message_text}"""
                 normalized_key = field_aliases.get(key, key)
                 collected_data[normalized_key] = str(value).strip()
 
-        # Send bot response
-        await send_message_fn(phone_number, conversation_id, response_text)
-
-        # Handle catalog search - send catalog LINK instead of text
+        # Handle catalog search - COMBINE with AI response in ONE message
         if catalog_search and catalog_search not in catalogs_sent:
             catalog_url = build_catalog_url(catalog_search)
             products = await search_products_by_keyword(db, catalog_search, limit=3)
             if products:
                 preview_names = ", ".join([p.get("name", "") for p in products[:3]])
                 catalog_msg = (
-                    f"Aquí tienes el catálogo de {catalog_search}: {catalog_url}\n\n"
-                    f"Encontrarás opciones como: {preview_names}.\n\n"
-                    f"Revisa las fotos y compárteme los códigos de los que te gusten para cotizarlos."
+                    f"{response_text}\n\n"
+                    f"Revisa nuestro catálogo aquí: {catalog_url}\n\n"
+                    f"Encontrarás opciones como: {preview_names}. "
+                    f"Compárteme los códigos de los que te gusten."
                 )
             else:
-                catalog_msg = f"Revisa nuestro catálogo aquí: {catalog_url}\n\nDime los códigos que te interesen."
+                # No products found - don't send catalog link, just the AI response
+                catalog_msg = response_text
             await send_message_fn(phone_number, conversation_id, catalog_msg)
             catalogs_sent.append(catalog_search)
+        else:
+            # No catalog - just send AI response
+            await send_message_fn(phone_number, conversation_id, response_text)
 
-        # Handle quote - dynamic: create or update
+        # Handle quote - only notify on actual changes
         if needs_quote:
-            quote_confirm = await upsert_quote(db, phone_number, collected_data, conversation_id)
-            await send_message_fn(phone_number, conversation_id, quote_confirm)
-            state_quote = True
+            has_min_data = (collected_data.get("codigos_producto") or collected_data.get("producto")) and collected_data.get("cantidad")
+            if has_min_data:
+                existing_quote = await db.quotes.find_one(
+                    {"phone_number": phone_number, "status": "pending"},
+                    {"_id": 0, "items": 1, "cantidad": 1, "client_correo": 1, "client_name": 1}
+                )
+                await upsert_quote(db, phone_number, collected_data, conversation_id)
+                state_quote = True
+
+                # Only send notification if this is a NEW quote (no existing) 
+                if not existing_quote:
+                    quote_notify = "Tu cotización ha sido registrada. Nuestro equipo la revisará pronto."
+                    await send_message_fn(phone_number, conversation_id, quote_notify)
+            else:
+                state_quote = state.get("quote_generated", False)
         else:
             state_quote = state.get("quote_generated", False)
 
