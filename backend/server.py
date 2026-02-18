@@ -3033,6 +3033,26 @@ LOGO_URL = "https://customer-assets.emergentagent.com/job_quote-crafter-1/artifa
 @app.get("/catalog", include_in_schema=False)
 async def catalog_page(q: str = ""):
     from fastapi.responses import HTMLResponse
+    import re as re_mod
+
+    def fix_drive_url(url):
+        """Convert Google Drive sharing URLs to direct image URLs"""
+        if not url:
+            return url
+        # https://drive.google.com/file/d/FILE_ID/view...
+        m = re_mod.search(r'drive\.google\.com/file/d/([^/]+)', url)
+        if m:
+            return f"https://lh3.googleusercontent.com/d/{m.group(1)}"
+        # https://drive.google.com/open?id=FILE_ID
+        m = re_mod.search(r'drive\.google\.com/open\?id=([^&]+)', url)
+        if m:
+            return f"https://lh3.googleusercontent.com/d/{m.group(1)}"
+        # https://drive.google.com/uc?id=FILE_ID
+        m = re_mod.search(r'drive\.google\.com/uc\?.*id=([^&]+)', url)
+        if m:
+            return f"https://lh3.googleusercontent.com/d/{m.group(1)}"
+        return url
+
     products_html = ""
     count = 0
     if q.strip():
@@ -3042,7 +3062,10 @@ async def catalog_page(q: str = ""):
             {"$or": [
                 {"name": {"$regex": regex, "$options": "i"}},
                 {"description": {"$regex": regex, "$options": "i"}},
-                {"code": {"$regex": regex, "$options": "i"}}
+                {"code": {"$regex": regex, "$options": "i"}},
+                {"category_1": {"$regex": regex, "$options": "i"}},
+                {"category_2": {"$regex": regex, "$options": "i"}},
+                {"category_3": {"$regex": regex, "$options": "i"}}
             ]},
             {"_id": 0, "code": 1, "name": 1, "description": 1, "image_url": 1}
         ).limit(40).to_list(40)
@@ -3051,8 +3074,8 @@ async def catalog_page(q: str = ""):
             code = p.get("code", "")
             name = p.get("name", "")
             desc = p.get("description") or ""
-            img = p.get("image_url") or ""
-            img_html = f'<img src="{img}" alt="{name}" loading="lazy">' if img and img != "N/A" else '<div class="no-img">Sin imagen</div>'
+            img = fix_drive_url(p.get("image_url") or "")
+            img_html = f'<img src="{img}" alt="{name}" loading="lazy" onerror="this.parentElement.innerHTML=\'<div class=no-img>Sin imagen</div>\'">' if img and img != "N/A" else '<div class="no-img">Sin imagen</div>'
             desc_html = f'<p class="desc">{desc[:80]}</p>' if desc else ""
             products_html += f'''<div class="card">
                 <div class="img">{img_html}</div>
