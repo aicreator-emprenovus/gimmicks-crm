@@ -485,6 +485,38 @@ export default function Inventory() {
           )}
         </CardContent>
       </Card>
+
+      {/* Pagination */}
+      {total > PAGE_SIZE && (
+        <div className="flex items-center justify-between" data-testid="pagination-controls">
+          <p className="text-sm text-zinc-500">
+            Mostrando {page * PAGE_SIZE + 1}-{Math.min((page + 1) * PAGE_SIZE, total)} de {total}
+          </p>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page === 0}
+              onClick={() => setPage(p => p - 1)}
+              data-testid="prev-page-btn"
+            >
+              <ChevronLeft className="w-4 h-4 mr-1" /> Anterior
+            </Button>
+            <span className="flex items-center px-3 text-sm text-zinc-600">
+              Página {page + 1} de {Math.ceil(total / PAGE_SIZE)}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={(page + 1) * PAGE_SIZE >= total}
+              onClick={() => setPage(p => p + 1)}
+              data-testid="next-page-btn"
+            >
+              Siguiente <ChevronRight className="w-4 h-4 ml-1" />
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
