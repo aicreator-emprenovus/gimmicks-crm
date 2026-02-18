@@ -183,6 +183,8 @@ async def upload_inventory(file: UploadFile = File(...)):
                             if p and p.lower() != 'nan':
                                 categories.append(p)
             categories = list(dict.fromkeys(categories))
+            # Clean invalid category entries
+            categories = [c for c in categories if len(c) > 1 and not c.replace('.','').replace('-','').isdigit()]
 
             if img_url == '0' or img_url.lower() == 'nan':
                 img_url = ""
