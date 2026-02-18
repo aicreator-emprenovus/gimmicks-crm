@@ -850,7 +850,7 @@ async def send_message(
 
 # ============== PRODUCTS/INVENTORY ROUTES ==============
 
-@api_router.get("/products", response_model=List[ProductResponse])
+@api_router.get("/products")
 async def get_products(
     search: Optional[str] = None,
     category: Optional[str] = None,
