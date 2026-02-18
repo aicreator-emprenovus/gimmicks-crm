@@ -866,9 +866,9 @@ MENSAJE ACTUAL DEL CLIENTE: {message_text}"""
         if needs_quote:
             has_min_data = (collected_data.get("codigos_producto") or collected_data.get("producto")) and collected_data.get("cantidad")
             if has_min_data:
-                existing_quote = await db.quotes.find_one(
-                    {"phone_number": phone_number, "status": "pending"},
-                    {"_id": 0, "items": 1, "cantidad": 1, "client_correo": 1, "client_name": 1}
+                existing_quote = await db.quotes_v2.find_one(
+                    {"phone_number": phone_number, "status": "pending", "is_deleted": False},
+                    {"_id": 0, "items": 1, "client_name": 1}
                 )
                 await upsert_quote(db, phone_number, collected_data, conversation_id)
                 state_quote = True
