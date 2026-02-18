@@ -576,9 +576,17 @@ async def process_ai_conversation(
             elif missing_fields:
                 next_to_ask = f"SIGUIENTE dato a pedir (SOLO este, nada más): {missing_fields[0]}"
         
+        # Check if there's already a quote for context
+        has_existing_quote = state.get("quote_generated", False)
+        quote_context = ""
+        if has_existing_quote:
+            quote_context = "NOTA: Ya existe una cotización pendiente. Si el cliente agrega, quita o cambia productos/cantidades, marca needs_quote=true para ACTUALIZAR la cotización."
+
         user_prompt = f"""INSTRUCCIÓN: Revisa TODO el historial y los datos recopilados. NO pidas nada que ya se haya proporcionado. Haz UNA sola pregunta.
+IMPORTANTE: En extracted_data.codigos_producto siempre devuelve la lista COMPLETA ACUMULADA de códigos (no solo los nuevos).
 
 {catalog_info}
+{quote_context}
 
 === HISTORIAL COMPLETO DE LA CONVERSACIÓN ===
 {history_text}
