@@ -235,7 +235,7 @@ export default function Inventory() {
         </div>
 
         {/* Pagination */}
-        <div className="flex items-center justify-between px-4 py-3 border-t bg-gray-50" data-testid="pagination">
+        <div className="flex items-center justify-between px-4 py-3 border-t bg-gray-50 flex-shrink-0" data-testid="pagination">
           <span className="text-sm text-gray-500">
             Mostrando {((page - 1) * limit) + 1}-{Math.min(page * limit, total)} de {total.toLocaleString()}
           </span>
