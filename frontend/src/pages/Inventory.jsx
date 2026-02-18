@@ -172,7 +172,7 @@ export default function Inventory() {
       <div className="bg-white rounded-xl shadow-sm border flex flex-col flex-1 min-h-0">
         <div className="overflow-auto flex-1">
           <table className="w-full text-sm min-w-[1100px]" data-testid="inventory-table">
-            <thead>
+            <thead className="sticky top-0 z-20">
               <tr className="bg-gray-50 text-left border-b">
                 <th className="px-2 py-3 font-semibold text-gray-500 w-14 text-center sticky left-0 bg-gray-50 z-10"></th>
                 <th className="px-3 py-3 font-semibold text-gray-500 w-16">Imagen</th>
