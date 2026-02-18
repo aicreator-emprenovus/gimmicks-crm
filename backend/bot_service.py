@@ -122,7 +122,14 @@ async def search_products_by_keyword(db: AsyncIOMotorDatabase, keyword: str, lim
     if not keyword:
         return []
     words = keyword.strip().split()
-    regex = "|".join(words)
+    stems = set()
+    for w in words:
+        stems.add(w)
+        if w.endswith("es") and len(w) > 3:
+            stems.add(w[:-2])
+        if w.endswith("s") and len(w) > 2:
+            stems.add(w[:-1])
+    regex = "|".join(stems)
     products = await db.products.find(
         {"$or": [
             {"name": {"$regex": regex, "$options": "i"}},
