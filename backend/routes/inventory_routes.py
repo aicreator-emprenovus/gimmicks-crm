@@ -218,6 +218,8 @@ async def get_products(
     category: Optional[str] = None,
     min_price: Optional[float] = None,
     max_price: Optional[float] = None,
+    min_cost: Optional[float] = None,
+    max_cost: Optional[float] = None,
     page: int = Query(1, ge=1),
     limit: int = Query(50, ge=1, le=10000)
 ):
