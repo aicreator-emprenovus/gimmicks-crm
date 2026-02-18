@@ -3060,7 +3060,15 @@ async def catalog_page(q: str = ""):
     count = 0
     if q.strip():
         words = q.strip().split()
-        regex = "|".join([re.escape(w) for w in words])
+        # Handle plurals/singulars: add stem without trailing 's/es'
+        stems = set()
+        for w in words:
+            stems.add(w)
+            if w.endswith("es") and len(w) > 3:
+                stems.add(w[:-2])
+            if w.endswith("s") and len(w) > 2:
+                stems.add(w[:-1])
+        regex = "|".join([re.escape(s) for s in stems])
         products = await db.products.find(
             {"$or": [
                 {"name": {"$regex": regex, "$options": "i"}},
