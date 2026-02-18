@@ -280,6 +280,18 @@ async def upsert_quote(db: AsyncIOMotorDatabase, phone_number: str, collected_da
     """Create or update a pending quote dynamically. Returns confirmation message."""
     now = datetime.now(timezone.utc)
 
+    # Parse per-product quantities
+    qty_map = {}
+    qty_raw = collected_data.get("cantidades_por_producto", "")
+    if qty_raw:
+        for pair in str(qty_raw).split(","):
+            pair = pair.strip()
+            if ":" in pair:
+                code_part, qty_part = pair.split(":", 1)
+                qty_map[code_part.strip().upper()] = qty_part.strip()
+
+    general_qty = str(collected_data.get("cantidad", ""))
+
     # Build product items from codes
     codes_raw = collected_data.get("codigos_producto", "")
     product_items = []
