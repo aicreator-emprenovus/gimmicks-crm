@@ -118,9 +118,9 @@ export default function Inventory() {
   };
 
   return (
-    <div className="p-4 lg:p-6" data-testid="inventory-page">
+    <div className="p-4 lg:p-6 flex flex-col h-[calc(100vh-64px)]" data-testid="inventory-page">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4 flex-shrink-0">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
             <Package size={24} className="text-[#7BA899]" /> Inventario
