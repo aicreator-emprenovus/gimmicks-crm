@@ -1460,6 +1460,7 @@ async def generate_quote_message(phone_number: str, collected_data: Dict) -> str
         products = await db.products.find({
             "$or": [
                 {"name": {"$regex": product_need, "$options": "i"}},
+                {"categories": {"$regex": product_need, "$options": "i"}},
                 {"category_1": {"$regex": product_need, "$options": "i"}},
                 {"category_2": {"$regex": product_need, "$options": "i"}},
                 {"description": {"$regex": product_need, "$options": "i"}}
