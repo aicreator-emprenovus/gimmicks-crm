@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { formatCurrency } from "@/utils/currency";
 import {
   Search, Upload, Plus, Trash2, Edit, ChevronLeft, ChevronRight,
-  X, Package, Download, Image as ImageIcon, Loader2, ChevronDown, ChevronUp
+  X, Package, Download, Image as ImageIcon, Loader2, ChevronDown, ChevronUp, Lightbulb
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
