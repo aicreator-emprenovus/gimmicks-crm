@@ -31,6 +31,12 @@ import {
   Loader2,
   Trash2,
   Image,
+  FileSpreadsheet,
+  CheckCircle,
+  AlertCircle,
+  ChevronLeft,
+  ChevronRight
+} from "lucide-react";
 
 function fixDriveUrl(url) {
   if (!url) return url;
@@ -42,12 +48,6 @@ function fixDriveUrl(url) {
   if (m) return `https://lh3.googleusercontent.com/d/${m[1]}`;
   return url;
 }
-  FileSpreadsheet,
-  CheckCircle,
-  AlertCircle,
-  ChevronLeft,
-  ChevronRight
-} from "lucide-react";
 import { toast } from "sonner";
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
