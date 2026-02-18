@@ -3294,6 +3294,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Serve uploaded product images
+from fastapi.staticfiles import StaticFiles
+uploads_dir = ROOT_DIR / "uploads" / "products"
+uploads_dir.mkdir(parents=True, exist_ok=True)
+app.mount("/api/uploads/products", StaticFiles(directory=str(uploads_dir)), name="product_uploads")
+
 @app.on_event("shutdown")
 async def shutdown_db_client():
     client.close()
