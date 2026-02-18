@@ -1563,12 +1563,14 @@ async def get_catalog_message(request_type: str, product_need: str = "") -> str:
         
         if request_type == "temporada":
             query = {"$or": [
+                {"categories": {"$regex": "navidad|evento|temporada|playa|verano", "$options": "i"}},
                 {"category_1": {"$regex": "navidad|evento|temporada|playa|verano", "$options": "i"}},
                 {"category_2": {"$regex": "navidad|evento|temporada|playa|verano", "$options": "i"}}
             ]}
             catalog_title = "CATÁLOGO DE TEMPORADA"
         elif request_type == "ejecutivo":
             query = {"$or": [
+                {"categories": {"$regex": "ejecutivo|premium|corporativo|lujo", "$options": "i"}},
                 {"category_1": {"$regex": "ejecutivo|premium|corporativo|lujo", "$options": "i"}},
                 {"category_2": {"$regex": "ejecutivo|premium|corporativo|lujo", "$options": "i"}}
             ]}
@@ -1576,6 +1578,7 @@ async def get_catalog_message(request_type: str, product_need: str = "") -> str:
         elif product_need:
             query = {"$or": [
                 {"name": {"$regex": product_need, "$options": "i"}},
+                {"categories": {"$regex": product_need, "$options": "i"}},
                 {"category_1": {"$regex": product_need, "$options": "i"}},
                 {"description": {"$regex": product_need, "$options": "i"}}
             ]}
