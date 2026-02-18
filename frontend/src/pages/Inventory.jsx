@@ -47,6 +47,9 @@ export default function Inventory() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [uploadResult, setUploadResult] = useState(null);
+  const [page, setPage] = useState(0);
+  const [total, setTotal] = useState(0);
+  const PAGE_SIZE = 50;
   const fileInputRef = useRef(null);
   const [formData, setFormData] = useState({
     code: "",
