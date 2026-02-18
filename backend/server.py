@@ -40,6 +40,26 @@ app = FastAPI(title="Gimmicks CRM - WhatsApp Business")
 # Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
 
+# --- Import and configure new modular routes (Proyecto B) ---
+from routes.inventory_routes import router as inventory_router, set_db as set_inv_db
+from routes.quotes_routes import router as quotes_v2_router, set_db as set_quotes_db, set_jwt_secret as set_quotes_jwt
+from routes.clients_routes import router as clients_router, set_db as set_clients_db
+from routes.dashboard_routes import router as dashboard_v2_router, set_db as set_dash_db, set_jwt_secret as set_dash_jwt
+
+# Inject DB and JWT into B routers
+set_inv_db(db)
+set_quotes_db(db)
+set_quotes_jwt(JWT_SECRET)
+set_clients_db(db)
+set_dash_db(db)
+set_dash_jwt(JWT_SECRET)
+
+# Mount B routers under /api prefix
+api_router.include_router(inventory_router, prefix="/inventory", tags=["Inventory V2"])
+api_router.include_router(quotes_v2_router, prefix="/quotes-v2", tags=["Quotes V2"])
+api_router.include_router(clients_router, prefix="/clients", tags=["Clients"])
+api_router.include_router(dashboard_v2_router, prefix="/dashboard-v2", tags=["Dashboard V2"])
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
