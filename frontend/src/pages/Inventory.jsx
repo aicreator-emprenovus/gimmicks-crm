@@ -163,9 +163,9 @@ export default function Inventory() {
           <option value="">Todas las categorías</option>
           {categories.map((c) => <option key={c} value={c}>{c}</option>)}
         </select>
-        <Input type="number" step="0.01" placeholder="Costo Min" value={minCost} onChange={(e) => { setMinCost(e.target.value); setPage(1); }} className="w-[100px] bg-white text-sm h-9 flex-shrink-0" data-testid="min-cost-input" />
+        <Input type="number" step="0.01" placeholder="Min $" value={minCost} onChange={(e) => { setMinCost(e.target.value); setPage(1); }} className="w-[100px] bg-white text-sm h-9 flex-shrink-0" data-testid="min-cost-input" />
         <span className="text-gray-400 text-xs flex-shrink-0">-</span>
-        <Input type="number" step="0.01" placeholder="Costo Max" value={maxCost} onChange={(e) => { setMaxCost(e.target.value); setPage(1); }} className="w-[100px] bg-white text-sm h-9 flex-shrink-0" data-testid="max-cost-input" />
+        <Input type="number" step="0.01" placeholder="Max $" value={maxCost} onChange={(e) => { setMaxCost(e.target.value); setPage(1); }} className="w-[100px] bg-white text-sm h-9 flex-shrink-0" data-testid="max-cost-input" />
       </div>
 
       {/* Table with horizontal scroll */}
