@@ -120,7 +120,7 @@ def format_price_ecuador(price: float) -> str:
 
 
 async def search_products_by_keyword(db: AsyncIOMotorDatabase, keyword: str, limit: int = 8) -> List[Dict]:
-    """Search products by keyword in name, description, or categories"""
+    """Search products by keyword in name, description, or categories (supports both old and new schema)"""
     if not keyword:
         return []
     words = keyword.strip().split()
@@ -136,11 +136,12 @@ async def search_products_by_keyword(db: AsyncIOMotorDatabase, keyword: str, lim
         {"$or": [
             {"name": {"$regex": regex, "$options": "i"}},
             {"description": {"$regex": regex, "$options": "i"}},
+            {"categories": {"$regex": regex, "$options": "i"}},
             {"category_1": {"$regex": regex, "$options": "i"}},
             {"category_2": {"$regex": regex, "$options": "i"}},
             {"category_3": {"$regex": regex, "$options": "i"}}
         ]},
-        {"_id": 0, "code": 1, "name": 1, "description": 1, "price": 1}
+        {"_id": 0, "code": 1, "name": 1, "description": 1, "price": 1, "cost": 1, "image_url": 1, "categories": 1}
     ).limit(limit).to_list(limit)
     return products
 
