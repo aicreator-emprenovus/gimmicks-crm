@@ -174,8 +174,12 @@ export default function Inventory() {
   };
 
   useEffect(() => {
-    fetchProducts();
+    setPage(0);
   }, [searchTerm]);
+
+  useEffect(() => {
+    fetchProducts();
+  }, [searchTerm, page]);
 
   return (
     <div className="p-6 space-y-6" data-testid="inventory-page">
