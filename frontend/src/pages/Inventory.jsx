@@ -24,6 +24,8 @@ export default function Inventory() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [editProduct, setEditProduct] = useState(null);
   const [limit] = useState(50);
+  const [minCost, setMinCost] = useState("");
+  const [maxCost, setMaxCost] = useState("");
   const fileInputRef = useRef(null);
   const token = localStorage.getItem("token");
   const headers = { Authorization: `Bearer ${token}` };
@@ -34,6 +36,8 @@ export default function Inventory() {
       const params = { page, limit };
       if (search) params.search = search;
       if (category && category !== "Todas") params.category = category;
+      if (minCost !== "") params.min_cost = parseFloat(minCost);
+      if (maxCost !== "") params.max_cost = parseFloat(maxCost);
       const res = await axios.get(`${API_URL}/api/inventory/`, { params, headers });
       setProducts(res.data.products || []);
       setTotal(res.data.total || 0);
@@ -42,7 +46,7 @@ export default function Inventory() {
       toast.error("Error al cargar productos");
     }
     setLoading(false);
-  }, [page, limit, search, category]);
+  }, [page, limit, search, category, minCost, maxCost]);
 
   const fetchCategories = async () => {
     try {
