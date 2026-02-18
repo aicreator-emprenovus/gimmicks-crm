@@ -148,6 +148,7 @@ export default function Inventory() {
       });
       setUploadResult(response.data);
       toast.success("Productos cargados exitosamente");
+      setPage(0);
       fetchProducts();
     } catch (error) {
       const message = error.response?.data?.detail || "Error al cargar archivo";
