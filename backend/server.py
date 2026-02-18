@@ -2499,7 +2499,14 @@ async def public_catalog(q: str = "", limit: int = 40):
         return []
     
     words = q.strip().split()
-    regex = "|".join([re.escape(w) for w in words])
+    stems = set()
+    for w in words:
+        stems.add(re.escape(w))
+        if w.endswith("es") and len(w) > 3:
+            stems.add(re.escape(w[:-2]))
+        if w.endswith("s") and len(w) > 2:
+            stems.add(re.escape(w[:-1]))
+    regex = "|".join(stems)
     
     products = await db.products.find(
         {"$or": [
