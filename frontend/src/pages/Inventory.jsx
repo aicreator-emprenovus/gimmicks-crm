@@ -300,19 +300,45 @@ function ProductModal({ product, onClose, onSave }) {
   });
   const [saving, setSaving] = useState(false);
   const [catInput, setCatInput] = useState("");
+  const [uploadingImg, setUploadingImg] = useState(false);
+  const [imagePreview, setImagePreview] = useState(null);
+  const imageInputRef = useRef(null);
   const token = localStorage.getItem("token");
   const headers = { Authorization: `Bearer ${token}` };
   const isEdit = !!product;
+
+  const resolveImageUrl = (url) => {
+    if (!url) return null;
+    if (url.startsWith("/api/uploads/")) return `${API_URL}${url}`;
+    const driveMatch = url.match(/drive\.google\.com\/file\/d\/([^/\?]+)/);
+    if (driveMatch) return `https://drive.google.com/thumbnail?id=${driveMatch[1]}&sz=w400`;
+    const driveOpen = url.match(/drive\.google\.com\/open\?id=([^&]+)/);
+    if (driveOpen) return `https://drive.google.com/thumbnail?id=${driveOpen[1]}&sz=w400`;
+    return url;
+  };
+
+  const convertGoogleDriveUrl = (url) => {
+    if (!url) return url;
+    const fileMatch = url.match(/drive\.google\.com\/file\/d\/([^/\?]+)/);
+    if (fileMatch) return `https://drive.google.com/thumbnail?id=${fileMatch[1]}&sz=w1200`;
+    const openMatch = url.match(/drive\.google\.com\/open\?id=([^&]+)/);
+    if (openMatch) return `https://drive.google.com/thumbnail?id=${openMatch[1]}&sz=w1200`;
+    return url;
+  };
 
   const handleSave = async () => {
     if (!form.code || !form.name) { toast.error("Código y nombre son requeridos"); return; }
     setSaving(true);
     try {
+      const saveData = { ...form };
+      if (saveData.image_url) {
+        saveData.image_url = convertGoogleDriveUrl(saveData.image_url);
+      }
       if (isEdit) {
-        await axios.put(`${API_URL}/api/inventory/${product.code}`, form, { headers });
+        await axios.put(`${API_URL}/api/inventory/${product.code}`, saveData, { headers });
         toast.success("Producto actualizado");
       } else {
-        await axios.post(`${API_URL}/api/inventory/`, form, { headers });
+        await axios.post(`${API_URL}/api/inventory/`, saveData, { headers });
         toast.success("Producto creado");
       }
       onSave();
@@ -334,23 +360,41 @@ function ProductModal({ product, onClose, onSave }) {
   const handleImageUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const formData = new FormData();
-    formData.append("image", file);
+    setUploadingImg(true);
     try {
+      const imageCompression = (await import("browser-image-compression")).default;
+      const options = {
+        maxWidthOrHeight: 1200,
+        maxSizeMB: 1,
+        useWebWorker: true,
+        fileType: "image/jpeg"
+      };
+      const compressedFile = await imageCompression(file, options);
+      setImagePreview(URL.createObjectURL(compressedFile));
+
+      const formData = new FormData();
+      formData.append("image", compressedFile, compressedFile.name || "compressed.jpg");
       const res = await axios.post(`${API_URL}/api/inventory/upload-image`, formData, {
         headers: { ...headers, "Content-Type": "multipart/form-data" }
       });
-      setForm({ ...form, image_url: res.data.image_url });
-      toast.success("Imagen subida");
-    } catch { toast.error("Error al subir imagen"); }
+      setForm(prev => ({ ...prev, image_url: res.data.image_url }));
+      toast.success("Imagen subida y comprimida exitosamente");
+    } catch (err) {
+      console.error("Image upload error:", err);
+      toast.error("Error al subir imagen");
+    }
+    setUploadingImg(false);
+    if (imageInputRef.current) imageInputRef.current.value = "";
   };
+
+  const currentImageSrc = imagePreview || resolveImageUrl(form.image_url);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" data-testid="product-modal">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-5 border-b">
           <h2 className="text-lg font-bold">{isEdit ? "Editar Producto" : "Nuevo Producto"}</h2>
-          <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded"><X size={20} /></button>
+          <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded" data-testid="close-modal-btn"><X size={20} /></button>
         </div>
         <div className="p-5 space-y-4">
           <div className="grid grid-cols-2 gap-3">
@@ -403,23 +447,70 @@ function ProductModal({ product, onClose, onSave }) {
               ))}
             </div>
           </div>
-          <div>
-            <label className="text-xs font-semibold text-gray-600 block mb-1">Imagen</label>
-            <div className="flex gap-2 items-center">
-              <Input value={form.image_url} onChange={e => setForm({ ...form, image_url: e.target.value })} placeholder="URL o subir imagen" className="flex-1" />
-              <label className="cursor-pointer">
-                <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
-                <Button variant="outline" size="sm" type="button" asChild><span><ImageIcon size={14} /></span></Button>
-              </label>
+
+          {/* ===== Imagen del Producto section ===== */}
+          <div data-testid="product-image-section">
+            <label className="text-sm font-semibold text-gray-700 block mb-2">Imagen del Producto</label>
+            {/* Image Preview */}
+            <div className="border border-gray-200 rounded-xl flex items-center justify-center bg-white min-h-[180px] mb-3 overflow-hidden" data-testid="image-preview-area">
+              {currentImageSrc ? (
+                <img
+                  src={currentImageSrc}
+                  alt="Producto"
+                  className="max-h-[180px] max-w-full object-contain p-3"
+                  onError={(e) => { e.target.style.display = 'none'; }}
+                  data-testid="product-image-preview"
+                />
+              ) : (
+                <div className="flex flex-col items-center justify-center text-gray-300 py-8">
+                  <ImageIcon size={40} strokeWidth={1.5} />
+                  <span className="text-xs mt-2">Sin imagen</span>
+                </div>
+              )}
             </div>
+            {/* Upload Button */}
+            <input ref={imageInputRef} type="file" accept="image/*" onChange={handleImageUpload} className="hidden" data-testid="image-file-input" />
+            <button
+              type="button"
+              onClick={() => imageInputRef.current?.click()}
+              disabled={uploadingImg}
+              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg border border-gray-200 bg-sky-50 hover:bg-sky-100 text-gray-700 text-sm font-medium transition-colors mb-3"
+              data-testid="upload-image-btn"
+            >
+              {uploadingImg ? (
+                <Loader2 size={16} className="animate-spin" />
+              ) : (
+                <Upload size={16} />
+              )}
+              {uploadingImg ? "Comprimiendo y subiendo..." : "Subir Imagen"}
+            </button>
+            {/* URL Input */}
+            <p className="text-xs text-gray-500 mb-1.5">O ingresa URL de imagen (Google Drive compatible)</p>
+            <Input
+              value={form.image_url}
+              onChange={e => setForm({ ...form, image_url: e.target.value })}
+              placeholder="https://..."
+              className="mb-1"
+              data-testid="image-url-input"
+            />
+            <p className="text-xs text-gray-400 flex items-start gap-1">
+              <span className="text-amber-400 text-sm leading-none">&#x1F4A1;</span>
+              Tip: Pega el link completo de Google Drive y se convertirá automáticamente
+            </p>
           </div>
         </div>
-        <div className="flex justify-end gap-2 p-5 border-t">
-          <Button variant="outline" onClick={onClose}>Cancelar</Button>
-          <Button className="bg-[#7BA899] hover:bg-[#5E8A7A]" onClick={handleSave} disabled={saving} data-testid="save-product-btn">
-            {saving ? <Loader2 size={16} className="animate-spin mr-1" /> : null}
-            {isEdit ? "Actualizar" : "Crear"}
-          </Button>
+
+        {/* Save / Guardar button */}
+        <div className="p-5 pt-3">
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="w-full py-3 rounded-xl bg-gray-800 hover:bg-gray-900 text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+            data-testid="save-product-btn"
+          >
+            {saving && <Loader2 size={16} className="animate-spin" />}
+            Guardar
+          </button>
         </div>
       </div>
     </div>
