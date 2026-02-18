@@ -279,9 +279,72 @@ async def call_llm(system_msg: str, user_msg: str, phone_number: str = "") -> Op
         return None
 
 
-async def upsert_quote(db: AsyncIOMotorDatabase, phone_number: str, collected_data: Dict, conversation_id: str) -> str:
-    """Create or update a pending quote dynamically. Returns confirmation message."""
+async def auto_create_client(db: AsyncIOMotorDatabase, collected_data: Dict, phone_number: str) -> str:
+    """Auto-create or update a client from bot collected data. Returns client_id."""
+    email = collected_data.get("correo", "")
+    name = collected_data.get("nombre", "") or collected_data.get("empresa", "")
+    if not name and not email:
+        return ""
+
+    # Check if client already exists by email or phone
+    existing = None
+    if email:
+        existing = await db.clients.find_one({"email": email, "is_deleted": False}, {"_id": 0, "id": 1})
+    if not existing and phone_number:
+        existing = await db.clients.find_one({"phone": {"$regex": phone_number[-10:]}, "is_deleted": False}, {"_id": 0, "id": 1})
+
+    if existing:
+        # Update existing client with new data
+        update_fields = {}
+        if name:
+            update_fields["name"] = name
+        if collected_data.get("ciudad"):
+            update_fields["city"] = collected_data["ciudad"]
+        if collected_data.get("empresa"):
+            update_fields["sector_details"] = collected_data["empresa"]
+        if update_fields:
+            await db.clients.update_one({"id": existing["id"]}, {"$set": update_fields})
+        return existing["id"]
+
+    # Create new client
+    client_id = str(uuid.uuid4())
     now = datetime.now(timezone.utc)
+    client_doc = {
+        "id": client_id,
+        "name": name or f"Cliente WhatsApp {phone_number[-4:]}",
+        "email": email or "",
+        "commercial_email": "",
+        "phone": phone_number,
+        "contact_person": collected_data.get("nombre", ""),
+        "address": "",
+        "city": collected_data.get("ciudad", ""),
+        "tax_id": "",
+        "sector": "",
+        "sector_details": collected_data.get("empresa", ""),
+        "notes": f"Cliente creado automáticamente desde WhatsApp",
+        "is_deleted": False,
+        "deleted_at": None,
+        "created_at": now
+    }
+    await db.clients.insert_one(client_doc)
+    # Log activity
+    await db.client_activities.insert_one({
+        "id": str(uuid.uuid4()),
+        "client_id": client_id,
+        "action": "created",
+        "details": f"Cliente creado automáticamente desde conversación WhatsApp ({phone_number})",
+        "timestamp": now
+    })
+    logger.info(f"Auto-created client {client_id} for {phone_number}")
+    return client_id
+
+
+async def upsert_quote(db: AsyncIOMotorDatabase, phone_number: str, collected_data: Dict, conversation_id: str) -> str:
+    """Create or update a pending quote in quotes_v2 collection. Auto-creates client. Returns confirmation message."""
+    now = datetime.now(timezone.utc)
+
+    # Auto-create or find client
+    client_id = await auto_create_client(db, collected_data, phone_number)
 
     # Parse per-product quantities
     qty_map = {}
@@ -291,13 +354,20 @@ async def upsert_quote(db: AsyncIOMotorDatabase, phone_number: str, collected_da
             pair = pair.strip()
             if ":" in pair:
                 code_part, qty_part = pair.split(":", 1)
-                qty_map[code_part.strip().upper()] = qty_part.strip()
+                try:
+                    qty_map[code_part.strip().upper()] = int(re.search(r'\d+', qty_part).group())
+                except:
+                    qty_map[code_part.strip().upper()] = 1
 
-    general_qty = str(collected_data.get("cantidad", ""))
+    general_qty_str = str(collected_data.get("cantidad", ""))
+    try:
+        general_qty = int(re.search(r'\d+', general_qty_str).group()) if general_qty_str else 1
+    except:
+        general_qty = 1
 
     # Build product items from codes
     codes_raw = collected_data.get("codigos_producto", "")
-    product_items = []
+    quote_items = []
 
     if codes_raw:
         clean = str(codes_raw).replace("[", "").replace("]", "").replace("'", "").replace('"', '')
@@ -305,30 +375,54 @@ async def upsert_quote(db: AsyncIOMotorDatabase, phone_number: str, collected_da
         products = await validate_product_codes(db, code_list)
         for p in products:
             code = p.get("code", "")
-            product_items.append({
+            qty = qty_map.get(code.upper(), general_qty)
+            unit_price = p.get("price", 0) or p.get("cost", 0) or 0
+            total_price = unit_price * qty
+            quote_items.append({
+                "item_id": str(uuid.uuid4()),
                 "product_id": p.get("id", ""),
                 "code": code,
-                "product_name": p.get("name", ""),
+                "name": p.get("name", ""),
                 "description": (p.get("description") or "")[:100],
-                "price": p.get("price", 0) or 0,
-                "quantity": qty_map.get(code.upper(), general_qty),
+                "quantity": qty,
+                "unit_price": unit_price,
+                "total_price": total_price,
+                "image_url": p.get("image_url", ""),
+                "categories": p.get("categories", []),
+                "discount_amount": 0,
+                "discount_type": "$",
+                "additional_amount": 0,
+                "additional_type": "$",
+                "otros": collected_data.get("personalizacion", "")
             })
 
     # Fallback: search by product keyword
-    if not product_items and collected_data.get("producto"):
+    if not quote_items and collected_data.get("producto"):
         products = await search_products_by_keyword(db, collected_data["producto"], limit=5)
         for p in products:
             code = p.get("code", "")
-            product_items.append({
+            qty = qty_map.get(code.upper(), general_qty)
+            unit_price = p.get("price", 0) or p.get("cost", 0) or 0
+            total_price = unit_price * qty
+            quote_items.append({
+                "item_id": str(uuid.uuid4()),
                 "product_id": p.get("id", ""),
                 "code": code,
-                "product_name": p.get("name", ""),
+                "name": p.get("name", ""),
                 "description": (p.get("description") or "")[:100],
-                "price": p.get("price", 0) or 0,
-                "quantity": qty_map.get(code.upper(), general_qty),
+                "quantity": qty,
+                "unit_price": unit_price,
+                "total_price": total_price,
+                "image_url": p.get("image_url", ""),
+                "categories": p.get("categories", []),
+                "discount_amount": 0,
+                "discount_type": "$",
+                "additional_amount": 0,
+                "additional_type": "$",
+                "otros": collected_data.get("personalizacion", "")
             })
 
-    # Get client name from collected_data or from lead
+    # Get client name
     client_name = collected_data.get("nombre", "")
     if not client_name:
         lead = await db.leads.find_one({"phone_number": phone_number}, {"_id": 0, "name": 1})
@@ -338,45 +432,78 @@ async def upsert_quote(db: AsyncIOMotorDatabase, phone_number: str, collected_da
         if lead and lead.get("name"):
             client_name = lead["name"]
 
+    subtotal = sum(item["total_price"] for item in quote_items)
+    tax = subtotal * 0.15
+    total = subtotal + tax
+
     quote_data = {
-        "conversation_id": conversation_id,
-        "phone_number": phone_number,
-        "status": "pending",
+        "doc_type": "QUOTE",
+        "client_id": client_id,
         "client_name": client_name,
-        "client_empresa": collected_data.get("empresa", ""),
-        "client_correo": collected_data.get("correo", ""),
-        "client_ciudad": collected_data.get("ciudad", ""),
-        "items": product_items,
-        "cantidad": collected_data.get("cantidad", ""),
-        "fecha_entrega": collected_data.get("fecha_entrega", ""),
-        "personalizacion": collected_data.get("personalizacion", ""),
-        "necesita_diseno": collected_data.get("necesita_diseno", ""),
-        "total": 0,
-        "updated_at": now.isoformat()
+        "client_contact": collected_data.get("nombre", ""),
+        "client_email": collected_data.get("correo", ""),
+        "items": quote_items,
+        "subtotal": round(subtotal, 2),
+        "tax": round(tax, 2),
+        "total": round(total, 2),
+        "status": "pending",
+        "payment_terms": "50% anticipo, 50% contra entrega",
+        "validity": "8 días",
+        "delivery_time": collected_data.get("fecha_entrega", "Por confirmar"),
+        "is_deleted": False,
+        "deleted_at": None,
+        "created_by_id": "",
+        "created_by_name": "Bot WhatsApp",
+        "phone_number": phone_number,
+        "conversation_id": conversation_id,
     }
 
-    # Check if a pending quote already exists for this phone
-    existing = await db.quotes.find_one(
-        {"phone_number": phone_number, "status": "pending"},
-        {"_id": 0, "id": 1}
+    # Check if a pending quote already exists for this phone in quotes_v2
+    existing = await db.quotes_v2.find_one(
+        {"phone_number": phone_number, "status": "pending", "is_deleted": False},
+        {"_id": 0, "id": 1, "quote_number": 1}
     )
 
     if existing:
-        await db.quotes.update_one(
+        await db.quotes_v2.update_one(
             {"id": existing["id"]},
-            {"$set": quote_data}
+            {"$set": {**quote_data, "updated_at": now}}
         )
-        product_names = ", ".join([p["product_name"] for p in product_items[:3]]) if product_items else collected_data.get("producto", "productos solicitados")
+        product_names = ", ".join([p["name"] for p in quote_items[:3]]) if quote_items else collected_data.get("producto", "productos solicitados")
         return (
             f"He actualizado tu cotización con los cambios: {product_names}. "
             f"Nuestro equipo la revisará y te la enviaremos a {collected_data.get('correo', 'tu correo')} pronto."
         )
     else:
+        # Generate quote number
+        count = await db.quotes_v2.count_documents({})
+        quote_number = str(4698 + count)
         quote_data["id"] = str(uuid.uuid4())
-        quote_data["created_at"] = now.isoformat()
-        quote_data["notes"] = ""
-        await db.quotes.insert_one(quote_data)
-        product_names = ", ".join([p["product_name"] for p in product_items[:3]]) if product_items else collected_data.get("producto", "productos solicitados")
+        quote_data["quote_number"] = quote_number
+        quote_data["created_at"] = now
+        await db.quotes_v2.insert_one(quote_data)
+        # Log activity
+        if client_id:
+            await db.client_activities.insert_one({
+                "id": str(uuid.uuid4()),
+                "client_id": client_id,
+                "action": "quote_created",
+                "details": f"Cotización #{quote_number} generada desde WhatsApp",
+                "timestamp": now
+            })
+            await db.document_activities.insert_one({
+                "_id": str(uuid.uuid4()),
+                "document_id": quote_data["id"],
+                "document_number": quote_number,
+                "document_type": "QUOTE",
+                "action": "created",
+                "user_id": "",
+                "user_name": "Bot WhatsApp",
+                "user_email": "",
+                "details": f"Cotización creada automáticamente para {client_name} desde WhatsApp",
+                "timestamp": now
+            })
+        product_names = ", ".join([p["name"] for p in quote_items[:3]]) if quote_items else collected_data.get("producto", "productos solicitados")
         return (
             f"Tu solicitud de cotización para {product_names} ha sido registrada. "
             f"Nuestro equipo la revisará y te la enviaremos a {collected_data.get('correo', 'tu correo')} pronto."
