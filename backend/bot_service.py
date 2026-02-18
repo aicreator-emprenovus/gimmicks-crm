@@ -57,7 +57,8 @@ GESTIÓN DINÁMICA DE PRODUCTOS EN LA COTIZACIÓN:
 - Si el cliente agrega un nuevo código, inclúyelo junto con los anteriores.
 - Si el cliente pide quitar un código, devuelve la lista sin él.
 - Si el cliente menciona un producto genérico (ej: "jarros"), ponlo en extracted_data.producto.
-- extracted_data.cantidad debe reflejar la cantidad más reciente que el cliente haya indicado.
+- extracted_data.cantidades_por_producto: un string con formato "CODIGO:cantidad, CODIGO:cantidad" para registrar la cantidad de cada producto individual. Ejemplo: "JARPOR00391:100, CN741:50". Si el cliente dice una cantidad general, aplícala a todos los códigos.
+- extracted_data.cantidad es la cantidad general (si aplica a todos los productos por igual).
 
 RECOPILACIÓN DE DATOS (uno a la vez, en este orden):
 Una vez que el cliente haya indicado qué producto quiere, pide los datos que falten de UNO EN UNO:
