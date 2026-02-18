@@ -265,16 +265,15 @@ async def call_llm(system_msg: str, user_msg: str, phone_number: str = "") -> Op
         return None
 
 
-async def create_pending_quote(db: AsyncIOMotorDatabase, phone_number: str, collected_data: Dict, conversation_id: str) -> str:
-    """Create a pending quote for admin review. Returns confirmation message."""
+async def upsert_quote(db: AsyncIOMotorDatabase, phone_number: str, collected_data: Dict, conversation_id: str) -> str:
+    """Create or update a pending quote dynamically. Returns confirmation message."""
     now = datetime.now(timezone.utc)
 
-    # Find products by codes or keyword
+    # Build product items from codes
     codes_raw = collected_data.get("codigos_producto", "")
     product_items = []
 
     if codes_raw:
-        # Clean codes string - handle list format ['X', 'Y'] or comma/space separated
         clean = str(codes_raw).replace("[", "").replace("]", "").replace("'", "").replace('"', '')
         code_list = [c.strip() for c in re.split(r'[,\s]+', clean) if c.strip()]
         products = await validate_product_codes(db, code_list)
@@ -289,7 +288,7 @@ async def create_pending_quote(db: AsyncIOMotorDatabase, phone_number: str, coll
 
     # Fallback: search by product keyword
     if not product_items and collected_data.get("producto"):
-        products = await search_products_by_keyword(db, collected_data["producto"], limit=3)
+        products = await search_products_by_keyword(db, collected_data["producto"], limit=5)
         for p in products:
             product_items.append({
                 "product_id": p.get("id", ""),
@@ -299,12 +298,21 @@ async def create_pending_quote(db: AsyncIOMotorDatabase, phone_number: str, coll
                 "price": p.get("price", 0) or 0,
             })
 
-    quote_doc = {
-        "id": str(uuid.uuid4()),
+    # Get client name from collected_data or from lead
+    client_name = collected_data.get("nombre", "")
+    if not client_name:
+        lead = await db.leads.find_one({"phone_number": phone_number}, {"_id": 0, "name": 1})
+        if not lead:
+            phone_alt = phone_number.lstrip("+")
+            lead = await db.leads.find_one({"phone_number": phone_alt}, {"_id": 0, "name": 1})
+        if lead and lead.get("name"):
+            client_name = lead["name"]
+
+    quote_data = {
         "conversation_id": conversation_id,
         "phone_number": phone_number,
         "status": "pending",
-        "client_name": collected_data.get("nombre", ""),
+        "client_name": client_name,
         "client_empresa": collected_data.get("empresa", ""),
         "client_correo": collected_data.get("correo", ""),
         "client_ciudad": collected_data.get("ciudad", ""),
@@ -314,18 +322,35 @@ async def create_pending_quote(db: AsyncIOMotorDatabase, phone_number: str, coll
         "personalizacion": collected_data.get("personalizacion", ""),
         "necesita_diseno": collected_data.get("necesita_diseno", ""),
         "total": 0,
-        "notes": "",
-        "created_at": now.isoformat(),
         "updated_at": now.isoformat()
     }
-    await db.quotes.insert_one(quote_doc)
 
-    product_names = ", ".join([p["product_name"] for p in product_items[:3]]) if product_items else collected_data.get("producto", "productos solicitados")
-    return (
-        f"Listo, tu solicitud de cotización para {product_names} ha sido registrada.\n\n"
-        f"Nuestro equipo la revisará y te la enviaremos a {collected_data.get('correo', 'tu correo')} muy pronto.\n\n"
-        f"Cualquier duda adicional me escribes por aquí."
+    # Check if a pending quote already exists for this phone
+    existing = await db.quotes.find_one(
+        {"phone_number": phone_number, "status": "pending"},
+        {"_id": 0, "id": 1}
     )
+
+    if existing:
+        await db.quotes.update_one(
+            {"id": existing["id"]},
+            {"$set": quote_data}
+        )
+        product_names = ", ".join([p["product_name"] for p in product_items[:3]]) if product_items else collected_data.get("producto", "productos solicitados")
+        return (
+            f"He actualizado tu cotización con los cambios: {product_names}. "
+            f"Nuestro equipo la revisará y te la enviaremos a {collected_data.get('correo', 'tu correo')} pronto."
+        )
+    else:
+        quote_data["id"] = str(uuid.uuid4())
+        quote_data["created_at"] = now.isoformat()
+        quote_data["notes"] = ""
+        await db.quotes.insert_one(quote_data)
+        product_names = ", ".join([p["product_name"] for p in product_items[:3]]) if product_items else collected_data.get("producto", "productos solicitados")
+        return (
+            f"Tu solicitud de cotización para {product_names} ha sido registrada. "
+            f"Nuestro equipo la revisará y te la enviaremos a {collected_data.get('correo', 'tu correo')} pronto."
+        )
 
 
 # ============== PIPELINE STAGES ==============
