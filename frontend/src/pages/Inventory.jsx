@@ -424,7 +424,7 @@ export default function Inventory() {
                       <TableCell>
                         {product.image_url ? (
                           <img
-                            src={product.image_url}
+                            src={fixDriveUrl(product.image_url)}
                             alt={product.name}
                             className="w-10 h-10 object-cover rounded-lg"
                             onError={(e) => {
