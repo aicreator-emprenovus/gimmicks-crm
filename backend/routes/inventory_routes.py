@@ -165,14 +165,24 @@ async def upload_inventory(file: UploadFile = File(...)):
                 price = cost * 1.35
             
             categories = []
-            for c_col in cat_cols:
-                val = get_str(c_col)
+            # Single "Categorías" column with comma-separated values
+            if col_categorias:
+                val = get_str(col_categorias)
                 if val and val.lower() != 'no':
                     parts = [p.strip() for p in val.split(',')]
                     for p in parts:
-                        if p:
+                        if p and p.lower() != 'nan':
                             categories.append(p)
-            categories = list(set([c for c in categories if c and c.lower() != 'nan']))
+            else:
+                # Multiple category columns
+                for c_col in cat_cols:
+                    val = get_str(c_col)
+                    if val and val.lower() != 'no':
+                        parts = [p.strip() for p in val.split(',')]
+                        for p in parts:
+                            if p and p.lower() != 'nan':
+                                categories.append(p)
+            categories = list(dict.fromkeys(categories))
 
             if img_url == '0' or img_url.lower() == 'nan':
                 img_url = ""
