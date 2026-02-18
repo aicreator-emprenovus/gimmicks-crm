@@ -68,8 +68,19 @@ CRM para ventas comerciales con WhatsApp Business que integra bot IA (GPT-4o), g
 ## Credentials
 - Admin: admin@gimmicks.com / admin123456
 
+### Mejora: Carga de Imágenes con Compresión en Modal de Producto - COMPLETADA (Feb 18, 2026)
+- Sección "Imagen del Producto" rediseñada en ProductModal (Inventory.jsx)
+- Vista previa grande de imagen con placeholder cuando no existe
+- Botón "Subir Imagen" con fondo celeste (bg-sky-50) y compresión client-side via browser-image-compression (max 1200px ancho)
+- Campo URL con soporte Google Drive (auto-conversión de enlaces)
+- Tip informativo sobre Google Drive
+- Botón "Guardar" oscuro (bg-gray-800) al fondo del modal
+- Compresión doble: client-side (browser-image-compression) + server-side (Pillow)
+- Testing iteration 9: 100% pass rate (11 backend + all frontend tests)
+
 ## Remaining/Future Tasks
-1. **P2 - Email credentials**: Configure SMTP/Gmail/Resend for real email sending
-2. **P2 - Refactoring**: Split server.py into smaller modules
+1. **P1 - SMTP credentials**: Configure SMTP/Gmail/Resend for real email sending (cotizaciones)
+2. **P2 - Refactoring**: Split bot_service.py and Leads.jsx into smaller modules
 3. **P3 - Asesor role**: Finalize role restrictions
-4. **P3 - Deploy to Railway**: Deploy latest code to production
+4. **P3 - PublicCatalog improvements**: Integrate improvements from Project B
+5. **P3 - Deploy to Railway**: Deploy latest code to production
