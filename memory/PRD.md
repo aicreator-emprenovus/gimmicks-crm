@@ -1,59 +1,102 @@
-# Gimmicks CRM - WhatsApp Business - PRD
+# PRD - Gimmicks CRM WhatsApp Business
 
-## Problema Original
-Sistema CRM con bot conversacional inteligente para WhatsApp Business, enfocado en flujo de ventas comerciales para Gimmicks Marketing Services (Ecuador).
+## Problem Statement
+CRM para ventas comerciales con WhatsApp Business que integra bot IA (GPT-4o), gestión de leads, cotizaciones dinámicas, catálogo público y ahora módulos avanzados del Cotizador Gimmicks.
 
-## Arquitectura
-- **Backend**: FastAPI + MongoDB (Motor async)
-- **Frontend**: React + Tailwind CSS + Shadcn/UI
-- **IA**: OpenAI (gpt-4o-mini) via Emergent LLM Key
-- **Produccion**: Railway (solo backend)
-- **Preview**: Emergent (frontend + backend)
+## Architecture
+- **Backend**: FastAPI (Python) - `/app/backend/server.py` + modular routes in `/app/backend/routes/`
+- **Frontend**: React + Shadcn/UI + TailwindCSS - `/app/frontend/src/`
+- **Database**: MongoDB (motor async driver)
+- **Auth**: JWT (bcrypt)
+- **Bot**: GPT-4o via Emergent LLM Key
+- **Hosting**: Railway (production), Emergent (preview)
 
-## Funcionalidades Implementadas
-- Bot conversacional con IA (bot_service.py)
-- Sistema de cotizaciones con revision admin (Quotes.jsx)
-- Catalogo publico sin login (PublicCatalog.jsx + /catalog endpoint HTML)
-- Pipeline de leads automatizado
-- Gestion de usuarios (admin/asesor)
-- Webhook WhatsApp Business API
-- Carga de inventario via Excel
-- Dashboard con metricas basicas
-- Manejo de conversaciones inactivas (12h resume, 4h reminder, 24h perdido)
-- Resilencia del bot (fallback sin errores tecnicos)
+## Core Modules (Proyecto A - Intactos)
+- Auth (login/registro JWT)
+- WhatsApp Inbox (conversations + bot)
+- Leads Kanban Board
+- Users Management
+- Settings (automation rules)
+- Public Catalog (/catalog)
 
-## Completado (Feb 2026)
-- [x] P0: Fix enlace catalogo publico (URL encoding + limpieza datos test + verificacion flujo completo)
-- [x] P0: Reconectar frontend a Railway (produccion) para mostrar conversaciones reales
-- [x] Bot no repetitivo: carga datos previos del lead (load_known_client_data), historial ampliado a 20 msgs, prompt reforzado para NO repetir datos
-- [x] Recordatorios inteligentes: skip conversaciones cotizadas, reminder_count (0->1->2->perdido), 4h->24h->24h->marca perdido
-- [x] Etiquetas funnel_stage en Inbox: filtros por Lead/Potencial/Cotizado/Pedido/Perdido, badges por conversacion
-- [x] Configuracion: 10 reglas del sistema sembradas (bienvenida, catalogo, recopilacion datos, cotizacion, recordatorios, perdido, reanudacion, transferencia humano, consulta precios)
-- [x] Configuracion: edicion completa de reglas (nombre, trigger, accion, valor, activa/inactiva) via dialogo
-- [x] Bot IA con recopilacion de datos paso a paso
-- [x] Correccion requirements.txt (emergentintegrations)
-- [x] Sistema de cotizaciones pendientes
-- [x] Ortografia impecable (tildes)
-- [x] Sin emojis en respuestas del bot
-- [x] Logica de reanudacion 12h+
+## Merged Modules from Proyecto B (FASE 2 - Completado Feb 18, 2026)
+- **Inventory V2** (`/api/inventory/`): Pagination, categories array, cost/supplier, image upload, Excel upload, export
+- **Clients** (`/api/clients/`): Full CRUD, soft delete, trash, restore, history, activity log, sectors
+- **Quotes V2** (`/api/quotes-v2/`): QuoteBuilder with cart, discounts, additional values, PDF generation (reportlab), email sending, Quotes/PO tabs, trash/restore, activity log
+- **Dashboard V2** (`/api/dashboard-v2/`): Real stats (products, clients, quotes, POs, leads), activity chart, top products, top clients
 
-## Completado (Feb 17-18, 2026)
-- [x] Sincronización nombre lead -> chat: fix normalización formato telefónico (+593 vs 593)
-- [x] Corrección ortográfica de las 10 reglas de automatización
-- [x] Bot anti-repetición: historial ampliado a 50 msgs, modelo gpt-4o, sesión persistente
-- [x] Inventario: paginación con total real (5412+ productos)
-- [x] Cotizaciones dinámicas: upsert_quote crea/actualiza, nombre desde lead, productos acumulativos
+## Key Files
+### Backend
+- `/app/backend/server.py` - Main server (routes + bot logic + WhatsApp webhook)
+- `/app/backend/routes/inventory_routes.py` - Inventory V2 API
+- `/app/backend/routes/quotes_routes.py` - Quotes V2 API with PDF
+- `/app/backend/routes/clients_routes.py` - Clients CRUD API
+- `/app/backend/routes/dashboard_routes.py` - Dashboard V2 stats
+- `/app/backend/services/email_service.py` - Email service (Gmail SMTP + Resend)
+- `/app/backend/models_b.py` - Pydantic models for V2 modules
+- `/app/backend/bot_service.py` - WhatsApp bot AI logic
 
-## Pendiente
-- [ ] P1: Configuracion SMTP para envio de cotizaciones (necesita credenciales)
-- [ ] P1: Mejorar UI de carga de inventario (Inventory.jsx)
-- [ ] P2: Dashboard con metricas reales
-- [ ] Restricciones completas rol "Asesor"
-- [ ] Refactorizar server.py en modulos (routes, models, services)
+### Frontend
+- `/app/frontend/src/pages/Inventory.jsx` - Inventory (replaced with B)
+- `/app/frontend/src/pages/Clients.jsx` - Clients (NEW from B)
+- `/app/frontend/src/pages/QuoteBuilder.jsx` - Quote Builder (NEW from B)
+- `/app/frontend/src/pages/QuoteHistory.jsx` - Quote History (NEW from B)
+- `/app/frontend/src/pages/Inbox.jsx` - WhatsApp Inbox (A intact)
+- `/app/frontend/src/pages/Leads.jsx` - Leads Kanban (A intact)
+- `/app/frontend/src/components/Layout.jsx` - Sidebar navigation
 
-## Credenciales Test
-- Email: admin@gimmicks.com
-- Password: admin123456
+## DB Collections
+- `users`, `leads`, `conversations`, `messages` (Proyecto A)
+- `products` (shared - both schemas supported)
+- `quotes` (old - for bot compatibility)
+- `quotes_v2` (new - Proyecto B quotes/POs)
+- `clients`, `client_activities`, `document_activities` (new from B)
+- `automation_rules` (Proyecto A)
 
-## Nota Critica
-Los cambios NO estan desplegados en Railway. El usuario debe hacer "Save to GitHub" para desplegar.
+## Mocked/Pending
+- **Email sending**: MOCKED (no SMTP/Resend/Gmail credentials configured)
+- **Dashboard (old)**: Still returns mocked data at `/api/dashboard/metrics`
+
+## API Endpoints
+### V2 (New from Proyecto B)
+- `GET/POST /api/inventory/` - Products with pagination
+- `POST /api/inventory/upload` - Excel upload
+- `GET /api/inventory/categories` - Product categories
+- `POST /api/inventory/upload-image` - Image upload
+- `PUT/DELETE /api/inventory/{code}` - Product CRUD
+- `GET/POST /api/clients/` - Clients CRUD
+- `PUT/DELETE /api/clients/{id}` - Client update/delete
+- `POST /api/clients/{id}/restore` - Restore from trash
+- `GET /api/clients/{id}/history` - Client history
+- `GET/POST /api/quotes-v2/` - Quotes/POs CRUD
+- `PUT/DELETE /api/quotes-v2/{id}` - Quote update/delete
+- `POST /api/quotes-v2/{id}/generate-pdf` - PDF generation
+- `POST /api/quotes-v2/{id}/convert-to-po` - Convert to PO
+- `POST /api/quotes-v2/{id}/send-quote` - Send quote email
+- `POST /api/quotes-v2/{id}/send-po` - Send PO email
+- `GET /api/quotes-v2/activities/all` - Document activities
+- `GET /api/dashboard-v2/stats` - Dashboard stats
+- `GET /api/dashboard-v2/activity-chart` - Activity chart
+- `GET /api/dashboard-v2/top-products` - Top products
+- `GET /api/dashboard-v2/top-clients` - Top clients
+
+### Legacy (Proyecto A - kept for bot compatibility)
+- `/api/products` - Old product endpoints
+- `/api/quotes` - Old quote endpoints
+- `/api/catalog/public` - Public catalog
+
+## Credentials
+- Admin: admin@gimmicks.com / admin123456
+
+## Completed Tasks
+- [x] FASE 1: Auditoría y plan de integración
+- [x] FASE 2: Reemplazo de Catálogo y Cotizaciones (Inventory V2, Quotes V2, Clients, Dashboard V2)
+- [x] Testing FASE 2: 100% pass rate
+
+## Upcoming Tasks (Priority Order)
+1. **P1 - FASE 3**: Integrar módulos restantes del Proyecto B (mejorar Dashboard UI con métricas reales V2)
+2. **P1 - FASE 4**: Migración/adaptación de base de datos
+3. **P1 - FASE 5**: Pruebas End-to-End completas
+4. **P2 - Bot adaptation**: Adaptar bot_service.py para usar quotes_v2 en lugar de quotes
+5. **P2 - Email SMTP/Resend**: Configurar credenciales de email
+6. **P3 - Refactoring**: Dividir server.py en módulos más pequeños
