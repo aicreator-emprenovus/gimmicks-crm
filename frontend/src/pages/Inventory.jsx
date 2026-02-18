@@ -31,6 +31,17 @@ import {
   Loader2,
   Trash2,
   Image,
+
+function fixDriveUrl(url) {
+  if (!url) return url;
+  let m = url.match(/drive\.google\.com\/file\/d\/([^/]+)/);
+  if (m) return `https://lh3.googleusercontent.com/d/${m[1]}`;
+  m = url.match(/drive\.google\.com\/open\?id=([^&]+)/);
+  if (m) return `https://lh3.googleusercontent.com/d/${m[1]}`;
+  m = url.match(/drive\.google\.com\/uc\?.*id=([^&]+)/);
+  if (m) return `https://lh3.googleusercontent.com/d/${m[1]}`;
+  return url;
+}
   FileSpreadsheet,
   CheckCircle,
   AlertCircle,
