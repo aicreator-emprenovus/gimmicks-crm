@@ -301,24 +301,28 @@ async def upsert_quote(db: AsyncIOMotorDatabase, phone_number: str, collected_da
         code_list = [c.strip() for c in re.split(r'[,\s]+', clean) if c.strip()]
         products = await validate_product_codes(db, code_list)
         for p in products:
+            code = p.get("code", "")
             product_items.append({
                 "product_id": p.get("id", ""),
-                "code": p.get("code", ""),
+                "code": code,
                 "product_name": p.get("name", ""),
                 "description": (p.get("description") or "")[:100],
                 "price": p.get("price", 0) or 0,
+                "quantity": qty_map.get(code.upper(), general_qty),
             })
 
     # Fallback: search by product keyword
     if not product_items and collected_data.get("producto"):
         products = await search_products_by_keyword(db, collected_data["producto"], limit=5)
         for p in products:
+            code = p.get("code", "")
             product_items.append({
                 "product_id": p.get("id", ""),
-                "code": p.get("code", ""),
+                "code": code,
                 "product_name": p.get("name", ""),
                 "description": (p.get("description") or "")[:100],
                 "price": p.get("price", 0) or 0,
+                "quantity": qty_map.get(code.upper(), general_qty),
             })
 
     # Get client name from collected_data or from lead
