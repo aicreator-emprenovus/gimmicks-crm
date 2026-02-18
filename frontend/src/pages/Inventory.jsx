@@ -168,9 +168,9 @@ export default function Inventory() {
         <Input type="number" step="0.01" placeholder="Max $" value={maxCost} onChange={(e) => { setMaxCost(e.target.value); setPage(1); }} className="w-[100px] bg-white text-sm h-9 flex-shrink-0" data-testid="max-cost-input" />
       </div>
 
-      {/* Table with horizontal scroll */}
-      <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
-        <div className="overflow-x-auto">
+      {/* Table with horizontal scroll - fills remaining height */}
+      <div className="bg-white rounded-xl shadow-sm border flex flex-col flex-1 min-h-0">
+        <div className="overflow-auto flex-1">
           <table className="w-full text-sm min-w-[1100px]" data-testid="inventory-table">
             <thead>
               <tr className="bg-gray-50 text-left border-b">
