@@ -606,6 +606,58 @@ async def get_lead(lead_id: str, current_user: dict = Depends(get_current_user))
         raise HTTPException(status_code=404, detail="Lead no encontrado")
     return build_lead_response(lead)
 
+
+async def _create_client_from_lead(lead_id: str, lead: dict, update_dict: dict):
+    """Create a client from lead data when lead reaches 'entregado' stage."""
+    now = datetime.now(timezone.utc)
+    name = update_dict.get("name") or lead.get("name", "")
+    phone = lead.get("phone_number", "")
+    email = lead.get("correo", "")
+
+    # Skip if no useful data
+    if not name and not phone:
+        return
+
+    # Check if client already exists by phone or email
+    existing = None
+    if email:
+        existing = await db.clients.find_one({"email": email, "is_deleted": False}, {"_id": 0, "id": 1})
+    if not existing and phone:
+        phone_clean = phone.lstrip("+")[-10:]
+        existing = await db.clients.find_one({"phone": {"$regex": phone_clean}, "is_deleted": False}, {"_id": 0, "id": 1})
+
+    if existing:
+        return  # Client already exists, no duplicates
+
+    client_id = str(uuid.uuid4())
+    client_doc = {
+        "id": client_id,
+        "name": name or f"Cliente {phone[-4:]}",
+        "email": email,
+        "commercial_email": "",
+        "phone": phone,
+        "contact_person": name,
+        "address": "",
+        "city": lead.get("ciudad", ""),
+        "tax_id": "",
+        "sector": "",
+        "sector_details": lead.get("empresa", ""),
+        "notes": f"Creado automaticamente desde Lead #{lead_id} al pasar a Entregado",
+        "is_deleted": False,
+        "deleted_at": None,
+        "created_at": now
+    }
+    await db.clients.insert_one(client_doc)
+    await db.client_activities.insert_one({
+        "id": str(uuid.uuid4()),
+        "client_id": client_id,
+        "action": "created",
+        "details": f"Cliente creado automaticamente desde Lead (tel: {phone}) al pasar a Entregado",
+        "timestamp": now
+    })
+    logger.info(f"Auto-created client {client_id} from lead {lead_id} (entregado)")
+
+
 @api_router.patch("/leads/{lead_id}", response_model=LeadResponse)
 async def update_lead(lead_id: str, update_data: LeadUpdate, current_user: dict = Depends(get_current_user)):
     lead = await db.leads.find_one({"id": lead_id}, {"_id": 0})
