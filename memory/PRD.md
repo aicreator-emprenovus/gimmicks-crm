@@ -37,10 +37,12 @@ Sistema CRM con bot conversacional inteligente para WhatsApp Business, enfocado 
 - [x] Sin emojis en respuestas del bot
 - [x] Logica de reanudacion 12h+
 
-## Completado (Feb 17, 2026)
+## Completado (Feb 17-18, 2026)
 - [x] Sincronización nombre lead -> chat: fix normalización formato telefónico (+593 vs 593)
-- [x] Corrección ortográfica de las 10 reglas de automatización (tildes en nombres y descripciones, eliminación de 4 duplicados)
-- [x] Bot anti-repetición: historial ampliado a 40 msgs, recarga de datos del lead, prompt reforzado con secciones claras de datos recopilados vs faltantes
+- [x] Corrección ortográfica de las 10 reglas de automatización
+- [x] Bot anti-repetición: historial ampliado a 50 msgs, modelo gpt-4o, sesión persistente
+- [x] Inventario: paginación con total real (5412+ productos)
+- [x] Cotizaciones dinámicas: upsert_quote crea/actualiza, nombre desde lead, productos acumulativos
 
 ## Pendiente
 - [ ] P1: Configuracion SMTP para envio de cotizaciones (necesita credenciales)
