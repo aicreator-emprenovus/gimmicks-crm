@@ -197,48 +197,36 @@ export default function Inventory() {
               ) : products.map((p) => (
                 <tr key={p.code || p.id} className="border-b hover:bg-gray-50/50 transition-colors" data-testid={`product-row-${p.code}`}>
                   {/* Actions - left side */}
-                  <td className="px-2 py-2 sticky left-0 bg-white z-10">
-                    <div className="flex flex-col items-center gap-1">
+                  <td className="px-2 py-1.5 sticky left-0 bg-white z-10">
+                    <div className="flex items-center gap-0.5">
                       <button onClick={() => { setEditProduct(p); setShowAddModal(true); }} className="p-1 hover:bg-gray-100 rounded text-gray-400 hover:text-blue-600" data-testid={`edit-btn-${p.code}`}>
-                        <Edit size={15} />
+                        <Edit size={14} />
                       </button>
                       <button onClick={() => handleDelete(p.code)} className="p-1 hover:bg-gray-100 rounded text-gray-400 hover:text-red-500" data-testid={`delete-btn-${p.code}`}>
-                        <Trash2 size={15} />
+                        <Trash2 size={14} />
                       </button>
                     </div>
                   </td>
                   {/* Image */}
-                  <td className="px-3 py-2">
+                  <td className="px-3 py-1.5">
                     {p.image_url ? (
-                      <img src={getImageUrl(p.image_url)} alt="" className="w-12 h-12 object-cover rounded" onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling && (e.target.nextSibling.style.display = 'flex'); }} />
+                      <img src={getImageUrl(p.image_url)} alt="" className="w-10 h-10 object-cover rounded" onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling && (e.target.nextSibling.style.display = 'flex'); }} />
                     ) : null}
-                    <div className={`w-12 h-12 bg-gray-100 rounded items-center justify-center ${p.image_url ? 'hidden' : 'flex'}`}>
-                      <ImageIcon size={18} className="text-gray-300" />
+                    <div className={`w-10 h-10 bg-gray-100 rounded items-center justify-center ${p.image_url ? 'hidden' : 'flex'}`}>
+                      <ImageIcon size={16} className="text-gray-300" />
                     </div>
                   </td>
-                  {/* Cód. Prod */}
-                  <td className="px-3 py-2 font-mono text-xs whitespace-nowrap">{p.code}</td>
-                  {/* Código (supplier code) */}
-                  <td className="px-3 py-2 text-gray-500 text-xs">{p.supplier_code || "-"}</td>
-                  {/* Nombre */}
-                  <td className="px-3 py-2 font-medium max-w-[160px] truncate">{p.name}</td>
-                  {/* Descripción */}
-                  <td className="px-3 py-2 text-gray-500 text-xs max-w-[180px] truncate">{p.description}</td>
-                  {/* Stock */}
-                  <td className="px-3 py-2 text-center">{p.stock}</td>
-                  {/* Costo */}
-                  <td className="px-3 py-2 text-right text-gray-500">{formatCurrency(p.cost)}</td>
-                  {/* PVP */}
-                  <td className="px-3 py-2 text-right font-semibold text-green-700">{formatCurrency(p.price)}</td>
-                  {/* Proveedor */}
-                  <td className="px-3 py-2 text-gray-500 text-xs whitespace-nowrap">{p.supplier || "-"}</td>
-                  {/* Categorías */}
-                  <td className="px-3 py-2">
-                    <div className="flex flex-wrap gap-1 max-w-[200px]">
-                      {(p.categories || []).map((c, i) => (
-                        <span key={i} className="bg-[#7BA899] text-white text-[10px] px-2 py-0.5 rounded font-medium whitespace-nowrap">{c}</span>
-                      ))}
-                    </div>
+                  <td className="px-3 py-1.5 font-mono text-xs whitespace-nowrap">{p.code}</td>
+                  <td className="px-3 py-1.5 text-gray-500 text-xs">{p.supplier_code || "-"}</td>
+                  <td className="px-3 py-1.5 font-medium max-w-[160px] truncate text-sm">{p.name}</td>
+                  <td className="px-3 py-1.5 text-gray-500 text-xs max-w-[180px] truncate">{p.description}</td>
+                  <td className="px-3 py-1.5 text-center text-sm">{p.stock}</td>
+                  <td className="px-3 py-1.5 text-right text-gray-500 text-sm">{formatCurrency(p.cost)}</td>
+                  <td className="px-3 py-1.5 text-right font-semibold text-green-700 text-sm">{formatCurrency(p.price)}</td>
+                  <td className="px-3 py-1.5 text-gray-500 text-xs whitespace-nowrap">{p.supplier || "-"}</td>
+                  {/* Categories - compact with expandable */}
+                  <td className="px-3 py-1.5">
+                    <CategoryCell categories={p.categories || []} />
                   </td>
                 </tr>
               ))}
