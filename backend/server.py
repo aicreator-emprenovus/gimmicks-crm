@@ -627,6 +627,10 @@ async def update_lead(lead_id: str, update_data: LeadUpdate, current_user: dict 
                 {"$set": {"contact_name": update_dict["name"]}}
             )
     
+    # Auto-create client when lead moves to "entregado"
+    if update_dict.get("funnel_stage") == "entregado" and lead.get("funnel_stage") != "entregado":
+        await _create_client_from_lead(lead_id, lead, update_dict)
+    
     updated_lead = await db.leads.find_one({"id": lead_id}, {"_id": 0})
     return build_lead_response(updated_lead)
 
