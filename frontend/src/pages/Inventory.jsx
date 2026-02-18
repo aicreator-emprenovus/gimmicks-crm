@@ -3,7 +3,7 @@ import axios from "axios";
 import { toast } from "sonner";
 import { formatCurrency } from "@/utils/currency";
 import {
-  Search, Upload, Plus, Trash2, Edit, ChevronLeft, ChevronRight, Filter,
+  Search, Upload, Plus, Trash2, Edit, ChevronLeft, ChevronRight,
   X, Package, Download, Image as ImageIcon, Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -93,10 +93,10 @@ export default function Inventory() {
   const handleExport = () => {
     import("xlsx").then(XLSX => {
       const data = products.map(p => ({
-        Código: p.code, Nombre: p.name, Descripción: p.description,
-        Precio: p.price, Costo: p.cost, Stock: p.stock,
-        Proveedor: p.supplier, "Cód. Proveedor": p.supplier_code,
-        Categorías: (p.categories || []).join(", "), Imagen: p.image_url
+        "Código": p.code, "Cód. Proveedor": p.supplier_code, Nombre: p.name,
+        "Descripción": p.description, Stock: p.stock, Costo: p.cost,
+        PVP: p.price, Proveedor: p.supplier,
+        "Categorías": (p.categories || []).join(", "), Imagen: p.image_url
       }));
       const ws = XLSX.utils.json_to_sheet(data);
       const wb = XLSX.utils.book_new();
@@ -143,7 +143,7 @@ export default function Inventory() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-3 mb-4">
+      <div className="flex flex-col sm:flex-row gap-3 mb-4 flex-wrap">
         <div className="relative flex-1 max-w-md">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <Input
@@ -164,81 +164,82 @@ export default function Inventory() {
           {categories.map((c) => <option key={c} value={c}>{c}</option>)}
         </select>
         <div className="flex items-center gap-1">
-          <Input
-            type="number"
-            step="0.01"
-            placeholder="Min $"
-            value={minCost}
-            onChange={(e) => { setMinCost(e.target.value); setPage(1); }}
-            className="w-24 bg-white text-sm"
-            data-testid="min-cost-input"
-          />
+          <Input type="number" step="0.01" placeholder="Costo Min $" value={minCost} onChange={(e) => { setMinCost(e.target.value); setPage(1); }} className="w-28 bg-white text-sm" data-testid="min-cost-input" />
           <span className="text-gray-400 text-xs">-</span>
-          <Input
-            type="number"
-            step="0.01"
-            placeholder="Max $"
-            value={maxCost}
-            onChange={(e) => { setMaxCost(e.target.value); setPage(1); }}
-            className="w-24 bg-white text-sm"
-            data-testid="max-cost-input"
-          />
+          <Input type="number" step="0.01" placeholder="Costo Max $" value={maxCost} onChange={(e) => { setMaxCost(e.target.value); setPage(1); }} className="w-28 bg-white text-sm" data-testid="max-cost-input" />
         </div>
       </div>
 
-      {/* Table */}
+      {/* Table with horizontal scroll */}
       <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm" data-testid="inventory-table">
+          <table className="w-full text-sm min-w-[1100px]" data-testid="inventory-table">
             <thead>
-              <tr className="bg-gray-50 text-left">
-                <th className="px-4 py-3 font-semibold text-gray-600 w-16">Img</th>
-                <th className="px-4 py-3 font-semibold text-gray-600">Código</th>
-                <th className="px-4 py-3 font-semibold text-gray-600">Nombre</th>
-                <th className="px-4 py-3 font-semibold text-gray-600">Precio</th>
-                <th className="px-4 py-3 font-semibold text-gray-600">Costo</th>
-                <th className="px-4 py-3 font-semibold text-gray-600">Stock</th>
-                <th className="px-4 py-3 font-semibold text-gray-600">Categorías</th>
-                <th className="px-4 py-3 font-semibold text-gray-600 w-20">Acciones</th>
+              <tr className="bg-gray-50 text-left border-b">
+                <th className="px-2 py-3 font-semibold text-gray-500 w-14 text-center sticky left-0 bg-gray-50 z-10"></th>
+                <th className="px-3 py-3 font-semibold text-gray-500 w-16">Imagen</th>
+                <th className="px-3 py-3 font-semibold text-gray-500">Cód. Prod</th>
+                <th className="px-3 py-3 font-semibold text-gray-500">Código</th>
+                <th className="px-3 py-3 font-semibold text-gray-500">Nombre</th>
+                <th className="px-3 py-3 font-semibold text-gray-500">Descripción</th>
+                <th className="px-3 py-3 font-semibold text-gray-500 text-center">Stock</th>
+                <th className="px-3 py-3 font-semibold text-gray-500 text-right">Costo</th>
+                <th className="px-3 py-3 font-semibold text-gray-500 text-right">PVP</th>
+                <th className="px-3 py-3 font-semibold text-gray-500">Proveedor</th>
+                <th className="px-3 py-3 font-semibold text-gray-500">Categorías</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={8} className="text-center py-10 text-gray-400">
+                <tr><td colSpan={11} className="text-center py-10 text-gray-400">
                   <Loader2 size={24} className="animate-spin mx-auto" />
                 </td></tr>
               ) : products.length === 0 ? (
-                <tr><td colSpan={8} className="text-center py-10 text-gray-400">No se encontraron productos</td></tr>
+                <tr><td colSpan={11} className="text-center py-10 text-gray-400">No se encontraron productos</td></tr>
               ) : products.map((p) => (
-                <tr key={p.code || p.id} className="border-t hover:bg-gray-50 transition-colors" data-testid={`product-row-${p.code}`}>
-                  <td className="px-4 py-2">
-                    {p.image_url ? (
-                      <img src={getImageUrl(p.image_url)} alt="" className="w-10 h-10 object-cover rounded" onError={(e) => { e.target.style.display = 'none'; }} />
-                    ) : (
-                      <div className="w-10 h-10 bg-gray-100 rounded flex items-center justify-center"><ImageIcon size={16} className="text-gray-300" /></div>
-                    )}
-                  </td>
-                  <td className="px-4 py-2 font-mono text-xs">{p.code}</td>
-                  <td className="px-4 py-2 font-medium max-w-xs truncate">{p.name}</td>
-                  <td className="px-4 py-2 text-green-700 font-medium">{formatCurrency(p.price)}</td>
-                  <td className="px-4 py-2 text-gray-500">{formatCurrency(p.cost)}</td>
-                  <td className="px-4 py-2">{p.stock}</td>
-                  <td className="px-4 py-2">
-                    <div className="flex flex-wrap gap-1">
-                      {(p.categories || []).slice(0, 2).map((c, i) => (
-                        <span key={i} className="bg-[#7BA899]/10 text-[#5E8A7A] text-xs px-2 py-0.5 rounded-full">{c}</span>
-                      ))}
-                      {(p.categories || []).length > 2 && <span className="text-xs text-gray-400">+{p.categories.length - 2}</span>}
+                <tr key={p.code || p.id} className="border-b hover:bg-gray-50/50 transition-colors" data-testid={`product-row-${p.code}`}>
+                  {/* Actions - left side */}
+                  <td className="px-2 py-2 sticky left-0 bg-white z-10">
+                    <div className="flex flex-col items-center gap-1">
+                      <button onClick={() => { setEditProduct(p); setShowAddModal(true); }} className="p-1 hover:bg-gray-100 rounded text-gray-400 hover:text-blue-600" data-testid={`edit-btn-${p.code}`}>
+                        <Edit size={15} />
+                      </button>
+                      <button onClick={() => handleDelete(p.code)} className="p-1 hover:bg-gray-100 rounded text-gray-400 hover:text-red-500" data-testid={`delete-btn-${p.code}`}>
+                        <Trash2 size={15} />
+                      </button>
                     </div>
                   </td>
-                  <td className="px-4 py-2">
-                    <div className="flex gap-1">
-                      <button onClick={() => { setEditProduct(p); setShowAddModal(true); }} className="p-1.5 hover:bg-gray-100 rounded text-gray-500 hover:text-blue-600" data-testid={`edit-btn-${p.code}`}>
-                        <Edit size={14} />
-                      </button>
-                      <button onClick={() => handleDelete(p.code)} className="p-1.5 hover:bg-gray-100 rounded text-gray-500 hover:text-red-600" data-testid={`delete-btn-${p.code}`}>
-                        <Trash2 size={14} />
-                      </button>
+                  {/* Image */}
+                  <td className="px-3 py-2">
+                    {p.image_url ? (
+                      <img src={getImageUrl(p.image_url)} alt="" className="w-12 h-12 object-cover rounded" onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling && (e.target.nextSibling.style.display = 'flex'); }} />
+                    ) : null}
+                    <div className={`w-12 h-12 bg-gray-100 rounded items-center justify-center ${p.image_url ? 'hidden' : 'flex'}`}>
+                      <ImageIcon size={18} className="text-gray-300" />
+                    </div>
+                  </td>
+                  {/* Cód. Prod */}
+                  <td className="px-3 py-2 font-mono text-xs whitespace-nowrap">{p.code}</td>
+                  {/* Código (supplier code) */}
+                  <td className="px-3 py-2 text-gray-500 text-xs">{p.supplier_code || "-"}</td>
+                  {/* Nombre */}
+                  <td className="px-3 py-2 font-medium max-w-[160px] truncate">{p.name}</td>
+                  {/* Descripción */}
+                  <td className="px-3 py-2 text-gray-500 text-xs max-w-[180px] truncate">{p.description}</td>
+                  {/* Stock */}
+                  <td className="px-3 py-2 text-center">{p.stock}</td>
+                  {/* Costo */}
+                  <td className="px-3 py-2 text-right text-gray-500">{formatCurrency(p.cost)}</td>
+                  {/* PVP */}
+                  <td className="px-3 py-2 text-right font-semibold text-green-700">{formatCurrency(p.price)}</td>
+                  {/* Proveedor */}
+                  <td className="px-3 py-2 text-gray-500 text-xs whitespace-nowrap">{p.supplier || "-"}</td>
+                  {/* Categorías */}
+                  <td className="px-3 py-2">
+                    <div className="flex flex-wrap gap-1 max-w-[200px]">
+                      {(p.categories || []).map((c, i) => (
+                        <span key={i} className="bg-[#7BA899] text-white text-[10px] px-2 py-0.5 rounded font-medium whitespace-nowrap">{c}</span>
+                      ))}
                     </div>
                   </td>
                 </tr>
@@ -250,7 +251,7 @@ export default function Inventory() {
         {/* Pagination */}
         <div className="flex items-center justify-between px-4 py-3 border-t bg-gray-50" data-testid="pagination">
           <span className="text-sm text-gray-500">
-            Mostrando {((page - 1) * limit) + 1}-{Math.min(page * limit, total)} de {total}
+            Mostrando {((page - 1) * limit) + 1}-{Math.min(page * limit, total)} de {total.toLocaleString()}
           </span>
           <div className="flex gap-1">
             <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(p => p - 1)} data-testid="prev-page-btn">
@@ -364,7 +365,7 @@ function ProductModal({ product, onClose, onSave }) {
           </div>
           <div className="grid grid-cols-3 gap-3">
             <div>
-              <label className="text-xs font-semibold text-gray-600 block mb-1">Precio</label>
+              <label className="text-xs font-semibold text-gray-600 block mb-1">PVP</label>
               <Input type="number" step="0.01" value={form.price} onChange={e => setForm({ ...form, price: parseFloat(e.target.value) || 0 })} />
             </div>
             <div>
@@ -388,7 +389,7 @@ function ProductModal({ product, onClose, onSave }) {
             </div>
             <div className="flex flex-wrap gap-1 mt-2">
               {form.categories.map(c => (
-                <span key={c} className="bg-[#7BA899]/10 text-[#5E8A7A] text-xs px-2 py-1 rounded-full flex items-center gap-1">
+                <span key={c} className="bg-[#7BA899] text-white text-xs px-2 py-0.5 rounded flex items-center gap-1">
                   {c} <button onClick={() => removeCategory(c)}><X size={12} /></button>
                 </span>
               ))}
