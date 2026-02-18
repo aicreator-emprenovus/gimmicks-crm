@@ -872,6 +872,7 @@ async def get_products(
             {"category_3": {"$regex": category, "$options": "i"}}
         ]
     
+    total = await db.products.count_documents(query)
     products = await db.products.find(query, {"_id": 0}).skip(skip).limit(limit).to_list(limit)
     
     result = []
@@ -894,7 +895,7 @@ async def get_products(
             created_at=created_at
         ))
     
-    return result
+    return {"products": result, "total": total, "skip": skip, "limit": limit}
 
 @api_router.post("/products", response_model=ProductResponse)
 async def create_product(product_data: ProductCreate, current_user: dict = Depends(get_current_user)):
