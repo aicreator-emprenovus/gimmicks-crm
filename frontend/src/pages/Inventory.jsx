@@ -33,7 +33,9 @@ import {
   Image,
   FileSpreadsheet,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react";
 import { toast } from "sonner";
 
