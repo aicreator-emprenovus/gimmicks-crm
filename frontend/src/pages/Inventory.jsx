@@ -142,32 +142,30 @@ export default function Inventory() {
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-3 mb-4 flex-wrap">
-        <div className="relative flex-1 max-w-md">
+      {/* Filters - all in one line */}
+      <div className="flex items-center gap-2 mb-4">
+        <div className="relative flex-shrink-0 w-[260px]">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <Input
             placeholder="Buscar por código, nombre, categoría..."
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-            className="pl-9 bg-white"
+            className="pl-9 bg-white h-9 text-sm"
             data-testid="search-input"
           />
         </div>
         <select
           value={category}
           onChange={(e) => { setCategory(e.target.value); setPage(1); }}
-          className="border rounded-lg px-3 py-2 text-sm bg-white"
+          className="border rounded-lg px-2 py-2 text-sm bg-white h-9 w-[160px] flex-shrink-0"
           data-testid="category-filter"
         >
           <option value="">Todas las categorías</option>
           {categories.map((c) => <option key={c} value={c}>{c}</option>)}
         </select>
-        <div className="flex items-center gap-1">
-          <Input type="number" step="0.01" placeholder="Costo Min $" value={minCost} onChange={(e) => { setMinCost(e.target.value); setPage(1); }} className="w-28 bg-white text-sm" data-testid="min-cost-input" />
-          <span className="text-gray-400 text-xs">-</span>
-          <Input type="number" step="0.01" placeholder="Costo Max $" value={maxCost} onChange={(e) => { setMaxCost(e.target.value); setPage(1); }} className="w-28 bg-white text-sm" data-testid="max-cost-input" />
-        </div>
+        <Input type="number" step="0.01" placeholder="Costo Min" value={minCost} onChange={(e) => { setMinCost(e.target.value); setPage(1); }} className="w-[100px] bg-white text-sm h-9 flex-shrink-0" data-testid="min-cost-input" />
+        <span className="text-gray-400 text-xs flex-shrink-0">-</span>
+        <Input type="number" step="0.01" placeholder="Costo Max" value={maxCost} onChange={(e) => { setMaxCost(e.target.value); setPage(1); }} className="w-[100px] bg-white text-sm h-9 flex-shrink-0" data-testid="max-cost-input" />
       </div>
 
       {/* Table with horizontal scroll */}
