@@ -242,6 +242,13 @@ async def get_products(
         if max_price is not None:
             price_query["$lte"] = max_price
         query["price"] = price_query
+    if min_cost is not None or max_cost is not None:
+        cost_query = {}
+        if min_cost is not None:
+            cost_query["$gte"] = min_cost
+        if max_cost is not None:
+            cost_query["$lte"] = max_cost
+        query["cost"] = cost_query
     
     total = await db.products.count_documents(query)
     skip = (page - 1) * limit
