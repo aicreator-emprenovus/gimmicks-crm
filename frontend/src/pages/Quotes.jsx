@@ -237,10 +237,16 @@ export default function Quotes() {
                 <span className="text-zinc-400 text-xs">Productos</span>
                 <div className="mt-1 space-y-2">
                   {selectedQuote.items?.map((item, i) => (
-                    <div key={i} className="bg-zinc-50 p-2 rounded text-xs">
-                      <span className="font-mono text-[#7BA899]">{item.code || item.product_id}</span>
-                      <span className="ml-2 font-medium">{item.product_name}</span>
-                      {item.description && <p className="text-zinc-500 mt-0.5">{item.description}</p>}
+                    <div key={i} className="bg-zinc-50 p-2 rounded text-xs flex items-start justify-between gap-2">
+                      <div className="flex-1">
+                        <span className="font-mono text-[#7BA899]">{item.code || item.product_id}</span>
+                        <span className="ml-2 font-medium">{item.product_name}</span>
+                        {item.description && <p className="text-zinc-500 mt-0.5">{item.description}</p>}
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <span className="font-semibold text-zinc-700">{item.quantity || selectedQuote.cantidad || "-"}</span>
+                        <span className="text-zinc-400 ml-1">uds</span>
+                      </div>
                     </div>
                   ))}
                   {(!selectedQuote.items || selectedQuote.items.length === 0) && <p className="text-zinc-400">Sin productos</p>}
