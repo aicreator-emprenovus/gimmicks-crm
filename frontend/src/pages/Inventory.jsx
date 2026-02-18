@@ -69,11 +69,20 @@ export default function Inventory() {
     try {
       const params = new URLSearchParams();
       if (searchTerm) params.append("search", searchTerm);
+      params.append("skip", String(page * PAGE_SIZE));
+      params.append("limit", String(PAGE_SIZE));
 
       const response = await axios.get(`${API_URL}/api/products?${params}`, {
         headers: getAuthHeaders()
       });
-      setProducts(response.data);
+      const data = response.data;
+      if (data.products) {
+        setProducts(data.products);
+        setTotal(data.total);
+      } else {
+        setProducts(Array.isArray(data) ? data : []);
+        setTotal(Array.isArray(data) ? data.length : 0);
+      }
     } catch (error) {
       toast.error("Error al cargar productos");
     } finally {
