@@ -97,14 +97,17 @@ async def upload_inventory(file: UploadFile = File(...)):
         col_cost = get_col(['COSTO', 'COST', 'PRECIO DE COMPRA'])
         col_supplier = get_col(['PROVEEDOR', 'SUPPLIER'])
         col_supplier_code = get_col(['CODIGO PROVEEDOR'])
-        col_img = get_col(['FOTO', 'IMAGEN', 'IMAGE', 'URL'])
+        col_img = get_col(['FOTO', 'IMAGEN', 'IMAGE', 'URL', 'URL IMAGEN'])
         col_stock = get_col(['STOCK', 'CANTIDAD', 'EXISTENCIA'])
         col_price = get_col(['PRECIO', 'PRICE', 'PVP'])
         
+        # Find category column(s) - single column with comma-separated values or multiple columns
+        col_categorias = get_col(['CATEGORIAS', 'CATEGORIA', 'CATEGORIES'])
         cat_cols = []
-        for h_norm, h_orig in header_map.items():
-            if 'CAT' in h_norm:
-                cat_cols.append(h_orig)
+        if not col_categorias:
+            for h_norm, h_orig in header_map.items():
+                if 'CAT' in h_norm:
+                    cat_cols.append(h_orig)
         
         if not col_code:
             msg = f"No se encontró la columna 'CÓDIGO'. Columnas detectadas: {', '.join(found_headers[:5])}..."
