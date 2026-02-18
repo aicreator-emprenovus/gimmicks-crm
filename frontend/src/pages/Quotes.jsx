@@ -169,11 +169,18 @@ export default function Quotes() {
                     {q.client_ciudad && <div className="flex items-center gap-1"><MapPin className="w-3 h-3" />{q.client_ciudad}</div>}
                   </div>
 
-                  <div className="text-xs text-zinc-500">
-                    <span className="flex items-center gap-1"><Package className="w-3 h-3" />
-                      {q.items?.length || 0} producto(s)
-                      {q.cantidad && ` - ${q.cantidad} unidades`}
-                    </span>
+                  <div className="text-xs text-zinc-500 space-y-0.5">
+                    {q.items?.map((item, i) => (
+                      <span key={i} className="flex items-center gap-1">
+                        <Package className="w-3 h-3 shrink-0" />
+                        <span className="font-mono text-[#7BA899]">{item.code}</span>
+                        <span className="truncate">{item.product_name}</span>
+                        {(item.quantity || q.cantidad) && <span className="shrink-0 font-semibold">x{item.quantity || q.cantidad}</span>}
+                      </span>
+                    ))}
+                    {(!q.items || q.items.length === 0) && (
+                      <span className="flex items-center gap-1"><Package className="w-3 h-3" />Sin productos</span>
+                    )}
                     {q.personalizacion && <span className="block mt-0.5">Pers: {q.personalizacion}</span>}
                     {q.fecha_entrega && <span className="flex items-center gap-1 mt-0.5"><Calendar className="w-3 h-3" />{q.fecha_entrega}</span>}
                   </div>
