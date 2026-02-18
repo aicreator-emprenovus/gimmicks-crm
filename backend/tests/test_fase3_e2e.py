@@ -198,7 +198,7 @@ class TestClientsCRUD:
         print(f"Clients: {len(data)} total")
     
     def test_client_create_and_verify(self, headers, test_client_data):
-        """Test client creation with verification"""
+        """Test client creation with verification via history endpoint"""
         # CREATE
         response = requests.post(f"{BASE_URL}/api/clients/", json=test_client_data, headers=headers)
         assert response.status_code in [200, 201], f"Client create failed: {response.text}"
@@ -208,11 +208,12 @@ class TestClientsCRUD:
         client_id = created["id"]
         print(f"Created client: {client_id}")
         
-        # GET to verify persistence
-        get_response = requests.get(f"{BASE_URL}/api/clients/{client_id}", headers=headers)
-        assert get_response.status_code == 200, f"Client GET failed: {get_response.text}"
-        fetched = get_response.json()
-        assert fetched["name"] == test_client_data["name"], "Client name mismatch"
+        # GET via history endpoint to verify persistence
+        get_response = requests.get(f"{BASE_URL}/api/clients/{client_id}/history", headers=headers)
+        assert get_response.status_code == 200, f"Client history failed: {get_response.text}"
+        history_data = get_response.json()
+        assert "client" in history_data, "Missing client in history response"
+        assert history_data["client"]["name"] == test_client_data["name"], "Client name mismatch"
         
         # CLEANUP - soft delete
         del_response = requests.delete(f"{BASE_URL}/api/clients/{client_id}?permanent=false", headers=headers)
