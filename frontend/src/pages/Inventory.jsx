@@ -147,7 +147,7 @@ export default function Inventory() {
         <div className="relative flex-1 max-w-md">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <Input
-            placeholder="Buscar por código, nombre, descripción..."
+            placeholder="Buscar por código, nombre, categoría..."
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
             className="pl-9 bg-white"
@@ -163,6 +163,27 @@ export default function Inventory() {
           <option value="">Todas las categorías</option>
           {categories.map((c) => <option key={c} value={c}>{c}</option>)}
         </select>
+        <div className="flex items-center gap-1">
+          <Input
+            type="number"
+            step="0.01"
+            placeholder="Min $"
+            value={minCost}
+            onChange={(e) => { setMinCost(e.target.value); setPage(1); }}
+            className="w-24 bg-white text-sm"
+            data-testid="min-cost-input"
+          />
+          <span className="text-gray-400 text-xs">-</span>
+          <Input
+            type="number"
+            step="0.01"
+            placeholder="Max $"
+            value={maxCost}
+            onChange={(e) => { setMaxCost(e.target.value); setPage(1); }}
+            className="w-24 bg-white text-sm"
+            data-testid="max-cost-input"
+          />
+        </div>
       </div>
 
       {/* Table */}
