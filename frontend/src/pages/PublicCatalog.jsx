@@ -125,7 +125,7 @@ export default function PublicCatalog() {
                 <div className="aspect-square bg-zinc-50 relative overflow-hidden flex items-center justify-center">
                   {product.image_url && product.image_url !== "N/A" ? (
                     <img
-                      src={product.image_url}
+                      src={fixDriveUrl(product.image_url)}
                       alt={product.name}
                       className="w-full h-full object-contain p-2"
                       loading="lazy"
