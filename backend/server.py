@@ -2537,11 +2537,12 @@ async def public_catalog(q: str = "", limit: int = 40):
             {"name": {"$regex": regex, "$options": "i"}},
             {"description": {"$regex": regex, "$options": "i"}},
             {"code": {"$regex": regex, "$options": "i"}},
+            {"categories": {"$regex": regex, "$options": "i"}},
             {"category_1": {"$regex": regex, "$options": "i"}},
             {"category_2": {"$regex": regex, "$options": "i"}},
             {"category_3": {"$regex": regex, "$options": "i"}}
         ]},
-        {"_id": 0, "code": 1, "name": 1, "description": 1, "image_url": 1, "price": 1}
+        {"_id": 0, "code": 1, "name": 1, "description": 1, "image_url": 1, "price": 1, "categories": 1}
     ).limit(limit).to_list(limit)
     
     return products
