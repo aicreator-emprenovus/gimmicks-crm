@@ -6,6 +6,17 @@ import { Loader2, Search, Package, Copy, Check } from "lucide-react";
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 const LOGO_URL = "https://customer-assets.emergentagent.com/job_quote-crafter-1/artifacts/ee7e6zy2_logo-gimmicks.png";
 
+function fixDriveUrl(url) {
+  if (!url) return url;
+  let m = url.match(/drive\.google\.com\/file\/d\/([^/]+)/);
+  if (m) return `https://lh3.googleusercontent.com/d/${m[1]}`;
+  m = url.match(/drive\.google\.com\/open\?id=([^&]+)/);
+  if (m) return `https://lh3.googleusercontent.com/d/${m[1]}`;
+  m = url.match(/drive\.google\.com\/uc\?.*id=([^&]+)/);
+  if (m) return `https://lh3.googleusercontent.com/d/${m[1]}`;
+  return url;
+}
+
 function CopyCodeButton({ code }) {
   const [copied, setCopied] = useState(false);
   const handleCopy = () => {
