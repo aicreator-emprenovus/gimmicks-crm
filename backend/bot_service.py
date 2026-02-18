@@ -576,6 +576,24 @@ async def process_ai_conversation(
             elif missing_fields:
                 next_to_ask = f"SIGUIENTE dato a pedir (SOLO este, nada más): {missing_fields[0]}"
         
+        # Pre-check catalog availability for product searches
+        catalog_availability = ""
+        if message_text:
+            # Simple keyword detection to pre-check inventory
+            product_keywords = ["jarro", "termo", "gorra", "taza", "agenda", "mochila", "bolso", "esfero",
+                              "boligrafo", "camiseta", "polo", "tecnolog", "usb", "cargador", "parlante",
+                              "botella", "vaso", "llavero", "libreta", "cuaderno", "bolsa", "paragua"]
+            msg_lower = message_text.lower()
+            for kw in product_keywords:
+                if kw in msg_lower:
+                    prods = await search_products_by_keyword(db, kw, limit=3)
+                    if prods:
+                        names = ", ".join([p.get("name", "") for p in prods[:3]])
+                        catalog_availability = f"\nPRODUCTOS ENCONTRADOS para '{kw}': {names}. Sí tenemos productos en esta categoría."
+                    else:
+                        catalog_availability = f"\nNO HAY PRODUCTOS en inventario para '{kw}'. Informa al cliente que por el momento no tenemos esa línea disponible y recomiéndale productos similares que sí tengamos."
+                    break
+
         # Check if there's already a quote for context
         has_existing_quote = state.get("quote_generated", False)
         quote_context = ""
