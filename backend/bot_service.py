@@ -675,6 +675,28 @@ MENSAJE ACTUAL DEL CLIENTE: {message_text}"""
         needs_quote = ai_result.get("needs_quote", False)
         needs_human = ai_result.get("needs_human", False)
 
+        # Anti-duplication: check if response is too similar to last bot message
+        last_bot_msg = await db.messages.find_one(
+            {"conversation_id": conversation_id, "sender": "bot"},
+            {"_id": 0, "content": 1},
+            sort=[("timestamp", -1)]
+        )
+        if last_bot_msg:
+            last_text = last_bot_msg.get("content", {}).get("text", "")
+            if last_text and response_text:
+                # Simple similarity: if >60% of words overlap, ask LLM to rephrase
+                last_words = set(last_text.lower().split())
+                new_words = set(response_text.lower().split())
+                if last_words and new_words:
+                    overlap = len(last_words & new_words) / max(len(last_words), len(new_words))
+                    if overlap > 0.6:
+                        rephrase_result = await call_llm(
+                            "Eres un asistente que reformula mensajes. Devuelve SOLO un JSON con el campo 'response'.",
+                            f"Reformula este mensaje con palabras COMPLETAMENTE DIFERENTES, más corto y directo. NO repitas las mismas frases. Mensaje original: \"{response_text}\"",
+                        )
+                        if rephrase_result and rephrase_result.get("response"):
+                            response_text = rephrase_result["response"]
+
         # Merge extracted data - normalize field names
         field_aliases = {
             "tipo_de_personalizacion": "personalizacion",
