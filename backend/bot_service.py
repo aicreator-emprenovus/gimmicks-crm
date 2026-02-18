@@ -652,9 +652,9 @@ MENSAJE ACTUAL DEL CLIENTE: {message_text}"""
             await send_message_fn(phone_number, conversation_id, catalog_msg)
             catalogs_sent.append(catalog_search)
 
-        # Handle quote
-        if needs_quote and not state.get("quote_generated"):
-            quote_confirm = await create_pending_quote(db, phone_number, collected_data, conversation_id)
+        # Handle quote - dynamic: create or update
+        if needs_quote:
+            quote_confirm = await upsert_quote(db, phone_number, collected_data, conversation_id)
             await send_message_fn(phone_number, conversation_id, quote_confirm)
             state_quote = True
         else:
