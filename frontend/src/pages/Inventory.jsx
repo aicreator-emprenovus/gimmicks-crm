@@ -373,7 +373,7 @@ export default function Inventory() {
             <Package className="w-5 h-5" />
             Catálogo de Productos
             <Badge variant="secondary" className="ml-2">
-              {products.length} productos
+              {total} productos
             </Badge>
           </CardTitle>
         </CardHeader>
