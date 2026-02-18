@@ -10,7 +10,9 @@ import Leads from "@/pages/Leads";
 import Inventory from "@/pages/Inventory";
 import Settings from "@/pages/Settings";
 import Users from "@/pages/Users";
-import Quotes from "@/pages/Quotes";
+import QuoteHistory from "@/pages/QuoteHistory";
+import QuoteBuilder from "@/pages/QuoteBuilder";
+import Clients from "@/pages/Clients";
 import PublicCatalog from "@/pages/PublicCatalog";
 import Layout from "@/components/Layout";
 
@@ -71,7 +73,9 @@ function AppRoutes() {
           </ProtectedRoute>
         } />
         <Route path="inventory" element={<Inventory />} />
-        <Route path="quotes" element={<Quotes />} />
+        <Route path="clients" element={<Clients />} />
+        <Route path="quotes" element={<QuoteHistory />} />
+        <Route path="quotes/new" element={<QuoteBuilder />} />
         <Route path="users" element={
           <ProtectedRoute adminOnly>
             <Users />
