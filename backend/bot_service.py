@@ -234,7 +234,7 @@ async def load_known_client_data(db: AsyncIOMotorDatabase, phone_number: str) ->
 
 
 async def call_llm(system_msg: str, user_msg: str, phone_number: str = "") -> Optional[Dict]:
-    """Call LLM and parse JSON response. Uses persistent session per phone for memory."""
+    """Call LLM and parse JSON response. Uses unique session per call to avoid repetition."""
     try:
         from emergentintegrations.llm.chat import LlmChat, UserMessage
 
@@ -243,7 +243,8 @@ async def call_llm(system_msg: str, user_msg: str, phone_number: str = "") -> Op
             logger.error("EMERGENT_LLM_KEY not configured")
             return None
 
-        session_id = f"gimmicks-{phone_number}" if phone_number else f"bot-{uuid.uuid4().hex[:8]}"
+        # Unique session per call - history is already in the prompt
+        session_id = f"gimmicks-{uuid.uuid4().hex[:12]}"
         chat = LlmChat(
             api_key=api_key,
             session_id=session_id,
