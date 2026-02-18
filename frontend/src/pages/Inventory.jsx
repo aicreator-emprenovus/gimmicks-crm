@@ -263,6 +263,28 @@ export default function Inventory() {
   );
 }
 
+function CategoryCell({ categories }) {
+  const [expanded, setExpanded] = useState(false);
+  if (!categories.length) return <span className="text-gray-300 text-xs">-</span>;
+  const visible = expanded ? categories : categories.slice(0, 3);
+  const hasMore = categories.length > 3;
+
+  return (
+    <div className="flex items-center gap-1 max-w-[220px]">
+      <div className="flex flex-wrap gap-0.5">
+        {visible.map((c, i) => (
+          <span key={i} className="bg-[#7BA899] text-white text-[10px] leading-tight px-1.5 py-[1px] rounded font-medium whitespace-nowrap">{c}</span>
+        ))}
+      </div>
+      {hasMore && (
+        <button onClick={() => setExpanded(!expanded)} className="flex-shrink-0 text-gray-400 hover:text-gray-600 p-0.5" data-testid="expand-categories-btn">
+          {expanded ? <ChevronUp size={13} /> : <span className="text-[10px] text-gray-400 whitespace-nowrap">+{categories.length - 3}</span>}
+        </button>
+      )}
+    </div>
+  );
+}
+
 function ProductModal({ product, onClose, onSave }) {
   const [form, setForm] = useState({
     code: product?.code || "",
