@@ -879,10 +879,10 @@ MENSAJE ACTUAL DEL CLIENTE: {message_text}"""
             # No catalog - just send AI response
             await send_message_fn(phone_number, conversation_id, response_text)
 
-        # Handle quote - only notify on actual changes
+        # Handle quote - only create and notify AFTER email is collected
         if needs_quote:
-            has_min_data = (collected_data.get("codigos_producto") or collected_data.get("producto")) and collected_data.get("cantidad")
-            if has_min_data:
+            has_full_data = (collected_data.get("codigos_producto") or collected_data.get("producto")) and collected_data.get("cantidad") and collected_data.get("correo")
+            if has_full_data:
                 existing_quote = await db.quotes_v2.find_one(
                     {"phone_number": phone_number, "status": "pending", "is_deleted": False},
                     {"_id": 0, "items": 1, "client_name": 1}
@@ -890,9 +890,9 @@ MENSAJE ACTUAL DEL CLIENTE: {message_text}"""
                 await upsert_quote(db, phone_number, collected_data, conversation_id)
                 state_quote = True
 
-                # Only send notification if this is a NEW quote (no existing) 
                 if not existing_quote:
-                    quote_notify = "Tu cotización ha sido registrada. Nuestro equipo la revisará pronto."
+                    correo = collected_data.get("correo", "tu correo")
+                    quote_notify = f"Tu cotización ha sido registrada y será enviada a {correo}. Nuestro equipo la revisará pronto."
                     await send_message_fn(phone_number, conversation_id, quote_notify)
             else:
                 state_quote = state.get("quote_generated", False)
