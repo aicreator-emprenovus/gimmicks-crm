@@ -336,3 +336,49 @@ function ClientHistoryModal({ client, onClose }) {
     </div>
   );
 }
+
+
+function ClientDetailModal({ client, onClose }) {
+  const rows = [
+    { icon: Building2, label: "Empresa / Nombre", value: client.name },
+    { icon: User, label: "Persona de contacto", value: client.contact_person },
+    { icon: Mail, label: "Email", value: client.email },
+    { icon: Mail, label: "Email comercial", value: client.commercial_email },
+    { icon: Phone, label: "Teléfono", value: client.phone },
+    { icon: MapPin, label: "Ciudad", value: client.city },
+    { icon: MapPin, label: "Dirección", value: client.address },
+    { icon: Hash, label: "RUC / CI", value: client.tax_id },
+    { icon: FileText, label: "Sector", value: client.sector },
+    { icon: FileText, label: "Detalle sector", value: client.sector_details },
+    { icon: StickyNote, label: "Notas", value: client.notes },
+  ];
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" data-testid="client-detail-modal">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between p-5 border-b">
+          <h2 className="text-lg font-bold flex items-center gap-2">
+            <Eye size={20} className="text-[#7BA899]" /> Información del Cliente
+          </h2>
+          <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded" data-testid="close-detail-modal-btn"><X size={20} /></button>
+        </div>
+        <div className="p-5 space-y-3">
+          {rows.map(({ icon: Icon, label, value }) => (
+            <div key={label} className="flex items-start gap-3">
+              <Icon size={16} className="text-[#7BA899] mt-0.5 flex-shrink-0" />
+              <div className="min-w-0">
+                <p className="text-xs text-gray-400 leading-none mb-0.5">{label}</p>
+                <p className="text-sm text-gray-800 break-words">{value || <span className="text-gray-300 italic">No registrado</span>}</p>
+              </div>
+            </div>
+          ))}
+          {client.created_at && (
+            <div className="pt-3 mt-3 border-t text-xs text-gray-400">
+              Creado: {new Date(client.created_at).toLocaleDateString("es-EC", { year: "numeric", month: "long", day: "numeric" })}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
