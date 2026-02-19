@@ -78,6 +78,11 @@ CRM para ventas comerciales con WhatsApp Business que integra bot IA (GPT-4o), g
 - Compresión doble: client-side (browser-image-compression) + server-side (Pillow)
 - Testing iteration 9: 100% pass rate (11 backend + all frontend tests)
 
+### Mejora: Ícono "Ver" en Clientes para Información Completa - COMPLETADA (Feb 18, 2026)
+- Botón "Ver" con ícono Eye agregado en cada tarjeta de cliente
+- Modal ClientDetailModal muestra TODA la información registrada: nombre, contacto, emails, teléfono, ciudad, dirección, RUC/CI, sector, notas y fecha de creación
+- Campos vacíos mostrados como "No registrado" en gris cursiva
+
 ## Remaining/Future Tasks
 1. **P1 - SMTP credentials**: Configure SMTP/Gmail/Resend for real email sending (cotizaciones)
 2. **P2 - Refactoring**: Split bot_service.py and Leads.jsx into smaller modules
