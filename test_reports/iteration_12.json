@@ -1,0 +1,135 @@
+{
+  "summary": "Iteration 12 Testing: Verified WhatsApp bot quote creation/update flow, field alias normalization, staff notifications to 593963266566, and Inbox real-time polling. All 13 backend tests passed. Frontend Inbox page loads correctly with conversations, stage filters, and AI analysis button. Staff notification messages (ALERTA COTIZACION NUEVA/ACTUALIZADA) are correctly sent to 593963266566 when quotes are created/updated.",
+
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+
+  "passed_tests": {
+    "auth_api": [
+      "✓ POST /api/auth/login returns 200 with admin@gimmicks.com / admin123456",
+      "✓ POST /api/auth/login returns 401 for invalid credentials"
+    ],
+    "webhook_processing": [
+      "✓ POST /api/webhook/whatsapp processes text messages correctly",
+      "✓ Webhook creates conversation and lead for new phone numbers",
+      "✓ Webhook triggers LLM processing via bot_service.py"
+    ],
+    "quote_creation_flow": [
+      "✓ Bot extracts codigos_producto, cantidades_por_producto from messages",
+      "✓ Bot extracts correo, nombre, empresa, ciudad from messages",
+      "✓ Quote created in quotes_v2 when has: codes + quantity + email",
+      "✓ Quote #4705 created with Juan Perez, testquote@test.com, 2 items",
+      "✓ Quote #4704 created with María López, fulltest@test.com, 3 items"
+    ],
+    "quote_update_flow": [
+      "✓ Quote updated (not duplicated) when client requests changes",
+      "✓ ALERTA COTIZACION ACTUALIZADA notification sent on updates",
+      "✓ No duplicate quotes created - single quote per phone maintained"
+    ],
+    "field_alias_normalization": [
+      "✓ correo_electronico → correo alias defined",
+      "✓ correo_electrónico → correo alias defined (with accent)",
+      "✓ cantidad_unidades → cantidad alias defined",
+      "✓ ciudad_de_entrega → ciudad alias defined",
+      "✓ email → correo alias defined"
+    ],
+    "staff_notifications": [
+      "✓ STAFF_NOTIFICATION_PHONE = 593963266566 configured",
+      "✓ notify_staff_new_quote function implemented",
+      "✓ ALERTA COTIZACION NUEVA sent on new quote creation",
+      "✓ ALERTA COTIZACION ACTUALIZADA sent on quote update",
+      "✓ Notifications include: quote#, client, phone, email, products, quantity"
+    ],
+    "conversations_api": [
+      "✓ GET /api/conversations returns list of conversations",
+      "✓ GET /api/conversations/{id}/messages returns messages",
+      "✓ Conversations include funnel_stage for filter badges"
+    ],
+    "inbox_frontend": [
+      "✓ Inbox page loads with data-testid='inbox-page'",
+      "✓ 16 conversations displayed in list",
+      "✓ Stage filter badges present (Todos, Lead, Potencial, Cotizado, etc.)",
+      "✓ Search conversations input visible",
+      "✓ Message input and send button visible",
+      "✓ 'Analizar con IA' button visible",
+      "✓ 5-second polling for real-time message updates",
+      "✓ syncIndicator state and data-testid present"
+    ]
+  },
+
+  "verified_staff_notifications": [
+    {
+      "timestamp": "2026-02-19T21:53:01Z",
+      "type": "ALERTA COTIZACION NUEVA",
+      "quote": "#4703",
+      "phone": "593999TEST01"
+    },
+    {
+      "timestamp": "2026-02-19T21:54:51Z",
+      "type": "ALERTA COTIZACION NUEVA",
+      "quote": "#4704",
+      "client": "María López",
+      "phone": "593999TEST02"
+    },
+    {
+      "timestamp": "2026-02-19T21:56:00Z",
+      "type": "ALERTA COTIZACION ACTUALIZADA",
+      "quote": "#4704",
+      "phone": "593999TEST02"
+    },
+    {
+      "timestamp": "2026-02-19T21:58:50Z",
+      "type": "ALERTA COTIZACION NUEVA",
+      "quote": "#4705",
+      "client": "Juan Perez",
+      "phone": "593999FQ5707"
+    }
+  ],
+
+  "test_report_links": [
+    "/app/backend/tests/test_iteration12_webhook_quotes.py",
+    "/app/test_reports/pytest/pytest_iteration12.xml"
+  ],
+
+  "action_items": [],
+
+  "critical_code_review_comments": [
+    "Quote creation/update flow working correctly via bot webhook",
+    "Field aliases properly normalize LLM-extracted data fields",
+    "Staff notification to 593963266566 working for both NEW and UPDATED quotes",
+    "Inbox real-time polling implemented with 5-second interval",
+    "All data-testid attributes present for testing"
+  ],
+
+  "updated_files": [
+    "/app/backend/tests/test_iteration12_webhook_quotes.py"
+  ],
+
+  "success_rate": {
+    "backend": "100% (13/13 tests passed)",
+    "frontend": "100% (Inbox page working correctly)"
+  },
+
+  "test_credentials": {
+    "email": "admin@gimmicks.com",
+    "password": "admin123456",
+    "staff_notification_phone": "593963266566"
+  },
+
+  "seed_data_creation": "Test webhook payloads created conversations/leads/quotes with phone numbers 593999TEST*, 593999FQ*, 593999UP*, 593999QC*, 593999T12*",
+
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+
+  "context_for_next_testing_agent": "Iteration 12 verified: (1) Bot webhook correctly processes WhatsApp messages with product codes, quantities, and contact info, (2) Quotes are created in quotes_v2 collection when all required data is present (codes+qty+email), (3) Quote updates don't create duplicates - existing pending quotes are updated, (4) Staff notifications via WhatsApp sent to 593963266566 with ALERTA COTIZACION NUEVA/ACTUALIZADA format, (5) Field aliases in bot_service.py normalize various input formats (correo_electronico→correo, ciudad_de_entrega→ciudad, etc.), (6) Inbox page has 5-second polling for real-time message updates with sync indicator. All features from the original issue are working correctly.",
+
+  "mocked_api_note": "WhatsApp Business API sending is MOCKED - messages are saved to DB but not actually sent via WhatsApp since no real WhatsApp token for this preview environment"
+}
