@@ -130,7 +130,7 @@ export default function PublicCatalog() {
           </form>
           {/* Category chips */}
           <div className="flex flex-wrap gap-2 items-center">
-            <span className="text-sm font-semibold text-gray-600">Categorias:</span>
+            <span className="text-sm font-semibold text-gray-600">Categorías:</span>
             <button
               onClick={() => handleCategoryChange("")}
               className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
