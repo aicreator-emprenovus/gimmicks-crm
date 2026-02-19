@@ -537,7 +537,7 @@ function CartItemCompact({ item, onUpdate, onRemove, onDuplicate, getImageUrl })
             </div>
           </div>
           <div>
-            <label className="text-[10px] text-gray-400">Otros</label>
+            <label className="text-[10px] text-gray-500">Otros</label>
             <Input value={item.otros} onChange={e => onUpdate(item.item_id, "otros", e.target.value)} className="h-7 text-xs" placeholder="Personalización" />
           </div>
         </div>
