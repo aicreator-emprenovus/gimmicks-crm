@@ -137,7 +137,7 @@ export default function Quotes() {
 
       {loading ? (
         <div className="flex items-center justify-center py-12">
-          <Loader2 className="w-8 h-8 animate-spin text-[#7BA899]" />
+          <Loader2 className="w-8 h-8 animate-spin text-[#63AC9A]" />
         </div>
       ) : quotes.length === 0 ? (
         <div className="text-center py-16 text-zinc-400">
@@ -173,7 +173,7 @@ export default function Quotes() {
                     {q.items?.map((item, i) => (
                       <span key={i} className="flex items-center gap-1">
                         <Package className="w-3 h-3 shrink-0" />
-                        <span className="font-mono text-[#7BA899]">{item.code}</span>
+                        <span className="font-mono text-[#63AC9A]">{item.code}</span>
                         <span className="truncate">{item.product_name}</span>
                         {(item.quantity || q.cantidad) && <span className="shrink-0 font-semibold">x{item.quantity || q.cantidad}</span>}
                       </span>
@@ -186,7 +186,7 @@ export default function Quotes() {
                   </div>
 
                   {q.total > 0 && (
-                    <p className="text-sm font-bold text-[#7BA899]">Total: ${q.total.toLocaleString("es-EC", { minimumFractionDigits: 2 })}</p>
+                    <p className="text-sm font-bold text-[#63AC9A]">Total: ${q.total.toLocaleString("es-EC", { minimumFractionDigits: 2 })}</p>
                   )}
 
                   <div className="flex items-center gap-1 text-xs text-zinc-400">
@@ -203,7 +203,7 @@ export default function Quotes() {
                     {q.status === "pending" && (
                       <Button
                         size="sm"
-                        className="h-8 text-xs gap-1 bg-[#7BA899] hover:bg-[#6A9688] text-white"
+                        className="h-8 text-xs gap-1 bg-[#63AC9A] hover:bg-[#6A9688] text-white"
                         onClick={() => sendQuote(q.id)}
                         disabled={sending === q.id}
                         data-testid={`send-quote-${q.id}`}
@@ -246,7 +246,7 @@ export default function Quotes() {
                   {selectedQuote.items?.map((item, i) => (
                     <div key={i} className="bg-zinc-50 p-2 rounded text-xs flex items-start justify-between gap-2">
                       <div className="flex-1">
-                        <span className="font-mono text-[#7BA899]">{item.code || item.product_id}</span>
+                        <span className="font-mono text-[#63AC9A]">{item.code || item.product_id}</span>
                         <span className="ml-2 font-medium">{item.product_name}</span>
                         {item.description && <p className="text-zinc-500 mt-0.5">{item.description}</p>}
                       </div>
@@ -263,7 +263,7 @@ export default function Quotes() {
                 <div><span className="text-zinc-400 text-xs">Notas</span><p>{selectedQuote.notes}</p></div>
               )}
               {selectedQuote.total > 0 && (
-                <p className="text-lg font-bold text-[#7BA899]">Total: ${selectedQuote.total.toLocaleString("es-EC", { minimumFractionDigits: 2 })}</p>
+                <p className="text-lg font-bold text-[#63AC9A]">Total: ${selectedQuote.total.toLocaleString("es-EC", { minimumFractionDigits: 2 })}</p>
               )}
             </div>
           )}
@@ -285,7 +285,7 @@ export default function Quotes() {
               <Label>Notas</Label>
               <Textarea value={editData.notes} onChange={(e) => setEditData({ ...editData, notes: e.target.value })} placeholder="Notas adicionales para la cotizacion..." data-testid="edit-quote-notes" />
             </div>
-            <Button onClick={updateQuote} className="w-full bg-[#7BA899] hover:bg-[#6A9688] text-white" data-testid="save-quote-btn">
+            <Button onClick={updateQuote} className="w-full bg-[#63AC9A] hover:bg-[#6A9688] text-white" data-testid="save-quote-btn">
               Guardar Cambios
             </Button>
           </div>
