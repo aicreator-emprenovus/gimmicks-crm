@@ -131,7 +131,7 @@ export default function Clients() {
               {client.email && <p className="flex items-center gap-1.5 truncate"><Mail size={12} className="text-gray-400 flex-shrink-0" /> <span className="truncate">{client.email}</span></p>}
               {client.phone && <p className="flex items-center gap-1.5 truncate"><Phone size={12} className="text-gray-400 flex-shrink-0" /> {client.phone}</p>}
             </div>
-            <div className="flex gap-1 mt-1 pt-1 border-t justify-center">
+            <div className="flex gap-1 border-t justify-center" style={{marginTop:'3px',paddingTop:'2px'}}>
               {showTrash ? (
                 <>
                   <button onClick={() => handleRestore(client.id)} className="p-2 rounded-lg hover:bg-green-50 text-green-600 transition-colors" title="Restaurar">
