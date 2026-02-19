@@ -136,7 +136,7 @@ export default function Inventory() {
             {uploading ? "Subiendo..." : "Subir Excel"}
           </Button>
           <input ref={fileInputRef} type="file" accept=".xlsx,.xls,.csv" onChange={handleUpload} className="hidden" />
-          <Button size="sm" className="bg-[#63AC9A] hover:bg-[#5E8A7A]" onClick={() => { setEditProduct(null); setShowAddModal(true); }} data-testid="add-product-btn">
+          <Button size="sm" className="bg-[#63AC9A] hover:bg-[#4F9A87]" onClick={() => { setEditProduct(null); setShowAddModal(true); }} data-testid="add-product-btn">
             <Plus size={16} className="mr-1" /> Agregar
           </Button>
         </div>
