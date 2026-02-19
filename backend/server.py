@@ -643,6 +643,7 @@ async def _create_client_from_lead(lead_id: str, lead: dict, update_dict: dict):
         "sector": "",
         "sector_details": lead.get("empresa", ""),
         "notes": f"Creado automaticamente desde Lead #{lead_id} al pasar a Entregado",
+        "source": "whatsapp",
         "is_deleted": False,
         "deleted_at": None,
         "created_at": now

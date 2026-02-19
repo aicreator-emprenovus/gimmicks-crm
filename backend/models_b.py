@@ -86,6 +86,7 @@ class Client(BaseModel):
     sector: str = ""
     sector_details: str = ""
     notes: str = ""
+    source: str = "manual"
     is_deleted: bool = False
     deleted_at: Optional[datetime] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

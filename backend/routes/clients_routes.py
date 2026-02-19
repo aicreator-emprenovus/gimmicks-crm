@@ -21,8 +21,10 @@ async def log_client_activity(client_id: str, action: str, details: str):
     await db.client_activities.insert_one(activity.model_dump())
 
 @router.get("/", response_model=List[Client])
-async def get_clients(trash: bool = False):
+async def get_clients(trash: bool = False, source: str = None):
     query = {"is_deleted": trash}
+    if source:
+        query["source"] = source
     clients = await db.clients.find(query, {"_id": 0}).to_list(1000)
     return clients
 
