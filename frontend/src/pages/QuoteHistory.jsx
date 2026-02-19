@@ -283,14 +283,17 @@ function SendEmailModal({ quote, onClose, onSent }) {
   useEffect(() => {
     const initial = [];
     if (quote.client_email) initial.push(quote.client_email);
-    // Fetch client to get commercial_email
     if (quote.client_id) {
-      axios.get(`${API_URL}/api/clients/${quote.client_id}`, { headers }).then(res => {
-        const c = res.data;
-        const all = [...initial];
-        if (c.commercial_email && !all.includes(c.commercial_email)) all.push(c.commercial_email);
-        if (c.email && !all.includes(c.email)) all.push(c.email);
-        setEmails(all);
+      axios.get(`${API_URL}/api/clients/`, { headers }).then(res => {
+        const c = (res.data || []).find(cl => cl.id === quote.client_id);
+        if (c) {
+          const all = [...initial];
+          if (c.commercial_email && !all.includes(c.commercial_email)) all.push(c.commercial_email);
+          if (c.email && !all.includes(c.email)) all.push(c.email);
+          setEmails(all);
+        } else {
+          setEmails(initial);
+        }
       }).catch(() => setEmails(initial));
     } else {
       setEmails(initial);
