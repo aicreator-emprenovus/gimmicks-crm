@@ -102,7 +102,7 @@ export default function Clients() {
             <Archive size={16} className="mr-1" /> {showTrash ? "Ver activos" : "Papelera"}
           </Button>
           {!showTrash && (
-            <Button size="sm" className="bg-[#63AC9A] hover:bg-[#5E8A7A]" onClick={() => { setEditClient(null); setShowModal(true); }} data-testid="add-client-btn">
+            <Button size="sm" className="bg-[#63AC9A] hover:bg-[#4F9A87]" onClick={() => { setEditClient(null); setShowModal(true); }} data-testid="add-client-btn">
               <Plus size={16} className="mr-1" /> Nuevo Cliente
             </Button>
           )}
@@ -285,7 +285,7 @@ function ClientModal({ client, onClose, onSave }) {
         </div>
         <div className="flex justify-end gap-2 p-5 border-t">
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
-          <Button className="bg-[#63AC9A] hover:bg-[#5E8A7A]" onClick={handleSave} disabled={saving} data-testid="save-client-btn">
+          <Button className="bg-[#63AC9A] hover:bg-[#4F9A87]" onClick={handleSave} disabled={saving} data-testid="save-client-btn">
             {saving ? <Loader2 size={16} className="animate-spin mr-1" /> : null}
             {isEdit ? "Actualizar" : "Crear"}
           </Button>
