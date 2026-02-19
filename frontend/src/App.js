@@ -13,6 +13,7 @@ import Users from "@/pages/Users";
 import QuoteHistory from "@/pages/QuoteHistory";
 import QuoteBuilder from "@/pages/QuoteBuilder";
 import Clients from "@/pages/Clients";
+import Interesados from "@/pages/Interesados";
 import PublicCatalog from "@/pages/PublicCatalog";
 import Layout from "@/components/Layout";
 
@@ -74,6 +75,7 @@ function AppRoutes() {
         } />
         <Route path="inventory" element={<Inventory />} />
         <Route path="clients" element={<Clients />} />
+        <Route path="interesados" element={<Interesados />} />
         <Route path="quotes" element={<QuoteHistory />} />
         <Route path="quotes/new" element={<QuoteBuilder />} />
         <Route path="purchase-orders" element={<QuoteHistory />} />

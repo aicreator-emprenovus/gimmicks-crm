@@ -16,7 +16,8 @@ import {
   Building2,
   ClipboardList,
   FilePlus,
-  PackagePlus
+  PackagePlus,
+  MessageCircle
 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -27,6 +28,7 @@ const navItems = [
   { to: "/users", icon: Users, label: "Usuarios", roles: ["admin"] },
   { to: "/inventory", icon: Package, label: "Inventario", roles: ["admin", "asesor"] },
   { to: "/clients", icon: Building2, label: "Clientes", roles: ["admin", "asesor"] },
+  { to: "/interesados", icon: MessageCircle, label: "Interesados", roles: ["admin", "asesor"] },
   { to: "/leads", icon: Users2, label: "Leads", roles: ["admin", "asesor"] },
   { to: "/quotes", icon: FileText, label: "Cotizaciones", roles: ["admin", "asesor"] },
   { to: "/purchase-orders", icon: ClipboardList, label: "Órdenes de Compra", roles: ["admin", "asesor"] },
