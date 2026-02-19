@@ -2180,19 +2180,17 @@ async def check_ai_intent(message: str, intent_keywords: str) -> bool:
 async def generate_ai_product_response(message: str) -> Optional[str]:
     """Generate an AI response with product recommendations based on user message"""
     try:
-        from openai import OpenAI
+        from emergentintegrations.llm.chat import LlmChat, UserMessage
         
-        api_key = os.environ.get("OPENAI_API_KEY") or os.environ.get("EMERGENT_LLM_KEY")
+        api_key = os.environ.get("EMERGENT_LLM_KEY")
         if not api_key:
             return None
         
-        # Get products from inventory
         products = await db.products.find({}, {"_id": 0}).limit(100).to_list(100)
         
         if not products:
-            return "¡Hola! Gracias por tu interés. Actualmente estamos actualizando nuestro catálogo. Un asesor te contactará pronto con más información."
+            return "Gracias por tu interés. Actualmente estamos actualizando nuestro catálogo. Un asesor te contactará pronto con más información."
         
-        # Build product catalog context
         products_context = "\n".join([
             f"- {p['name']}: {p.get('description', 'Sin descripción')[:150]} | Categoría: {p.get('category_1', 'General')} | Precio: ${p.get('price', 'Consultar')}"
             for p in products
@@ -2217,19 +2215,10 @@ INSTRUCCIONES:
 
 NO uses formato markdown, solo texto plano."""
 
-        client = OpenAI(api_key=api_key)
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": system_message},
-                {"role": "user", "content": f"Cliente dice: {message}"}
-            ],
-            temperature=0.7,
-            max_tokens=200
-        )
-        
-        ai_response = response.choices[0].message.content.strip()
-        return ai_response
+        chat = LlmChat(api_key=api_key, session_id=f"product-rec-{uuid.uuid4().hex[:8]}", system_message=system_message)
+        chat.with_model("openai", "gpt-4o-mini")
+        ai_response = await chat.send_message(UserMessage(text=f"Cliente dice: {message}"))
+        return ai_response.strip()
         
     except Exception as e:
         logger.error(f"Error generating AI product response: {e}")
@@ -2245,13 +2234,9 @@ async def analyze_message(
 ):
     """Analyze full conversation context using AI to provide actionable insights"""
     try:
-        try:
-            from emergentintegrations.llm.chat import LlmChat, UserMessage
-            use_emergent = True
-        except ImportError:
-            use_emergent = False
+        from emergentintegrations.llm.chat import LlmChat, UserMessage
 
-        api_key = os.environ.get("EMERGENT_LLM_KEY") or os.environ.get("OPENAI_API_KEY")
+        api_key = os.environ.get("EMERGENT_LLM_KEY")
         if not api_key:
             return {
                 "intent": "consulta",
@@ -2327,19 +2312,9 @@ ESTADO DE LA CONVERSACION:
 
 Analiza: 1) El cliente tiene intencion de cotizar? 2) Ya cotizo? 3) Que datos faltan? 4) Cual es la mejor accion siguiente?"""
 
-        if use_emergent:
-            chat = LlmChat(api_key=api_key, session_id=f"analyze-{uuid.uuid4().hex[:8]}", system_message=system_msg)
-            chat.with_model("openai", "gpt-4o-mini")
-            response_text = await chat.send_message(UserMessage(text=user_msg))
-        else:
-            import openai
-            client = openai.AsyncOpenAI(api_key=api_key)
-            resp = await client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[{"role": "system", "content": system_msg}, {"role": "user", "content": user_msg}],
-                temperature=0.7, max_tokens=1000
-            )
-            response_text = resp.choices[0].message.content
+        chat = LlmChat(api_key=api_key, session_id=f"analyze-{uuid.uuid4().hex[:8]}", system_message=system_msg)
+        chat.with_model("openai", "gpt-4o-mini")
+        response_text = await chat.send_message(UserMessage(text=user_msg))
         
         json_match = re.search(r'\{[\s\S]*\}', response_text)
         if json_match:
