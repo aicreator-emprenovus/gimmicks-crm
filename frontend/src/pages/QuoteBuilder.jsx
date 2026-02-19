@@ -507,7 +507,7 @@ function CartItemCompact({ item, onUpdate, onRemove, onDuplicate, getImageUrl })
         <div className="mt-2 pt-2 border-t space-y-2">
           {/* Características */}
           <div>
-            <p className="text-xs font-semibold text-gray-600 flex items-center gap-1 mb-1"><Tag size={12} /> Caracteristicas</p>
+            <p className="text-xs font-semibold text-gray-600 flex items-center gap-1 mb-1"><Tag size={12} /> Características</p>
             {item.selected_characteristics?.length > 0 && (
               <div className="flex flex-wrap gap-1 mb-1">
                 {item.selected_characteristics.map(c => (
@@ -520,7 +520,7 @@ function CartItemCompact({ item, onUpdate, onRemove, onDuplicate, getImageUrl })
               className="w-full flex items-center justify-center gap-1.5 py-1.5 border rounded-lg text-xs text-gray-600 hover:bg-gray-50 transition-colors"
               data-testid={`manage-chars-${item.item_id}`}
             >
-              <Tag size={12} /> Gestionar Caracteristicas
+              <Tag size={12} /> Gestionar Características
             </button>
           </div>
           {/* % Descuento */}
@@ -584,12 +584,12 @@ function CharacteristicsModal({ categories, selected, onSave, onClose }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" data-testid="characteristics-modal">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm mx-4">
         <div className="flex items-center justify-between p-4 border-b">
-          <h3 className="font-bold text-base">Gestionar Caracteristicas</h3>
+          <h3 className="font-bold text-base">Gestionar Características</h3>
           <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded"><X size={18} /></button>
         </div>
         <div className="p-4 space-y-3">
           <div>
-            <p className="text-sm font-semibold text-gray-700 mb-1">Caracteristicas Seleccionadas:</p>
+            <p className="text-sm font-semibold text-gray-700 mb-1">Características Seleccionadas:</p>
             {chars.length === 0 ? (
               <p className="text-sm text-[#63AC9A] italic">Ninguna categoria seleccionada</p>
             ) : (
@@ -603,7 +603,7 @@ function CharacteristicsModal({ categories, selected, onSave, onClose }) {
             )}
           </div>
           <div>
-            <p className="text-sm font-semibold text-gray-700 mb-1">Caracteristicas del Inventario:</p>
+            <p className="text-sm font-semibold text-gray-700 mb-1">Características del Inventario:</p>
             <div className="border rounded-lg p-2 max-h-40 overflow-y-auto space-y-1">
               {categories.length === 0 ? (
                 <p className="text-xs text-gray-400 italic">Sin categorias en este producto</p>
