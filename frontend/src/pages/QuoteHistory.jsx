@@ -131,23 +131,15 @@ export default function QuoteHistory() {
             <Archive size={16} className="mr-1" /> {showTrash ? "Ver activos" : "Papelera"}
           </Button>
           {!showTrash && (
-            <Button size="sm" className="bg-[#7BA899] hover:bg-[#5E8A7A]" onClick={() => navigate(`/quotes/new?type=${docType}`)} data-testid="new-quote-btn">
-              <Plus size={16} className="mr-1" /> {docType === "PO" ? "Nueva OC" : "Nueva Cotización"}
+            <Button size="sm" className="bg-[#7BA899] hover:bg-[#5E8A7A]" onClick={() => navigate(`${newPath}?type=${docType}`)} data-testid="new-quote-btn">
+              <Plus size={16} className="mr-1" /> {isPO ? "Nueva OC" : "Nueva Cotizacion"}
             </Button>
           )}
         </div>
       </div>
 
-      {/* Tabs + Search */}
-      <div className="flex flex-col sm:flex-row gap-3 mb-4">
-        <div className="flex bg-white rounded-lg border p-1">
-          <button className={`px-4 py-1.5 rounded text-sm font-medium transition-colors ${docType === "QUOTE" ? "bg-[#7BA899] text-white" : "text-gray-500 hover:text-gray-700"}`} onClick={() => setDocType("QUOTE")} data-testid="tab-quotes">
-            Cotizaciones
-          </button>
-          <button className={`px-4 py-1.5 rounded text-sm font-medium transition-colors ${docType === "PO" ? "bg-[#7BA899] text-white" : "text-gray-500 hover:text-gray-700"}`} onClick={() => setDocType("PO")} data-testid="tab-pos">
-            Órdenes de Compra
-          </button>
-        </div>
+      {/* Search */}
+      <div className="flex gap-3 mb-4">
         <div className="relative flex-1 max-w-md">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <Input placeholder="Buscar por cliente, número..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9 bg-white" data-testid="search-quotes-input" />
