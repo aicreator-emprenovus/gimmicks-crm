@@ -232,23 +232,32 @@ async def load_known_client_data(db: AsyncIOMotorDatabase, phone_number: str) ->
 async def call_llm(system_msg: str, user_msg: str, phone_number: str = "") -> Optional[Dict]:
     """Call LLM and parse JSON response. Uses unique session per call to avoid repetition."""
     try:
-        from emergentintegrations.llm.chat import LlmChat, UserMessage
-
-        api_key = os.environ.get("EMERGENT_LLM_KEY")
-        if not api_key:
-            logger.error("EMERGENT_LLM_KEY not configured")
-            return None
-
-        # Unique session per call - history is already in the prompt
-        session_id = f"gimmicks-{uuid.uuid4().hex[:12]}"
-        chat = LlmChat(
-            api_key=api_key,
-            session_id=session_id,
-            system_message=system_msg
-        )
-        chat.with_model("openai", "gpt-4o")
-
-        response_text = await chat.send_message(UserMessage(text=user_msg))
+        try:
+            from emergentintegrations.llm.chat import LlmChat, UserMessage
+            api_key = os.environ.get("EMERGENT_LLM_KEY")
+            if not api_key:
+                raise ImportError("No EMERGENT_LLM_KEY")
+            session_id = f"gimmicks-{uuid.uuid4().hex[:12]}"
+            chat = LlmChat(api_key=api_key, session_id=session_id, system_message=system_msg)
+            chat.with_model("openai", "gpt-4o")
+            response_text = await chat.send_message(UserMessage(text=user_msg))
+        except ImportError:
+            import openai
+            api_key = os.environ.get("OPENAI_API_KEY") or os.environ.get("EMERGENT_LLM_KEY")
+            if not api_key:
+                logger.error("No LLM API key configured")
+                return None
+            client = openai.AsyncOpenAI(api_key=api_key)
+            resp = await client.chat.completions.create(
+                model="gpt-4o",
+                messages=[
+                    {"role": "system", "content": system_msg},
+                    {"role": "user", "content": user_msg}
+                ],
+                temperature=0.7,
+                max_tokens=1000
+            )
+            response_text = resp.choices[0].message.content
 
         json_match = re.search(r'\{[\s\S]*\}', response_text)
         if json_match:
