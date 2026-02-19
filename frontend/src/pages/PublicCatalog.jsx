@@ -36,7 +36,7 @@ function CopyCodeButton({ code }) {
       data-testid={`copy-code-${code}`}
     >
       {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-      {copied ? "Copiado" : "Copiar codigo"}
+      {copied ? "Copiado" : "Copiar código"}
     </button>
   );
 }
