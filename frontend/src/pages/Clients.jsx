@@ -157,6 +157,13 @@ export default function Clients() {
           onClose={() => setSelectedClient(null)}
         />
       )}
+
+      {detailClient && (
+        <ClientDetailModal
+          client={detailClient}
+          onClose={() => setDetailClient(null)}
+        />
+      )}
     </div>
   );
 }
