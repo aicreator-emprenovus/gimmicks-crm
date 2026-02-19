@@ -194,7 +194,7 @@ export default function QuoteBuilder() {
         toast.success(docType === "PO" ? "Orden actualizada" : "Cotización actualizada");
       } else {
         await axios.post(`${API_URL}/api/quotes-v2/`, quoteData, { headers });
-        toast.success(docType === "PO" ? "Orden creada" : "Cotizacion creada");
+        toast.success(docType === "PO" ? "Orden creada" : "Cotización creada");
       }
       navigate(backPath);
     } catch (e) {
