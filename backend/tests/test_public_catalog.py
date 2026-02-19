@@ -6,7 +6,7 @@ import pytest
 import requests
 import os
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://crm-cotizador-merge.preview.emergentagent.com')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://merged-platform-3.preview.emergentagent.com')
 
 
 class TestPublicCatalogEndpoint:
@@ -118,7 +118,7 @@ class TestCatalogUrlBuilder:
         from urllib.parse import quote
         
         keywords = ["jarro", "termo", "gorra", "usb"]
-        base_url = "https://crm-cotizador-merge.preview.emergentagent.com"
+        base_url = "https://merged-platform-3.preview.emergentagent.com"
         
         for keyword in keywords:
             expected_url = f"{base_url}/catalog?q={quote(keyword)}"
