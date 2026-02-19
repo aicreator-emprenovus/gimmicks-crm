@@ -15,7 +15,7 @@ import {
 } from "recharts";
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
-const COLORS = ["#7BA899", "#3b82f6", "#f59e0b", "#8b5cf6", "#ec4899", "#10b981", "#ef4444", "#6366f1"];
+const COLORS = ["#63AC9A", "#3b82f6", "#f59e0b", "#8b5cf6", "#ec4899", "#10b981", "#ef4444", "#6366f1"];
 
 export default function Dashboard() {
   const { getAuthHeaders } = useAuth();
@@ -49,11 +49,11 @@ export default function Dashboard() {
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
   if (loading) {
-    return <div className="p-6 flex items-center justify-center min-h-[400px]"><Loader2 className="w-8 h-8 animate-spin text-[#7BA899]" /></div>;
+    return <div className="p-6 flex items-center justify-center min-h-[400px]"><Loader2 className="w-8 h-8 animate-spin text-[#63AC9A]" /></div>;
   }
 
   const statCards = [
-    { label: "Productos", value: stats?.total_products?.toLocaleString() || "0", icon: Package, color: "bg-[#7BA899]/15", iconColor: "text-[#7BA899]", sub: "en inventario" },
+    { label: "Productos", value: stats?.total_products?.toLocaleString() || "0", icon: Package, color: "bg-[#63AC9A]/15", iconColor: "text-[#63AC9A]", sub: "en inventario" },
     { label: "Clientes", value: stats?.total_clients || 0, icon: Users, color: "bg-blue-50", iconColor: "text-blue-500", sub: "activos" },
     { label: "Cotizaciones", value: stats?.total_quotes || 0, icon: FileText, color: "bg-purple-50", iconColor: "text-purple-500", sub: formatCurrency(stats?.quotes_total_value || 0) },
     { label: "Órdenes de Compra", value: stats?.total_pos || 0, icon: ShoppingBag, color: "bg-orange-50", iconColor: "text-orange-500", sub: formatCurrency(stats?.pos_total_value || 0) },
@@ -113,7 +113,7 @@ export default function Dashboard() {
                   <XAxis dataKey="label" fontSize={11} stroke="#9ca3af" />
                   <YAxis fontSize={11} stroke="#9ca3af" allowDecimals={false} />
                   <Tooltip contentStyle={{ borderRadius: "8px", border: "1px solid #e5e7eb" }} />
-                  <Bar dataKey="cotizaciones" name="Cotizaciones" fill="#7BA899" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="cotizaciones" name="Cotizaciones" fill="#63AC9A" radius={[4, 4, 0, 0]} />
                   <Bar dataKey="ordenes" name="Órdenes" fill="#3b82f6" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
@@ -139,7 +139,7 @@ export default function Dashboard() {
                       <p className="text-xs text-gray-400">{p.code} - {p.count} cotizaciones</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-medium text-[#7BA899]">{formatCurrency(p.total_value)}</p>
+                      <p className="text-sm font-medium text-[#63AC9A]">{formatCurrency(p.total_value)}</p>
                       <p className="text-xs text-gray-400">{p.total_quantity} uds</p>
                     </div>
                   </div>
@@ -175,7 +175,7 @@ export default function Dashboard() {
                       <td className="py-2.5"><span className="w-5 h-5 rounded-full inline-flex items-center justify-center text-xs font-bold text-white" style={{ backgroundColor: COLORS[i % COLORS.length] }}>{i + 1}</span></td>
                       <td className="py-2.5 font-medium text-gray-800">{c.client_name || "Sin nombre"}</td>
                       <td className="py-2.5 text-right text-gray-600">{c.total_quotes}</td>
-                      <td className="py-2.5 text-right font-medium text-[#7BA899]">{formatCurrency(c.total_value)}</td>
+                      <td className="py-2.5 text-right font-medium text-[#63AC9A]">{formatCurrency(c.total_value)}</td>
                     </tr>
                   ))}
                 </tbody>
