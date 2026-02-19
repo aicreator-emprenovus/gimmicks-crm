@@ -13,7 +13,10 @@ import {
   ChevronsLeft,
   ChevronsRight,
   FileText,
-  Building2
+  Building2,
+  ClipboardList,
+  FilePlus,
+  PackagePlus
 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -26,6 +29,9 @@ const navItems = [
   { to: "/clients", icon: Building2, label: "Clientes", roles: ["admin", "asesor"] },
   { to: "/leads", icon: Users2, label: "Leads", roles: ["admin", "asesor"] },
   { to: "/quotes", icon: FileText, label: "Cotizaciones", roles: ["admin", "asesor"] },
+  { to: "/purchase-orders", icon: ClipboardList, label: "Órdenes de Compra", roles: ["admin", "asesor"] },
+  { to: "/quotes/new", icon: FilePlus, label: "Nueva Cotización", roles: ["admin", "asesor"], accent: true },
+  { to: "/purchase-orders/new", icon: PackagePlus, label: "Nueva Orden", roles: ["admin", "asesor"], accent: true },
   { to: "/settings", icon: Settings, label: "Configuración", roles: ["admin"] },
 ];
 
