@@ -502,10 +502,10 @@ function CartItemCompact({ item, onUpdate, onRemove, onDuplicate, getImageUrl })
           {expanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />} {expanded ? "Ocultar" : "Detalles"}
         </button>
         <div className="flex items-center gap-2">
-          <button onClick={() => onDuplicate(item.item_id)} className="flex items-center gap-0.5 text-gray-400 hover:text-gray-600" title="Duplicar">
+          <button onClick={() => onDuplicate(item.item_id)} className="flex items-center gap-0.5 text-gray-500 hover:text-gray-700" title="Duplicar">
             <Copy size={12} /> Duplicar
           </button>
-          <button onClick={() => onRemove(item.item_id)} className="text-red-400 hover:text-red-600" title="Eliminar">
+          <button onClick={() => onRemove(item.item_id)} className="text-red-500 hover:text-red-600" title="Eliminar">
             <Trash2 size={12} />
           </button>
         </div>
