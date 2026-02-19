@@ -563,7 +563,7 @@ async def notify_staff_new_quote(db: AsyncIOMotorDatabase, customer_phone: str, 
         client_name = collected_data.get("nombre", "Cliente desconocido")
         correo = collected_data.get("correo", "No proporcionado")
         producto = collected_data.get("codigos_producto") or collected_data.get("producto", "No especificado")
-        cantidad = collected_data.get("cantidad", "No especificada")
+        cantidad = collected_data.get("cantidad") or collected_data.get("cantidades_por_producto", "No especificada")
         action = "ACTUALIZADA" if is_update else "NUEVA"
 
         # Get the quote number
