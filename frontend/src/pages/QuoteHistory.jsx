@@ -131,7 +131,7 @@ export default function QuoteHistory() {
           </Button>
           {!showTrash && (
             <Button size="sm" className="bg-[#63AC9A] hover:bg-[#4F9A87]" onClick={() => navigate(`${newPath}?type=${docType}`)} data-testid="new-quote-btn">
-              <Plus size={16} className="mr-1" /> {isPO ? "Nueva OC" : "Nueva Cotizacion"}
+              <Plus size={16} className="mr-1" /> {isPO ? "Nueva OC" : "Nueva Cotización"}
             </Button>
           )}
         </div>
