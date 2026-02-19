@@ -240,7 +240,7 @@ export default function Inbox() {
   useEffect(() => {
     if (selectedConv) {
       fetchMessages(selectedConv.id);
-      const msgInterval = setInterval(() => fetchMessages(selectedConv.id), 5000);
+      const msgInterval = setInterval(() => fetchMessages(selectedConv.id, true), 5000);
       return () => clearInterval(msgInterval);
     }
   }, [selectedConv]);
