@@ -197,7 +197,7 @@ export default function QuoteHistory() {
                     </Button>
                     {q.doc_type === "QUOTE" && (
                       <Button variant="ghost" size="sm" onClick={() => handleConvertToPO(q.id)} className="text-xs text-purple-600" data-testid={`convert-po-btn-${q.id}`}>
-                        <ShoppingBag size={14} className="mr-1" /> OC
+                        <ShoppingBag size={14} className="mr-1" /> Crear Orden
                       </Button>
                     )}
                     <Button variant="ghost" size="sm" onClick={() => handleDelete(q.id)} className="text-xs text-red-500">
