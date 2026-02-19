@@ -274,15 +274,33 @@ export default function QuoteHistory() {
 }
 
 function SendEmailModal({ quote, onClose, onSent }) {
-  const [emails, setEmails] = useState(quote.client_email ? [quote.client_email] : []);
+  const [emails, setEmails] = useState([]);
   const [newEmail, setNewEmail] = useState("");
   const [sending, setSending] = useState(false);
   const token = localStorage.getItem("token");
   const headers = { Authorization: `Bearer ${token}` };
 
+  useEffect(() => {
+    const initial = [];
+    if (quote.client_email) initial.push(quote.client_email);
+    // Fetch client to get commercial_email
+    if (quote.client_id) {
+      axios.get(`${API_URL}/api/clients/${quote.client_id}`, { headers }).then(res => {
+        const c = res.data;
+        const all = [...initial];
+        if (c.commercial_email && !all.includes(c.commercial_email)) all.push(c.commercial_email);
+        if (c.email && !all.includes(c.email)) all.push(c.email);
+        setEmails(all);
+      }).catch(() => setEmails(initial));
+    } else {
+      setEmails(initial);
+    }
+  }, []);
+
   const addEmail = () => {
-    if (newEmail && !emails.includes(newEmail)) {
-      setEmails([...emails, newEmail]);
+    const parts = newEmail.split(",").map(e => e.trim()).filter(e => e && !emails.includes(e));
+    if (parts.length > 0) {
+      setEmails([...emails, ...parts]);
       setNewEmail("");
     }
   };
