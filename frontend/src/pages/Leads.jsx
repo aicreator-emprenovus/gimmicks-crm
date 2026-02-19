@@ -254,7 +254,7 @@ export default function Leads() {
         </div>
         <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
           <DialogTrigger asChild>
-            <Button className="bg-[#7BA899] hover:bg-[#6A9688] gap-2 text-white" data-testid="create-lead-btn">
+            <Button className="bg-[#63AC9A] hover:bg-[#6A9688] gap-2 text-white" data-testid="create-lead-btn">
               <Plus size={18} />
               Nuevo Lead
             </Button>
@@ -285,7 +285,7 @@ export default function Leads() {
                 <Label>Notas</Label>
                 <Textarea placeholder="Notas adicionales..." value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} data-testid="lead-notes-input" />
               </div>
-              <Button onClick={createLead} className="w-full bg-[#7BA899] hover:bg-[#6A9688] text-white" data-testid="submit-lead-btn">
+              <Button onClick={createLead} className="w-full bg-[#63AC9A] hover:bg-[#6A9688] text-white" data-testid="submit-lead-btn">
                 Crear Lead
               </Button>
             </div>
@@ -323,7 +323,7 @@ export default function Leads() {
       {/* Kanban Board */}
       {loading ? (
         <div className="flex items-center justify-center py-12">
-          <Loader2 className="w-8 h-8 animate-spin text-[#7BA899]" />
+          <Loader2 className="w-8 h-8 animate-spin text-[#63AC9A]" />
         </div>
       ) : (
         <div className="overflow-x-auto pb-4" data-testid="kanban-scroll-container">
@@ -331,7 +331,7 @@ export default function Leads() {
             {FUNNEL_STAGES.map(stage => (
               <div
                 key={stage.value}
-                className={`shrink-0 w-[240px] space-y-2 rounded-lg transition-colors ${dragOverStage === stage.value ? 'bg-[#7BA899]/10 ring-2 ring-[#7BA899]/30' : ''}`}
+                className={`shrink-0 w-[240px] space-y-2 rounded-lg transition-colors ${dragOverStage === stage.value ? 'bg-[#63AC9A]/10 ring-2 ring-[#63AC9A]/30' : ''}`}
                 onDragOver={(e) => handleDragOver(e, stage.value)}
                 onDragLeave={handleDragLeave}
                 onDrop={(e) => handleDrop(e, stage.value)}
@@ -395,7 +395,7 @@ export default function Leads() {
                               <div className="flex gap-1">
                                 <button className="p-1 text-zinc-400 hover:text-zinc-700 rounded hover:bg-zinc-100" onClick={() => setDetailLead(lead)} data-testid={`view-lead-${lead.id}`}><Eye className="w-3.5 h-3.5" /></button>
                                 <button className="p-1 text-zinc-400 hover:text-zinc-700 rounded hover:bg-zinc-100" onClick={() => openEditDialog(lead)} data-testid={`edit-lead-${lead.id}`}><Edit className="w-3.5 h-3.5" /></button>
-                                <button className="p-1 text-[#7BA899] hover:text-[#4A7566] rounded hover:bg-emerald-50" onClick={() => navigate(`/inbox?phone=${lead.phone_number}`)} data-testid={`chat-lead-${lead.id}`} title="Ver chat"><MessageSquare className="w-3.5 h-3.5" /></button>
+                                <button className="p-1 text-[#63AC9A] hover:text-[#4A7566] rounded hover:bg-emerald-50" onClick={() => navigate(`/inbox?phone=${lead.phone_number}`)} data-testid={`chat-lead-${lead.id}`} title="Ver chat"><MessageSquare className="w-3.5 h-3.5" /></button>
                                 <button className="p-1 text-red-400 hover:text-red-600 rounded hover:bg-red-50" onClick={() => deleteLead(lead.id)} data-testid={`delete-lead-${lead.id}`}><Trash2 className="w-3.5 h-3.5" /></button>
                               </div>
                             </div>
@@ -429,7 +429,7 @@ export default function Leads() {
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="font-['Manrope'] flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-[#7BA899] flex items-center justify-center text-white text-lg font-bold">
+              <div className="w-10 h-10 rounded-full bg-[#63AC9A] flex items-center justify-center text-white text-lg font-bold">
                 {detailLead?.name?.charAt(0)?.toUpperCase() || "?"}
               </div>
               <div>
@@ -535,7 +535,7 @@ export default function Leads() {
               <Label>Notas</Label>
               <Textarea value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} data-testid="edit-lead-notes" />
             </div>
-            <Button onClick={updateLead} className="w-full bg-[#7BA899] hover:bg-[#6A9688] text-white" data-testid="save-lead-btn">
+            <Button onClick={updateLead} className="w-full bg-[#63AC9A] hover:bg-[#6A9688] text-white" data-testid="save-lead-btn">
               Guardar Cambios
             </Button>
           </div>
