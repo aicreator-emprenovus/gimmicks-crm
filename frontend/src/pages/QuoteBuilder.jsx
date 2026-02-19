@@ -384,8 +384,8 @@ export default function QuoteBuilder() {
 
           {/* Characteristics section */}
           <div>
-            <label className="text-xs font-semibold text-gray-500 flex items-center gap-1 mb-1">% Descuento</label>
-            <p className="text-[10px] text-gray-400 mb-1">Aplicar por item expandiendo cada producto</p>
+            <label className="text-xs font-semibold text-gray-600 flex items-center gap-1 mb-1">% Descuento</label>
+            <p className="text-[10px] text-gray-500 mb-1">Aplicar por item expandiendo cada producto</p>
           </div>
 
           {/* Otros */}
