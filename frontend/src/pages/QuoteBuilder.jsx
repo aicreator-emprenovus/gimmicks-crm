@@ -261,7 +261,7 @@ export default function QuoteBuilder() {
                 style={{maxWidth: '100%'}}
                 data-testid="catalog-category-filter"
               >
-              <option value="">Categorias</option>
+              <option value="">Categorías</option>
               {categories.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
             </div>
