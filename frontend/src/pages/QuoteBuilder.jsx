@@ -273,7 +273,7 @@ export default function QuoteBuilder() {
             </div>
             <span className="text-gray-400 mt-4">-</span>
             <div>
-              <label className="text-xs text-gray-500">Precio Maximo</label>
+              <label className="text-xs text-gray-500">Precio Máximo</label>
               <Input type="number" step="0.01" placeholder="$ Max" value={maxPrice} onChange={e => { setMaxPrice(e.target.value); setProdPage(1); }} className="h-8 text-sm" data-testid="catalog-max-price" />
             </div>
             <button
