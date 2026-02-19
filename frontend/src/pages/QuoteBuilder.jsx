@@ -92,7 +92,7 @@ export default function QuoteBuilder() {
         additional_type: item.additional_type || "$",
         otros: item.otros || ""
       })));
-    } catch { toast.error("Error al cargar cotizacion"); }
+    } catch { toast.error("Error al cargar cotización"); }
     setLoading(false);
   };
 
