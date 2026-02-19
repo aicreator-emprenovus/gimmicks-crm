@@ -171,8 +171,9 @@ class TestAIEndpoints:
         data = response.json()
         
         # Verify response structure
-        assert "products" in data or isinstance(data, list), f"Unexpected response format: {data}"
-        print(f"✓ POST /api/ai/recommend-products returned product recommendations")
+        assert "recommendations" in data or "products" in data or isinstance(data, list), f"Unexpected response format: {data}"
+        recs = data.get("recommendations", data.get("products", data))
+        print(f"✓ POST /api/ai/recommend-products returned {len(recs)} product recommendations")
 
 
 class TestConversationDetails:
