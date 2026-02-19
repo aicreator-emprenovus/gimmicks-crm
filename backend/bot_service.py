@@ -938,7 +938,7 @@ MENSAJE ACTUAL DEL CLIENTE: {message_text}"""
         user_wants_quote = any(kw in message_text.lower() for kw in quote_keywords)
         if user_wants_quote and not needs_quote:
             has_codes = bool(collected_data.get("codigos_producto") or collected_data.get("producto"))
-            has_qty = bool(collected_data.get("cantidad"))
+            has_qty = bool(collected_data.get("cantidad") or collected_data.get("cantidades_por_producto"))
             has_email = bool(collected_data.get("correo"))
             if has_codes and has_qty and has_email:
                 needs_quote = True
