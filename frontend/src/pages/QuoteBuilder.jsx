@@ -591,7 +591,7 @@ function CharacteristicsModal({ categories, selected, onSave, onClose }) {
           <div>
             <p className="text-sm font-semibold text-gray-700 mb-1">Características Seleccionadas:</p>
             {chars.length === 0 ? (
-              <p className="text-sm text-[#63AC9A] italic">Ninguna categoria seleccionada</p>
+              <p className="text-sm text-[#63AC9A] italic">Ninguna categoría seleccionada</p>
             ) : (
               <div className="flex flex-wrap gap-1">
                 {chars.map(c => (
