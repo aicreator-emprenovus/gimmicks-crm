@@ -295,7 +295,7 @@ export default function Inbox() {
           <div className="flex flex-wrap gap-1 mt-2" data-testid="stage-filters">
             <button
               onClick={() => setFilterStage(null)}
-              className={`px-2 py-0.5 text-xs rounded-full transition-colors ${!filterStage ? "bg-[#7BA899] text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
+              className={`px-2 py-0.5 text-xs rounded-full transition-colors ${!filterStage ? "bg-[#63AC9A] text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
               data-testid="filter-all"
             >
               Todos
@@ -304,7 +304,7 @@ export default function Inbox() {
               <button
                 key={key}
                 onClick={() => setFilterStage(filterStage === key ? null : key)}
-                className={`px-2 py-0.5 text-xs rounded-full transition-colors ${filterStage === key ? "bg-[#7BA899] text-white" : `${cfg.color} hover:opacity-80`}`}
+                className={`px-2 py-0.5 text-xs rounded-full transition-colors ${filterStage === key ? "bg-[#63AC9A] text-white" : `${cfg.color} hover:opacity-80`}`}
                 data-testid={`filter-${key}`}
               >
                 {cfg.label}
@@ -316,7 +316,7 @@ export default function Inbox() {
         <ScrollArea className="flex-1">
           {loading ? (
             <div className="p-4 text-center">
-              <Loader2 className="w-6 h-6 animate-spin mx-auto text-[#7BA899]" />
+              <Loader2 className="w-6 h-6 animate-spin mx-auto text-[#63AC9A]" />
             </div>
           ) : filteredConversations.length === 0 ? (
             <div className="p-4 text-center text-gray-400">
@@ -333,13 +333,13 @@ export default function Inbox() {
                     setAiSuggestion(null);
                   }}
                   className={`w-full p-4 text-left hover:bg-gray-50 transition-colors ${
-                    selectedConv?.id === conv.id ? "bg-[#7BA899]/10 border-l-2 border-[#7BA899]" : ""
+                    selectedConv?.id === conv.id ? "bg-[#63AC9A]/10 border-l-2 border-[#63AC9A]" : ""
                   }`}
                   data-testid={`conversation-${conv.id}`}
                 >
                   <div className="flex items-start gap-3">
                     <div className="relative">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#7BA899] to-[#5E8A7A] flex items-center justify-center text-white font-medium flex-shrink-0">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#63AC9A] to-[#5E8A7A] flex items-center justify-center text-white font-medium flex-shrink-0">
                         {conv.contact_name?.charAt(0)?.toUpperCase() ||
                           conv.phone_number.slice(-2)}
                       </div>
@@ -360,7 +360,7 @@ export default function Inbox() {
                         {conv.last_message || "Sin mensajes"}
                       </p>
                       {conv.unread_count > 0 && (
-                        <Badge className="mt-1 bg-[#7BA899] text-white text-xs">
+                        <Badge className="mt-1 bg-[#63AC9A] text-white text-xs">
                           {conv.unread_count} nuevos
                         </Badge>
                       )}
@@ -385,7 +385,7 @@ export default function Inbox() {
             {/* Chat Header */}
             <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-white">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#7BA899] to-[#5E8A7A] flex items-center justify-center text-white font-medium">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#63AC9A] to-[#5E8A7A] flex items-center justify-center text-white font-medium">
                   {selectedConv.contact_name?.charAt(0)?.toUpperCase() ||
                     selectedConv.phone_number.slice(-2)}
                 </div>
@@ -408,7 +408,7 @@ export default function Inbox() {
                   size="sm"
                   onClick={analyzeWithAI}
                   disabled={analyzing}
-                  className="gap-2 bg-[#7BA899] hover:bg-[#6A9688] text-white border-[#7BA899]"
+                  className="gap-2 bg-[#63AC9A] hover:bg-[#6A9688] text-white border-[#63AC9A]"
                   data-testid="analyze-ai-btn"
                 >
                   {analyzing ? (
@@ -455,9 +455,9 @@ export default function Inbox() {
 
             {/* AI Analysis Panel */}
             {aiSuggestion && (
-              <div className="p-4 bg-[#7BA899]/10 border-b border-[#7BA899]/20">
+              <div className="p-4 bg-[#63AC9A]/10 border-b border-[#63AC9A]/20">
                 <div className="flex items-start gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-[#7BA899]/20 flex items-center justify-center flex-shrink-0">
+                  <div className="w-8 h-8 rounded-lg bg-[#63AC9A]/20 flex items-center justify-center flex-shrink-0">
                     <Bot className="w-4 h-4 text-[#5E8A7A]" />
                   </div>
                   <div className="flex-1">
@@ -476,7 +476,7 @@ export default function Inbox() {
                     <div className="mt-2 grid grid-cols-3 gap-2 text-xs">
                       <div className="bg-white rounded-lg p-2 border border-gray-200">
                         <span className="text-gray-500 block">Intención</span>
-                        <Badge className="mt-0.5 capitalize bg-[#7BA899]/15 text-[#5E8A7A]">
+                        <Badge className="mt-0.5 capitalize bg-[#63AC9A]/15 text-[#5E8A7A]">
                           {aiSuggestion.intent}
                         </Badge>
                       </div>
@@ -545,7 +545,7 @@ export default function Inbox() {
                           size="sm"
                           variant="outline"
                           onClick={useSuggestedResponse}
-                          className="mt-2 border-[#7BA899] text-[#5E8A7A] hover:bg-[#7BA899]/10"
+                          className="mt-2 border-[#63AC9A] text-[#5E8A7A] hover:bg-[#63AC9A]/10"
                           data-testid="use-suggestion-btn"
                         >
                           Usar esta respuesta
@@ -608,7 +608,7 @@ export default function Inbox() {
               <Button
                 type="submit"
                 disabled={sending || !newMessage.trim()}
-                className="bg-[#7BA899] hover:bg-[#6A9688] text-white"
+                className="bg-[#63AC9A] hover:bg-[#6A9688] text-white"
                 data-testid="send-message-btn"
               >
                 {sending ? (
