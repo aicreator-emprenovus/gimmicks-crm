@@ -429,12 +429,16 @@ async def upsert_quote(db: AsyncIOMotorDatabase, phone_number: str, collected_da
     # Get client name
     client_name = collected_data.get("nombre", "")
     if not client_name:
+        client_name = collected_data.get("empresa", "")
+    if not client_name:
         lead = await db.leads.find_one({"phone_number": phone_number}, {"_id": 0, "name": 1})
         if not lead:
             phone_alt = phone_number.lstrip("+")
             lead = await db.leads.find_one({"phone_number": phone_alt}, {"_id": 0, "name": 1})
         if lead and lead.get("name"):
             client_name = lead["name"]
+    if not client_name:
+        client_name = f"Cliente {phone_number[-4:]}"
 
     subtotal = sum(item["total_price"] for item in quote_items)
     tax = subtotal * 0.15
