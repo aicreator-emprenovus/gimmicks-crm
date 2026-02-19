@@ -1,11 +1,12 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import axios from "axios";
 import { toast } from "sonner";
 import { formatCurrency } from "@/utils/currency";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import {
-  ArrowLeft, Plus, Trash2, Search, ShoppingCart, FileText,
-  X, Loader2, Save, Send, Minus, ChevronDown, ChevronUp
+  Plus, Trash2, Search, FileText, X, Loader2, Save, Send,
+  Minus, ChevronDown, ChevronUp, ChevronLeft, ChevronRight,
+  Image as ImageIcon, Eye, Copy, FilterX
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,28 +15,42 @@ const API_URL = process.env.REACT_APP_BACKEND_URL;
 
 export default function QuoteBuilder() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const editId = searchParams.get("edit");
-  const docType = searchParams.get("type") || "QUOTE";
+  const isPORoute = location.pathname.startsWith("/purchase-orders");
+  const docType = searchParams.get("type") || (isPORoute ? "PO" : "QUOTE");
+
   const [clients, setClients] = useState([]);
   const [products, setProducts] = useState([]);
+  const [totalProducts, setTotalProducts] = useState(0);
+  const [prodPage, setProdPage] = useState(1);
+  const [prodPages, setProdPages] = useState(1);
   const [productSearch, setProductSearch] = useState("");
-  const [clientSearch, setClientSearch] = useState("");
-  const [showProductPicker, setShowProductPicker] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState("");
+  const [minPrice, setMinPrice] = useState("");
+  const [maxPrice, setMaxPrice] = useState("");
+  const [categories, setCategories] = useState([]);
+  const [loadingProducts, setLoadingProducts] = useState(false);
+
   const [cart, setCart] = useState([]);
   const [selectedClient, setSelectedClient] = useState(null);
   const [clientContact, setClientContact] = useState("");
   const [clientEmail, setClientEmail] = useState("");
   const [paymentTerms, setPaymentTerms] = useState("50% anticipo, 50% contra entrega");
-  const [validity, setValidity] = useState("8 días");
+  const [validity, setValidity] = useState("8 dias");
   const [deliveryTime, setDeliveryTime] = useState("Por confirmar");
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [categories, setCategories] = useState([]);
-  const [selectedCategory, setSelectedCategory] = useState("");
+  const [otros, setOtros] = useState("");
+
+  const [detailProduct, setDetailProduct] = useState(null);
+  const [detailIndex, setDetailIndex] = useState(-1);
+
   const token = localStorage.getItem("token");
   const headers = { Authorization: `Bearer ${token}` };
   const isEdit = !!editId;
+  const backPath = isPORoute ? "/purchase-orders" : "/quotes";
 
   useEffect(() => {
     fetchClients();
@@ -66,7 +81,7 @@ export default function QuoteBuilder() {
       setClientContact(q.client_contact || "");
       setClientEmail(q.client_email || "");
       setPaymentTerms(q.payment_terms || "50% anticipo, 50% contra entrega");
-      setValidity(q.validity || "8 días");
+      setValidity(q.validity || "8 dias");
       setDeliveryTime(q.delivery_time || "Por confirmar");
       setCart((q.items || []).map((item, i) => ({
         ...item,
@@ -77,55 +92,62 @@ export default function QuoteBuilder() {
         additional_type: item.additional_type || "$",
         otros: item.otros || ""
       })));
-    } catch { toast.error("Error al cargar cotización"); }
+    } catch { toast.error("Error al cargar cotizacion"); }
     setLoading(false);
   };
 
-  const searchProducts = useCallback(async () => {
+  const fetchProducts = useCallback(async () => {
+    setLoadingProducts(true);
     try {
-      const params = { page: 1, limit: 50 };
+      const params = { page: prodPage, limit: 20 };
       if (productSearch) params.search = productSearch;
-      if (selectedCategory && selectedCategory !== "Todas") params.category = selectedCategory;
+      if (selectedCategory) params.category = selectedCategory;
+      if (minPrice) params.min_cost = parseFloat(minPrice);
+      if (maxPrice) params.max_cost = parseFloat(maxPrice);
       const res = await axios.get(`${API_URL}/api/inventory/`, { params, headers });
       setProducts(res.data.products || []);
+      setTotalProducts(res.data.total || 0);
+      setProdPages(res.data.pages || 1);
     } catch {}
-  }, [productSearch, selectedCategory]);
+    setLoadingProducts(false);
+  }, [prodPage, productSearch, selectedCategory, minPrice, maxPrice]);
 
-  useEffect(() => {
-    if (showProductPicker) searchProducts();
-  }, [showProductPicker, searchProducts]);
+  useEffect(() => { fetchProducts(); }, [fetchProducts]);
 
   const addToCart = (product) => {
-    const exists = cart.find(i => i.code === product.code);
-    if (exists) {
-      setCart(cart.map(i => i.code === product.code ? { ...i, quantity: i.quantity + 1, total_price: (i.quantity + 1) * i.unit_price } : i));
-    } else {
-      setCart([...cart, {
-        item_id: `item-${Date.now()}`,
-        product_id: product.id || "",
-        code: product.code,
-        name: product.name,
-        description: product.description || "",
-        quantity: 1,
-        unit_price: product.price || 0,
-        total_price: product.price || 0,
-        image_url: product.image_url || "",
-        categories: product.categories || [],
-        discount_amount: 0,
-        discount_type: "$",
-        additional_amount: 0,
-        additional_type: "$",
-        otros: ""
-      }]);
-    }
+    setCart(prev => [...prev, {
+      item_id: `item-${Date.now()}-${Math.random().toString(36).substr(2,5)}`,
+      product_id: product.id || "",
+      code: product.code,
+      name: product.name,
+      description: product.description || "",
+      quantity: 1,
+      unit_price: product.price || 0,
+      total_price: product.price || 0,
+      image_url: product.image_url || "",
+      categories: product.categories || [],
+      discount_amount: 0,
+      discount_type: "$",
+      additional_amount: 0,
+      additional_type: "$",
+      otros: ""
+    }]);
     toast.success(`${product.name} agregado`);
+  };
+
+  const duplicateCartItem = (itemId) => {
+    const item = cart.find(i => i.item_id === itemId);
+    if (!item) return;
+    setCart(prev => [...prev, {
+      ...item,
+      item_id: `item-${Date.now()}-${Math.random().toString(36).substr(2,5)}`
+    }]);
   };
 
   const updateCartItem = (itemId, field, value) => {
     setCart(cart.map(i => {
       if (i.item_id !== itemId) return i;
       const updated = { ...i, [field]: value };
-      // Recalculate total
       let base = updated.quantity * updated.unit_price;
       if (updated.discount_amount > 0) {
         if (updated.discount_type === "%") base -= base * (updated.discount_amount / 100);
@@ -168,24 +190,45 @@ export default function QuoteBuilder() {
     try {
       if (isEdit) {
         await axios.put(`${API_URL}/api/quotes-v2/${editId}`, quoteData, { headers });
-        toast.success("Cotización actualizada");
+        toast.success(docType === "PO" ? "Orden actualizada" : "Cotizacion actualizada");
       } else {
         await axios.post(`${API_URL}/api/quotes-v2/`, quoteData, { headers });
-        toast.success("Cotización creada");
+        toast.success(docType === "PO" ? "Orden creada" : "Cotizacion creada");
       }
-      navigate("/quotes");
+      navigate(backPath);
     } catch (e) {
       toast.error(e.response?.data?.detail || "Error al guardar");
     }
     setSaving(false);
   };
 
+  const clearFilters = () => {
+    setProductSearch("");
+    setSelectedCategory("");
+    setMinPrice("");
+    setMaxPrice("");
+    setProdPage(1);
+  };
+
   const getImageUrl = (url) => {
     if (!url) return null;
     if (url.startsWith("/api/uploads/")) return `${API_URL}${url}`;
     const driveMatch = url.match(/drive\.google\.com\/file\/d\/([^/\?]+)/);
-    if (driveMatch) return `https://drive.google.com/thumbnail?id=${driveMatch[1]}&sz=w100`;
+    if (driveMatch) return `https://drive.google.com/thumbnail?id=${driveMatch[1]}&sz=w200`;
     return url;
+  };
+
+  const openDetail = (product, index) => {
+    setDetailProduct(product);
+    setDetailIndex(index);
+  };
+
+  const navigateDetail = (dir) => {
+    const newIdx = detailIndex + dir;
+    if (newIdx >= 0 && newIdx < products.length) {
+      setDetailProduct(products[newIdx]);
+      setDetailIndex(newIdx);
+    }
   };
 
   if (loading) {
@@ -193,177 +236,309 @@ export default function QuoteBuilder() {
   }
 
   return (
-    <div className="p-4 lg:p-6" data-testid="quote-builder-page">
-      {/* Header */}
-      <div className="flex items-center gap-3 mb-6">
-        <Button variant="ghost" size="sm" onClick={() => navigate("/quotes")} data-testid="back-btn">
-          <ArrowLeft size={18} />
-        </Button>
-        <div>
-          <h1 className="text-xl font-bold text-gray-900">
-            {isEdit ? "Editar" : "Nueva"} {docType === "PO" ? "Orden de Compra" : "Cotización"}
-          </h1>
+    <div className="flex h-[calc(100vh-64px)]" data-testid="quote-builder-page">
+      {/* LEFT: Product Catalog */}
+      <div className="flex-1 flex flex-col overflow-hidden p-4">
+        {/* Filters */}
+        <div className="bg-white rounded-xl shadow-sm border p-4 mb-3 flex-shrink-0" data-testid="catalog-filters">
+          <div className="flex gap-2 mb-2">
+            <div className="relative flex-1">
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <Input
+                placeholder="Buscar por codigo, nombre, categoria..."
+                value={productSearch}
+                onChange={e => { setProductSearch(e.target.value); setProdPage(1); }}
+                className="pl-9"
+                data-testid="catalog-search-input"
+              />
+            </div>
+            <select
+              value={selectedCategory}
+              onChange={e => { setSelectedCategory(e.target.value); setProdPage(1); }}
+              className="border rounded-lg px-3 py-2 text-sm bg-white min-w-[150px]"
+              data-testid="catalog-category-filter"
+            >
+              <option value="">Categorias</option>
+              {categories.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+          <div className="flex items-center gap-2">
+            <div>
+              <label className="text-xs text-gray-500">Precio Minimo</label>
+              <Input type="number" step="0.01" placeholder="$ Min" value={minPrice} onChange={e => { setMinPrice(e.target.value); setProdPage(1); }} className="h-8 text-sm" data-testid="catalog-min-price" />
+            </div>
+            <span className="text-gray-400 mt-4">-</span>
+            <div>
+              <label className="text-xs text-gray-500">Precio Maximo</label>
+              <Input type="number" step="0.01" placeholder="$ Max" value={maxPrice} onChange={e => { setMaxPrice(e.target.value); setProdPage(1); }} className="h-8 text-sm" data-testid="catalog-max-price" />
+            </div>
+            <button
+              onClick={clearFilters}
+              className="flex items-center gap-1 text-sm text-gray-500 hover:text-red-500 mt-4 ml-2 whitespace-nowrap"
+              data-testid="clear-filters-btn"
+            >
+              <FilterX size={14} /> Limpiar filtros
+            </button>
+          </div>
+        </div>
+
+        {/* Product Grid */}
+        <div className="flex-1 overflow-y-auto">
+          {loadingProducts ? (
+            <div className="flex justify-center py-10"><Loader2 size={24} className="animate-spin text-gray-400" /></div>
+          ) : products.length === 0 ? (
+            <div className="text-center py-10 text-gray-400">No se encontraron productos</div>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+              {products.map((p, idx) => (
+                <div key={p.code} className="bg-white rounded-xl shadow-sm border overflow-hidden hover:shadow-md transition-shadow" data-testid={`catalog-product-${p.code}`}>
+                  <div className="aspect-square bg-gray-100 flex items-center justify-center overflow-hidden">
+                    {p.image_url ? (
+                      <img src={getImageUrl(p.image_url)} alt="" className="w-full h-full object-cover" onError={e => { e.target.style.display='none'; e.target.nextSibling && (e.target.nextSibling.style.display='flex'); }} />
+                    ) : null}
+                    <div className={`w-full h-full items-center justify-center text-gray-400 text-sm font-medium ${p.image_url ? 'hidden' : 'flex'}`}>
+                      No Image
+                    </div>
+                  </div>
+                  <div className="p-2.5">
+                    <p className="text-[11px] text-gray-400 font-mono">{p.code}</p>
+                    <div className="flex items-center gap-1">
+                      <span className="font-bold text-sm text-[#7BA899]">{formatCurrency(p.price)}</span>
+                    </div>
+                    <p className="text-sm font-medium text-gray-800 truncate mt-0.5">{p.name}</p>
+                    <div className="flex gap-1.5 mt-2">
+                      <button
+                        onClick={() => addToCart(p)}
+                        className="flex-1 bg-[#7BA899] hover:bg-[#5E8A7A] text-white text-xs font-medium py-1.5 rounded-lg transition-colors"
+                        data-testid={`add-product-${p.code}`}
+                      >
+                        Agregar
+                      </button>
+                      <button
+                        onClick={() => openDetail(p, idx)}
+                        className="flex-1 bg-gray-800 hover:bg-gray-900 text-white text-xs font-medium py-1.5 rounded-lg transition-colors"
+                        data-testid={`detail-product-${p.code}`}
+                      >
+                        Detalles
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          {/* Pagination */}
+          {prodPages > 1 && (
+            <div className="flex items-center justify-center gap-2 py-3">
+              <Button variant="outline" size="sm" disabled={prodPage <= 1} onClick={() => setProdPage(p => p - 1)}><ChevronLeft size={14} /></Button>
+              <span className="text-xs text-gray-500">{prodPage} / {prodPages}</span>
+              <Button variant="outline" size="sm" disabled={prodPage >= prodPages} onClick={() => setProdPage(p => p + 1)}><ChevronRight size={14} /></Button>
+            </div>
+          )}
         </div>
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-6">
-        {/* Left: Client + Products */}
-        <div className="lg:col-span-2 space-y-4">
-          {/* Client Selection */}
-          <div className="bg-white rounded-xl shadow-sm border p-4" data-testid="client-section">
-            <h3 className="font-semibold text-sm text-gray-700 mb-3">Cliente</h3>
+      {/* RIGHT: Quote Builder Panel */}
+      <div className="w-[340px] flex-shrink-0 border-l bg-white flex flex-col overflow-hidden" data-testid="quote-panel">
+        <div className="p-4 border-b flex-shrink-0">
+          <h2 className="font-bold text-base flex items-center gap-2">
+            <FileText size={18} />
+            {isEdit ? "Editar" : "Nueva"} {docType === "PO" ? "Orden" : "Cotizacion"}
+          </h2>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-4 space-y-3">
+          {/* Client Selector */}
+          <div data-testid="client-selector">
             {selectedClient ? (
-              <div className="flex items-center justify-between bg-[#7BA899]/5 rounded-lg p-3">
-                <div>
-                  <p className="font-medium">{selectedClient.name}</p>
-                  <p className="text-xs text-gray-500">{selectedClient.email}</p>
-                </div>
-                <Button variant="ghost" size="sm" onClick={() => setSelectedClient(null)}><X size={16} /></Button>
+              <div className="flex items-center justify-between bg-gray-50 rounded-lg p-2 text-sm">
+                <span className="font-medium truncate">{selectedClient.name}</span>
+                <button onClick={() => setSelectedClient(null)} className="p-0.5 hover:bg-gray-200 rounded"><X size={14} /></button>
               </div>
             ) : (
-              <div>
-                <Input
-                  placeholder="Buscar cliente..."
-                  value={clientSearch}
-                  onChange={(e) => setClientSearch(e.target.value)}
-                  data-testid="client-search-input"
-                />
-                {clientSearch && (
-                  <div className="mt-1 border rounded-lg max-h-40 overflow-y-auto bg-white shadow-lg">
-                    {clients.filter(c => c.name?.toLowerCase().includes(clientSearch.toLowerCase()) || c.email?.toLowerCase().includes(clientSearch.toLowerCase())).map(c => (
-                      <button key={c.id} className="w-full text-left px-3 py-2 hover:bg-gray-50 text-sm border-b last:border-0" onClick={() => {
-                        setSelectedClient(c);
-                        setClientEmail(c.email || c.commercial_email || "");
-                        setClientContact(c.contact_person || "");
-                        setClientSearch("");
-                      }} data-testid={`client-option-${c.id}`}>
-                        <span className="font-medium">{c.name}</span>
-                        <span className="text-gray-400 ml-2 text-xs">{c.email}</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-            {selectedClient && (
-              <div className="grid grid-cols-2 gap-3 mt-3">
-                <div>
-                  <label className="text-xs text-gray-500">Contacto</label>
-                  <Input value={clientContact} onChange={e => setClientContact(e.target.value)} placeholder="Persona de contacto" />
-                </div>
-                <div>
-                  <label className="text-xs text-gray-500">Email para envío</label>
-                  <Input value={clientEmail} onChange={e => setClientEmail(e.target.value)} placeholder="Email" />
-                </div>
-              </div>
+              <ClientDropdown clients={clients} onSelect={(c) => {
+                setSelectedClient(c);
+                setClientEmail(c.email || c.commercial_email || "");
+                setClientContact(c.contact_person || "");
+              }} />
             )}
           </div>
 
           {/* Cart Items */}
-          <div className="bg-white rounded-xl shadow-sm border p-4" data-testid="cart-section">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="font-semibold text-sm text-gray-700 flex items-center gap-1">
-                <ShoppingCart size={16} /> Productos ({cart.length})
-              </h3>
-              <Button size="sm" variant="outline" onClick={() => setShowProductPicker(true)} data-testid="add-product-to-cart-btn">
-                <Plus size={14} className="mr-1" /> Agregar Producto
-              </Button>
+          {cart.length === 0 ? (
+            <p className="text-center text-gray-400 py-4 text-xs">Agregue productos</p>
+          ) : (
+            <div className="space-y-2">
+              {cart.map(item => (
+                <CartItemCompact
+                  key={item.item_id}
+                  item={item}
+                  onUpdate={updateCartItem}
+                  onRemove={removeFromCart}
+                  onDuplicate={duplicateCartItem}
+                  getImageUrl={getImageUrl}
+                />
+              ))}
             </div>
-            {cart.length === 0 ? (
-              <p className="text-center text-gray-400 py-8 text-sm">Agregue productos a la cotización</p>
-            ) : (
-              <div className="space-y-3">
-                {cart.map(item => (
-                  <CartItem key={item.item_id} item={item} onUpdate={updateCartItem} onRemove={removeFromCart} getImageUrl={getImageUrl} />
-                ))}
-              </div>
-            )}
+          )}
+
+          {/* Characteristics section */}
+          <div>
+            <label className="text-xs font-semibold text-gray-500 flex items-center gap-1 mb-1">% Descuento</label>
+            <p className="text-[10px] text-gray-400 mb-1">Aplicar por item expandiendo cada producto</p>
+          </div>
+
+          {/* Otros */}
+          <div>
+            <label className="text-xs font-semibold text-gray-500 flex items-center gap-1 mb-1">Otros</label>
+            <textarea value={otros} onChange={e => setOtros(e.target.value)} className="w-full border rounded-lg px-2 py-1.5 text-xs resize-none" rows={2} placeholder="Agregar otros u observaciones..." />
           </div>
         </div>
 
-        {/* Right: Summary */}
-        <div className="space-y-4">
-          <div className="bg-white rounded-xl shadow-sm border p-4 sticky top-4" data-testid="summary-section">
-            <h3 className="font-semibold text-sm text-gray-700 mb-3">Resumen</h3>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between"><span className="text-gray-500">Subtotal</span><span>{formatCurrency(subtotal)}</span></div>
-              <div className="flex justify-between"><span className="text-gray-500">IVA (15%)</span><span>{formatCurrency(tax)}</span></div>
-              <div className="flex justify-between font-bold text-lg border-t pt-2"><span>Total</span><span className="text-[#7BA899]">{formatCurrency(total)}</span></div>
-            </div>
-            <div className="mt-4 space-y-3">
-              <div>
-                <label className="text-xs text-gray-500 block mb-1">Forma de pago</label>
-                <Input value={paymentTerms} onChange={e => setPaymentTerms(e.target.value)} />
-              </div>
-              <div>
-                <label className="text-xs text-gray-500 block mb-1">Validez</label>
-                <Input value={validity} onChange={e => setValidity(e.target.value)} />
-              </div>
-              <div>
-                <label className="text-xs text-gray-500 block mb-1">Tiempo de entrega</label>
-                <Input value={deliveryTime} onChange={e => setDeliveryTime(e.target.value)} />
-              </div>
-            </div>
-            <div className="mt-4 space-y-2">
-              <Button className="w-full bg-[#7BA899] hover:bg-[#5E8A7A]" onClick={() => handleSave("draft")} disabled={saving} data-testid="save-quote-btn">
-                {saving ? <Loader2 size={16} className="animate-spin mr-1" /> : <Save size={16} className="mr-1" />}
-                Guardar Borrador
-              </Button>
-              <Button variant="outline" className="w-full" onClick={() => handleSave("sent")} disabled={saving} data-testid="save-and-send-btn">
-                <Send size={16} className="mr-1" /> Guardar y Finalizar
-              </Button>
+        {/* Summary Footer */}
+        <div className="border-t p-4 flex-shrink-0 bg-white">
+          <div className="text-sm space-y-1 mb-3">
+            <div className="flex justify-between text-gray-500"><span>Subtotal:</span><span>{formatCurrency(subtotal)}</span></div>
+            <div className="flex justify-between font-bold text-base">
+              <span>Total (Inc. IVA):</span>
+              <span>{formatCurrency(total)}</span>
             </div>
           </div>
+          <button
+            onClick={() => handleSave("draft")}
+            disabled={saving}
+            className="w-full py-2.5 rounded-xl bg-gray-800 hover:bg-gray-900 text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-50 mb-2"
+            data-testid="save-quote-btn"
+          >
+            {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+            Guardar {docType === "PO" ? "Orden" : "Cotizacion"}
+          </button>
+          <button
+            onClick={() => { setCart([]); setSelectedClient(null); setOtros(""); }}
+            className="w-full py-2 rounded-xl border border-red-200 text-red-500 hover:bg-red-50 text-sm font-medium flex items-center justify-center gap-2 transition-colors"
+            data-testid="clear-cart-btn"
+          >
+            <Trash2 size={14} /> Limpiar
+          </button>
         </div>
       </div>
 
-      {/* Product Picker Modal */}
-      {showProductPicker && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" data-testid="product-picker-modal">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl mx-4 max-h-[80vh] flex flex-col">
-            <div className="flex items-center justify-between p-4 border-b">
-              <h2 className="font-bold">Seleccionar Productos</h2>
-              <button onClick={() => setShowProductPicker(false)} className="p-1 hover:bg-gray-100 rounded"><X size={20} /></button>
+      {/* Product Detail Modal */}
+      {detailProduct && (
+        <ProductDetailModal
+          product={detailProduct}
+          index={detailIndex}
+          total={products.length}
+          onClose={() => setDetailProduct(null)}
+          onAdd={addToCart}
+          onPrev={() => navigateDetail(-1)}
+          onNext={() => navigateDetail(1)}
+          getImageUrl={getImageUrl}
+        />
+      )}
+    </div>
+  );
+}
+
+function ClientDropdown({ clients, onSelect }) {
+  const [search, setSearch] = useState("");
+  const [open, setOpen] = useState(false);
+  const filtered = clients.filter(c =>
+    !search || c.name?.toLowerCase().includes(search.toLowerCase()) || c.email?.toLowerCase().includes(search.toLowerCase())
+  );
+
+  return (
+    <div className="relative">
+      <select
+        className="w-full border rounded-lg px-3 py-2 text-sm bg-white appearance-none cursor-pointer"
+        value=""
+        onChange={e => {
+          const c = clients.find(cl => cl.id === e.target.value);
+          if (c) onSelect(c);
+        }}
+        data-testid="client-dropdown"
+      >
+        <option value="">Seleccionar Cliente...</option>
+        {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+      </select>
+      <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+    </div>
+  );
+}
+
+function CartItemCompact({ item, onUpdate, onRemove, onDuplicate, getImageUrl }) {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <div className="border rounded-lg p-2 text-xs" data-testid={`cart-item-${item.item_id}`}>
+      <div className="flex gap-2 items-start">
+        <div className="w-10 h-10 rounded bg-gray-100 flex-shrink-0 overflow-hidden">
+          {item.image_url ? (
+            <img src={getImageUrl(item.image_url)} alt="" className="w-full h-full object-cover" onError={e => { e.target.style.display='none'; }} />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-gray-300"><ImageIcon size={14} /></div>
+          )}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex justify-between items-start">
+            <div className="min-w-0">
+              <p className="font-medium truncate leading-tight">{item.name}</p>
+              <p className="text-gray-400">{item.code}</p>
             </div>
-            <div className="p-4 flex gap-2">
-              <div className="relative flex-1">
-                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                <Input
-                  placeholder="Buscar productos..."
-                  value={productSearch}
-                  onChange={(e) => setProductSearch(e.target.value)}
-                  className="pl-9"
-                  data-testid="product-search-modal-input"
-                />
-              </div>
-              <select value={selectedCategory} onChange={e => setSelectedCategory(e.target.value)} className="border rounded-lg px-2 text-sm">
-                <option value="">Todas</option>
-                {categories.map(c => <option key={c} value={c}>{c}</option>)}
+            <div className="text-right flex-shrink-0 ml-1">
+              <p className="text-gray-400">{formatCurrency(item.unit_price)} x {item.quantity}</p>
+              <p className="font-bold">{formatCurrency(item.total_price)}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-1 mt-1">
+            <button onClick={() => onUpdate(item.item_id, "quantity", Math.max(1, item.quantity - 1))} className="w-6 h-6 border rounded flex items-center justify-center hover:bg-gray-50"><Minus size={10} /></button>
+            <input type="number" value={item.quantity} onChange={e => onUpdate(item.item_id, "quantity", Math.max(1, parseInt(e.target.value) || 1))} className="w-10 text-center border rounded h-6 text-xs" />
+            <button onClick={() => onUpdate(item.item_id, "quantity", item.quantity + 1)} className="w-6 h-6 border rounded flex items-center justify-center hover:bg-gray-50"><Plus size={10} /></button>
+          </div>
+        </div>
+      </div>
+      <div className="flex items-center justify-between mt-1.5 pt-1.5 border-t">
+        <button onClick={() => setExpanded(!expanded)} className="flex items-center gap-0.5 text-gray-400 hover:text-gray-600">
+          {expanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />} Ocultar
+        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={() => onDuplicate(item.item_id)} className="flex items-center gap-0.5 text-gray-400 hover:text-gray-600" title="Duplicar">
+            <Copy size={12} /> Duplicar
+          </button>
+          <button onClick={() => onRemove(item.item_id)} className="text-red-400 hover:text-red-600" title="Eliminar">
+            <Trash2 size={12} />
+          </button>
+        </div>
+      </div>
+      {expanded && (
+        <div className="mt-2 pt-2 border-t grid grid-cols-2 gap-2">
+          <div>
+            <label className="text-[10px] text-gray-400">Precio unitario</label>
+            <Input type="number" step="0.01" value={item.unit_price} onChange={e => onUpdate(item.item_id, "unit_price", parseFloat(e.target.value) || 0)} className="h-7 text-xs" />
+          </div>
+          <div>
+            <label className="text-[10px] text-gray-400">Descuento</label>
+            <div className="flex gap-1">
+              <Input type="number" step="0.01" value={item.discount_amount} onChange={e => onUpdate(item.item_id, "discount_amount", parseFloat(e.target.value) || 0)} className="h-7 text-xs flex-1" />
+              <select value={item.discount_type} onChange={e => onUpdate(item.item_id, "discount_type", e.target.value)} className="border rounded h-7 text-xs px-1">
+                <option value="$">$</option>
+                <option value="%">%</option>
               </select>
             </div>
-            <div className="overflow-y-auto flex-1 p-4 pt-0">
-              {products.length === 0 ? (
-                <p className="text-center text-gray-400 py-8">No se encontraron productos</p>
-              ) : (
-                <div className="space-y-2">
-                  {products.map(p => (
-                    <div key={p.code} className="flex items-center gap-3 p-3 rounded-lg border hover:bg-gray-50 cursor-pointer" onClick={() => addToCart(p)} data-testid={`pick-product-${p.code}`}>
-                      {p.image_url ? (
-                        <img src={getImageUrl(p.image_url)} alt="" className="w-10 h-10 rounded object-cover" onError={e => { e.target.style.display = 'none'; }} />
-                      ) : (
-                        <div className="w-10 h-10 rounded bg-gray-100 flex items-center justify-center text-gray-300"><FileText size={16} /></div>
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm truncate">{p.name}</p>
-                        <p className="text-xs text-gray-400">{p.code}</p>
-                      </div>
-                      <span className="text-sm font-medium text-green-700">{formatCurrency(p.price)}</span>
-                      <Button size="sm" variant="ghost" className="text-[#7BA899]"><Plus size={16} /></Button>
-                    </div>
-                  ))}
-                </div>
-              )}
+          </div>
+          <div>
+            <label className="text-[10px] text-gray-400">Valor adicional</label>
+            <div className="flex gap-1">
+              <Input type="number" step="0.01" value={item.additional_amount} onChange={e => onUpdate(item.item_id, "additional_amount", parseFloat(e.target.value) || 0)} className="h-7 text-xs flex-1" />
+              <select value={item.additional_type} onChange={e => onUpdate(item.item_id, "additional_type", e.target.value)} className="border rounded h-7 text-xs px-1">
+                <option value="$">$</option>
+                <option value="%">%</option>
+              </select>
             </div>
+          </div>
+          <div>
+            <label className="text-[10px] text-gray-400">Otros</label>
+            <Input value={item.otros} onChange={e => onUpdate(item.item_id, "otros", e.target.value)} className="h-7 text-xs" placeholder="Personalización" />
           </div>
         </div>
       )}
@@ -371,69 +546,83 @@ export default function QuoteBuilder() {
   );
 }
 
-function CartItem({ item, onUpdate, onRemove, getImageUrl }) {
-  const [expanded, setExpanded] = useState(false);
+function ProductDetailModal({ product, index, total, onClose, onAdd, onPrev, onNext, getImageUrl }) {
+  const imgSrc = getImageUrl(product.image_url);
 
   return (
-    <div className="border rounded-lg p-3" data-testid={`cart-item-${item.code}`}>
-      <div className="flex items-center gap-3">
-        {item.image_url ? (
-          <img src={getImageUrl(item.image_url)} alt="" className="w-12 h-12 rounded object-cover" onError={e => { e.target.style.display = 'none'; }} />
-        ) : (
-          <div className="w-12 h-12 rounded bg-gray-100 flex items-center justify-center text-gray-300"><FileText size={16} /></div>
-        )}
-        <div className="flex-1 min-w-0">
-          <p className="font-medium text-sm truncate">{item.name}</p>
-          <p className="text-xs text-gray-400">{item.code}</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => onUpdate(item.item_id, "quantity", Math.max(1, item.quantity - 1))}><Minus size={14} /></Button>
-          <Input type="number" value={item.quantity} onChange={e => onUpdate(item.item_id, "quantity", Math.max(1, parseInt(e.target.value) || 1))} className="w-14 text-center h-7 text-sm" />
-          <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => onUpdate(item.item_id, "quantity", item.quantity + 1)}><Plus size={14} /></Button>
-        </div>
-        <div className="text-right min-w-[80px]">
-          <p className="font-medium text-sm">{formatCurrency(item.total_price)}</p>
-          <p className="text-xs text-gray-400">{formatCurrency(item.unit_price)} c/u</p>
-        </div>
-        <div className="flex gap-1">
-          <button onClick={() => setExpanded(!expanded)} className="p-1 hover:bg-gray-100 rounded text-gray-400">
-            {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" data-testid="product-detail-modal">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4 relative">
+        {/* Nav arrows outside */}
+        {index > 0 && (
+          <button onClick={onPrev} className="absolute left-[-50px] top-1/2 -translate-y-1/2 w-10 h-10 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-gray-50" data-testid="detail-prev-btn">
+            <ChevronLeft size={20} />
           </button>
-          <button onClick={() => onRemove(item.item_id)} className="p-1 hover:bg-gray-100 rounded text-red-400"><Trash2 size={14} /></button>
+        )}
+        {index < total - 1 && (
+          <button onClick={onNext} className="absolute right-[-50px] top-1/2 -translate-y-1/2 w-10 h-10 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-gray-50" data-testid="detail-next-btn">
+            <ChevronRight size={20} />
+          </button>
+        )}
+
+        <div className="flex items-center justify-between p-5 border-b">
+          <h2 className="font-bold text-lg">Detalles del Producto</h2>
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-[#7BA899] font-medium">{index + 1} / {total}</span>
+            <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded" data-testid="close-detail-btn"><X size={20} /></button>
+          </div>
+        </div>
+
+        <div className="p-5">
+          <div className="flex gap-4">
+            {/* Image */}
+            <div className="w-36 h-36 bg-gray-100 rounded-xl flex-shrink-0 overflow-hidden flex items-center justify-center">
+              {imgSrc ? (
+                <img src={imgSrc} alt="" className="w-full h-full object-cover" onError={e => { e.target.style.display='none'; }} />
+              ) : (
+                <span className="text-gray-400 text-sm">No Image</span>
+              )}
+            </div>
+            {/* Info */}
+            <div className="flex-1 min-w-0">
+              <h3 className="font-bold text-base">{product.name}</h3>
+              <p className="text-xs text-gray-400 mb-2">Cod: {product.code}</p>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm border-t pt-2">
+                <span className="text-gray-500">Cod. Proveedor</span>
+                <span className="text-right">{product.supplier_code || "-"}</span>
+                <span className="text-gray-500">PVP</span>
+                <span className="text-right font-bold text-[#7BA899]">{formatCurrency(product.price)}</span>
+                <span className="text-gray-500">Costo</span>
+                <span className="text-right">{formatCurrency(product.cost)}</span>
+                <span className="text-gray-500">Stock</span>
+                <span className="text-right">{product.stock || 0}</span>
+                <span className="text-gray-500">Proveedor</span>
+                <span className="text-right">{product.supplier || "-"}</span>
+              </div>
+            </div>
+          </div>
+
+          {product.description && (
+            <p className="text-sm text-gray-600 mt-3 pt-3 border-t">{product.description}</p>
+          )}
+
+          {product.categories?.length > 0 && (
+            <div className="flex flex-wrap gap-1 mt-3">
+              {product.categories.map(c => (
+                <span key={c} className="bg-[#7BA899] text-white text-xs px-2 py-0.5 rounded">{c}</span>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="flex gap-3 p-5 pt-0">
+          <button onClick={onClose} className="flex-1 py-2.5 rounded-xl bg-gray-800 hover:bg-gray-900 text-white font-medium text-sm transition-colors">
+            Cerrar
+          </button>
+          <button onClick={() => { onAdd(product); }} className="flex-1 py-2.5 rounded-xl bg-[#7BA899] hover:bg-[#5E8A7A] text-white font-medium text-sm transition-colors flex items-center justify-center gap-1" data-testid="detail-add-btn">
+            <Plus size={16} /> Agregar
+          </button>
         </div>
       </div>
-      {expanded && (
-        <div className="mt-3 pt-3 border-t grid grid-cols-2 gap-3">
-          <div>
-            <label className="text-xs text-gray-500">Precio unitario</label>
-            <Input type="number" step="0.01" value={item.unit_price} onChange={e => onUpdate(item.item_id, "unit_price", parseFloat(e.target.value) || 0)} className="h-8 text-sm" />
-          </div>
-          <div>
-            <label className="text-xs text-gray-500">Descuento</label>
-            <div className="flex gap-1">
-              <Input type="number" step="0.01" value={item.discount_amount} onChange={e => onUpdate(item.item_id, "discount_amount", parseFloat(e.target.value) || 0)} className="h-8 text-sm flex-1" />
-              <select value={item.discount_type} onChange={e => onUpdate(item.item_id, "discount_type", e.target.value)} className="border rounded h-8 text-xs px-1">
-                <option value="$">$</option>
-                <option value="%">%</option>
-              </select>
-            </div>
-          </div>
-          <div>
-            <label className="text-xs text-gray-500">Valor adicional</label>
-            <div className="flex gap-1">
-              <Input type="number" step="0.01" value={item.additional_amount} onChange={e => onUpdate(item.item_id, "additional_amount", parseFloat(e.target.value) || 0)} className="h-8 text-sm flex-1" />
-              <select value={item.additional_type} onChange={e => onUpdate(item.item_id, "additional_type", e.target.value)} className="border rounded h-8 text-xs px-1">
-                <option value="$">$</option>
-                <option value="%">%</option>
-              </select>
-            </div>
-          </div>
-          <div>
-            <label className="text-xs text-gray-500">Otros (descripción)</label>
-            <Input value={item.otros} onChange={e => onUpdate(item.item_id, "otros", e.target.value)} className="h-8 text-sm" placeholder="Ej: Personalización" />
-          </div>
-        </div>
-      )}
     </div>
   );
 }
