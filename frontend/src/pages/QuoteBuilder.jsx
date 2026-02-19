@@ -347,7 +347,7 @@ export default function QuoteBuilder() {
         <div className="p-4 border-b flex-shrink-0">
           <h2 className="font-bold text-base flex items-center gap-2">
             <FileText size={18} />
-            {isEdit ? "Editar" : "Nueva"} {docType === "PO" ? "Orden" : "Cotizacion"}
+            {isEdit ? "Editar" : "Nueva"} {docType === "PO" ? "Orden" : "Cotización"}
           </h2>
         </div>
 
@@ -403,7 +403,7 @@ export default function QuoteBuilder() {
             data-testid="save-quote-btn"
           >
             {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-            Guardar {docType === "PO" ? "Orden" : "Cotizacion"}
+            Guardar {docType === "PO" ? "Orden" : "Cotización"}
           </button>
           <button
             onClick={() => { setCart([]); setSelectedClient(null); setOtros(""); }}
