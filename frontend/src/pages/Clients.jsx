@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import {
   Users, Plus, Edit, Trash2, Search, X, RotateCcw, Archive,
   Mail, Phone, MapPin, Building2, Loader2, History, Eye,
-  FileText, User, Hash, StickyNote
+  FileText, User, Hash, StickyNote, Download
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
