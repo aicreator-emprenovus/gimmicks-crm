@@ -73,7 +73,9 @@ export default function Inbox() {
   const [showClearDialog, setShowClearDialog] = useState(false);
   const [filterStarred, setFilterStarred] = useState(false);
   const [filterStage, setFilterStage] = useState(null);
+  const [syncIndicator, setSyncIndicator] = useState(false);
   const messagesEndRef = useRef(null);
+  const prevMessageCountRef = useRef(0);
 
   const fetchConversations = async () => {
     try {
@@ -82,21 +84,31 @@ export default function Inbox() {
       });
       setConversations(response.data);
     } catch (error) {
-      toast.error("Error al cargar conversaciones");
+      if (!conversations.length) toast.error("Error al cargar conversaciones");
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchMessages = async (convId) => {
+  const fetchMessages = async (convId, isPolling = false) => {
     try {
+      if (isPolling) setSyncIndicator(true);
       const response = await axios.get(
         `${API_URL}/api/conversations/${convId}/messages`,
         { headers: getAuthHeaders() }
       );
-      setMessages(response.data);
+      const newMsgs = response.data;
+      setMessages(prev => {
+        if (newMsgs.length !== prev.length) {
+          prevMessageCountRef.current = prev.length;
+          return newMsgs;
+        }
+        return prev;
+      });
     } catch (error) {
-      toast.error("Error al cargar mensajes");
+      if (!isPolling) toast.error("Error al cargar mensajes");
+    } finally {
+      if (isPolling) setTimeout(() => setSyncIndicator(false), 500);
     }
   };
 
