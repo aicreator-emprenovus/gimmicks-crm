@@ -2356,9 +2356,9 @@ async def recommend_products(
 ):
     """Recommend products based on customer query using AI"""
     try:
-        from openai import OpenAI
+        from emergentintegrations.llm.chat import LlmChat, UserMessage
         
-        api_key = os.environ.get("OPENAI_API_KEY") or os.environ.get("EMERGENT_LLM_KEY")
+        api_key = os.environ.get("EMERGENT_LLM_KEY")
         if not api_key:
             return {"recommendations": [], "message": "API key no configurada"}
         
@@ -2392,20 +2392,11 @@ Responde en formato JSON:
     "message": "mensaje para el cliente explicando las recomendaciones"
 }}"""
         
-        client = OpenAI(api_key=api_key)
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": system_message},
-                {"role": "user", "content": f"El cliente necesita: {query}"}
-            ],
-            temperature=0.7
-        )
-        
-        response_text = response.choices[0].message.content
+        chat = LlmChat(api_key=api_key, session_id=f"recommend-{uuid.uuid4().hex[:8]}", system_message=system_message)
+        chat.with_model("openai", "gpt-4o-mini")
+        response_text = await chat.send_message(UserMessage(text=f"El cliente necesita: {query}"))
         
         try:
-            import re
             json_match = re.search(r'\{[\s\S]*\}', response_text)
             if json_match:
                 result = json.loads(json_match.group())
