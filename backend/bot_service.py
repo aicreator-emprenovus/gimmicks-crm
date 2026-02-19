@@ -308,6 +308,7 @@ async def auto_create_client(db: AsyncIOMotorDatabase, collected_data: Dict, pho
         "sector": "",
         "sector_details": collected_data.get("empresa", ""),
         "notes": f"Cliente creado automáticamente desde WhatsApp",
+        "source": "whatsapp",
         "is_deleted": False,
         "deleted_at": None,
         "created_at": now
