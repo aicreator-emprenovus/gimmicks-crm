@@ -303,13 +303,13 @@ export default function QuoteBuilder() {
                   <div className="p-2.5">
                     <p className="text-[11px] text-gray-400 font-mono">{p.code}</p>
                     <div className="flex items-center gap-1">
-                      <span className="font-bold text-sm text-[#7BA899]">{formatCurrency(p.price)}</span>
+                      <span className="font-bold text-sm text-[#63AC9A]">{formatCurrency(p.price)}</span>
                     </div>
                     <p className="text-sm font-medium text-gray-800 truncate mt-0.5">{p.name}</p>
                     <div className="flex gap-1.5 mt-2">
                       <button
                         onClick={() => addToCart(p)}
-                        className="flex-1 bg-[#7BA899] hover:bg-[#5E8A7A] text-white text-xs font-medium py-1.5 rounded-lg transition-colors"
+                        className="flex-1 bg-[#63AC9A] hover:bg-[#5E8A7A] text-white text-xs font-medium py-1.5 rounded-lg transition-colors"
                         data-testid={`add-product-${p.code}`}
                       >
                         Agregar
@@ -567,7 +567,7 @@ function ProductDetailModal({ product, index, total, onClose, onAdd, onPrev, onN
         <div className="flex items-center justify-between p-5 border-b">
           <h2 className="font-bold text-lg">Detalles del Producto</h2>
           <div className="flex items-center gap-3">
-            <span className="text-sm text-[#7BA899] font-medium">{index + 1} / {total}</span>
+            <span className="text-sm text-[#63AC9A] font-medium">{index + 1} / {total}</span>
             <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded" data-testid="close-detail-btn"><X size={20} /></button>
           </div>
         </div>
@@ -590,7 +590,7 @@ function ProductDetailModal({ product, index, total, onClose, onAdd, onPrev, onN
                 <span className="text-gray-500">Cod. Proveedor</span>
                 <span className="text-right">{product.supplier_code || "-"}</span>
                 <span className="text-gray-500">PVP</span>
-                <span className="text-right font-bold text-[#7BA899]">{formatCurrency(product.price)}</span>
+                <span className="text-right font-bold text-[#63AC9A]">{formatCurrency(product.price)}</span>
                 <span className="text-gray-500">Costo</span>
                 <span className="text-right">{formatCurrency(product.cost)}</span>
                 <span className="text-gray-500">Stock</span>
@@ -608,7 +608,7 @@ function ProductDetailModal({ product, index, total, onClose, onAdd, onPrev, onN
           {product.categories?.length > 0 && (
             <div className="flex flex-wrap gap-1 mt-3">
               {product.categories.map(c => (
-                <span key={c} className="bg-[#7BA899] text-white text-xs px-2 py-0.5 rounded">{c}</span>
+                <span key={c} className="bg-[#63AC9A] text-white text-xs px-2 py-0.5 rounded">{c}</span>
               ))}
             </div>
           )}
@@ -618,7 +618,7 @@ function ProductDetailModal({ product, index, total, onClose, onAdd, onPrev, onN
           <button onClick={onClose} className="flex-1 py-2.5 rounded-xl bg-gray-800 hover:bg-gray-900 text-white font-medium text-sm transition-colors">
             Cerrar
           </button>
-          <button onClick={() => { onAdd(product); }} className="flex-1 py-2.5 rounded-xl bg-[#7BA899] hover:bg-[#5E8A7A] text-white font-medium text-sm transition-colors flex items-center justify-center gap-1" data-testid="detail-add-btn">
+          <button onClick={() => { onAdd(product); }} className="flex-1 py-2.5 rounded-xl bg-[#63AC9A] hover:bg-[#5E8A7A] text-white font-medium text-sm transition-colors flex items-center justify-center gap-1" data-testid="detail-add-btn">
             <Plus size={16} /> Agregar
           </button>
         </div>
