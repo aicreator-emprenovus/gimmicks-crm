@@ -246,7 +246,7 @@ export default function QuoteBuilder() {
             <div className="relative flex-1 min-w-0">
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
               <Input
-                placeholder="Buscar por codigo, nombre, categoria..."
+                placeholder="Buscar por código, nombre, categoría..."
                 value={productSearch}
                 onChange={e => { setProductSearch(e.target.value); setProdPage(1); }}
                 className="pl-9 w-full"
