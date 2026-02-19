@@ -416,6 +416,12 @@ export default function Inbox() {
                   <p className="text-sm text-gray-500 flex items-center gap-1">
                     <Phone className="w-3 h-3" />
                     {selectedConv.phone_number}
+                    {syncIndicator && (
+                      <span className="ml-2 flex items-center gap-1 text-xs text-[#63AC9A]" data-testid="sync-indicator">
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                        Sincronizando
+                      </span>
+                    )}
                   </p>
                 </div>
               </div>
