@@ -63,6 +63,28 @@ export default function Clients() {
     c.phone?.includes(search) || c.contact_person?.toLowerCase().includes(search.toLowerCase())
   );
 
+  const handleExportExcel = () => {
+    import("xlsx").then(XLSX => {
+      const data = filtered.map(c => ({
+        "Empresa / Nombre": c.name,
+        "Contacto": c.contact_person,
+        "Email": c.email,
+        "Email Comercial": c.commercial_email,
+        "Teléfono": c.phone,
+        "Ciudad": c.city,
+        "Dirección": c.address,
+        "RUC / CI": c.tax_id,
+        "Sector": c.sector,
+        "Notas": c.notes,
+        "Creado": c.created_at ? new Date(c.created_at).toLocaleDateString("es-EC") : ""
+      }));
+      const ws = XLSX.utils.json_to_sheet(data);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Clientes");
+      XLSX.writeFile(wb, "clientes_gimmicks.xlsx");
+    });
+  };
+
   return (
     <div className="p-4 lg:p-6" data-testid="clients-page">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
