@@ -126,6 +126,7 @@ export default function QuoteBuilder() {
       total_price: product.price || 0,
       image_url: product.image_url || "",
       categories: product.categories || [],
+      selected_characteristics: [],
       discount_amount: 0,
       discount_type: "$",
       additional_amount: 0,
