@@ -513,7 +513,7 @@ function CartItemCompact({ item, onUpdate, onRemove, onDuplicate, getImageUrl })
       {expanded && (
         <div className="mt-2 pt-2 border-t grid grid-cols-2 gap-2">
           <div>
-            <label className="text-[10px] text-gray-400">Precio unitario</label>
+            <label className="text-[10px] text-gray-500">Precio unitario</label>
             <Input type="number" step="0.01" value={item.unit_price} onChange={e => onUpdate(item.item_id, "unit_price", parseFloat(e.target.value) || 0)} className="h-7 text-xs" />
           </div>
           <div>
