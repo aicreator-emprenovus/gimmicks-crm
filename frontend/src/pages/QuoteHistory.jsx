@@ -23,17 +23,20 @@ const STATUS_MAP = {
 
 export default function QuoteHistory() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const isPO = location.pathname.startsWith("/purchase-orders");
   const [quotes, setQuotes] = useState([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
   const [showTrash, setShowTrash] = useState(false);
-  const [docType, setDocType] = useState("QUOTE");
+  const docType = isPO ? "PO" : "QUOTE";
   const [pdfPreview, setPdfPreview] = useState(null);
   const [sendModal, setSendModal] = useState(null);
   const [activities, setActivities] = useState([]);
   const [showActivities, setShowActivities] = useState(false);
   const token = localStorage.getItem("token");
   const headers = { Authorization: `Bearer ${token}` };
+  const newPath = isPO ? "/purchase-orders/new" : "/quotes/new";
 
   const fetchQuotes = useCallback(async () => {
     setLoading(true);
