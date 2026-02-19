@@ -92,7 +92,6 @@ export default function QuoteHistory() {
     try {
       await axios.post(`${API_URL}/api/quotes-v2/${id}/convert-to-po`, {}, { headers });
       toast.success("Orden de compra generada");
-      setDocType("PO");
       fetchQuotes();
     } catch (e) { toast.error(e.response?.data?.detail || "Error"); }
   };
