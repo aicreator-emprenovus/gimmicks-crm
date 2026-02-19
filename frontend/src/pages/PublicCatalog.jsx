@@ -31,7 +31,7 @@ function CopyCodeButton({ code }) {
       className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
         copied
           ? "bg-emerald-100 text-emerald-700 border border-emerald-300"
-          : "bg-zinc-100 text-zinc-600 hover:bg-[#7BA899]/10 hover:text-[#7BA899] border border-zinc-200"
+          : "bg-zinc-100 text-zinc-600 hover:bg-[#63AC9A]/10 hover:text-[#63AC9A] border border-zinc-200"
       }`}
       data-testid={`copy-code-${code}`}
     >
@@ -91,7 +91,7 @@ export default function PublicCatalog() {
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               placeholder="Buscar productos..."
-              className="w-full pl-10 pr-4 py-3 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#7BA899] focus:border-transparent"
+              className="w-full pl-10 pr-4 py-3 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#63AC9A] focus:border-transparent"
               data-testid="catalog-search"
             />
           </div>
@@ -106,7 +106,7 @@ export default function PublicCatalog() {
         {/* Products Grid */}
         {loading ? (
           <div className="flex justify-center py-16">
-            <Loader2 className="w-8 h-8 animate-spin text-[#7BA899]" />
+            <Loader2 className="w-8 h-8 animate-spin text-[#63AC9A]" />
           </div>
         ) : products.length === 0 ? (
           <div className="text-center py-16 text-zinc-400">
@@ -144,7 +144,7 @@ export default function PublicCatalog() {
                     <p className="text-xs text-zinc-400 mt-1 line-clamp-2">{product.description}</p>
                   )}
                   <div className="mt-2 flex items-center justify-between gap-2">
-                    <div className="inline-block bg-[#7BA899]/10 text-[#7BA899] px-2 py-1 rounded-md">
+                    <div className="inline-block bg-[#63AC9A]/10 text-[#63AC9A] px-2 py-1 rounded-md">
                       <span className="text-xs font-bold font-mono" data-testid={`product-code-${product.code}`}>
                         {product.code}
                       </span>
