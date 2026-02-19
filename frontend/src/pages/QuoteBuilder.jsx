@@ -309,7 +309,7 @@ export default function QuoteBuilder() {
                     <div className="flex gap-1.5 mt-2">
                       <button
                         onClick={() => addToCart(p)}
-                        className="flex-1 bg-[#63AC9A] hover:bg-[#5E8A7A] text-white text-xs font-medium py-1.5 rounded-lg transition-colors"
+                        className="flex-1 bg-[#63AC9A] hover:bg-[#4F9A87] text-white text-xs font-medium py-1.5 rounded-lg transition-colors"
                         data-testid={`add-product-${p.code}`}
                       >
                         Agregar
@@ -618,7 +618,7 @@ function ProductDetailModal({ product, index, total, onClose, onAdd, onPrev, onN
           <button onClick={onClose} className="flex-1 py-2.5 rounded-xl bg-gray-800 hover:bg-gray-900 text-white font-medium text-sm transition-colors">
             Cerrar
           </button>
-          <button onClick={() => { onAdd(product); }} className="flex-1 py-2.5 rounded-xl bg-[#63AC9A] hover:bg-[#5E8A7A] text-white font-medium text-sm transition-colors flex items-center justify-center gap-1" data-testid="detail-add-btn">
+          <button onClick={() => { onAdd(product); }} className="flex-1 py-2.5 rounded-xl bg-[#63AC9A] hover:bg-[#4F9A87] text-white font-medium text-sm transition-colors flex items-center justify-center gap-1" data-testid="detail-add-btn">
             <Plus size={16} /> Agregar
           </button>
         </div>
