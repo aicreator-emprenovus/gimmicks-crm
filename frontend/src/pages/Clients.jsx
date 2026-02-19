@@ -90,7 +90,7 @@ export default function Clients() {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-            <Building2 size={24} className="text-[#7BA899]" /> Clientes
+            <Building2 size={24} className="text-[#63AC9A]" /> Clientes
           </h1>
           <p className="text-sm text-gray-500 mt-1">{filtered.length} clientes</p>
         </div>
@@ -102,7 +102,7 @@ export default function Clients() {
             <Archive size={16} className="mr-1" /> {showTrash ? "Ver activos" : "Papelera"}
           </Button>
           {!showTrash && (
-            <Button size="sm" className="bg-[#7BA899] hover:bg-[#5E8A7A]" onClick={() => { setEditClient(null); setShowModal(true); }} data-testid="add-client-btn">
+            <Button size="sm" className="bg-[#63AC9A] hover:bg-[#5E8A7A]" onClick={() => { setEditClient(null); setShowModal(true); }} data-testid="add-client-btn">
               <Plus size={16} className="mr-1" /> Nuevo Cliente
             </Button>
           )}
@@ -143,7 +143,7 @@ export default function Clients() {
                 </>
               ) : (
                 <>
-                  <button onClick={() => setDetailClient(client)} className="p-2 rounded-lg hover:bg-[#7BA899]/10 text-[#7BA899] transition-colors" title="Ver información" data-testid={`view-btn-${client.id}`}>
+                  <button onClick={() => setDetailClient(client)} className="p-2 rounded-lg hover:bg-[#63AC9A]/10 text-[#63AC9A] transition-colors" title="Ver información" data-testid={`view-btn-${client.id}`}>
                     <Eye size={16} />
                   </button>
                   <button onClick={() => setSelectedClient(client)} className="p-2 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors" title="Historial" data-testid={`history-btn-${client.id}`}>
@@ -285,7 +285,7 @@ function ClientModal({ client, onClose, onSave }) {
         </div>
         <div className="flex justify-end gap-2 p-5 border-t">
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
-          <Button className="bg-[#7BA899] hover:bg-[#5E8A7A]" onClick={handleSave} disabled={saving} data-testid="save-client-btn">
+          <Button className="bg-[#63AC9A] hover:bg-[#5E8A7A]" onClick={handleSave} disabled={saving} data-testid="save-client-btn">
             {saving ? <Loader2 size={16} className="animate-spin mr-1" /> : null}
             {isEdit ? "Actualizar" : "Crear"}
           </Button>
@@ -339,7 +339,7 @@ function ClientHistoryModal({ client, onClose }) {
                 <div className="space-y-2">
                   {data.activities.map(a => (
                     <div key={a.id} className="text-sm text-gray-600 flex items-start gap-2">
-                      <div className="w-1.5 h-1.5 rounded-full bg-[#7BA899] mt-1.5 flex-shrink-0" />
+                      <div className="w-1.5 h-1.5 rounded-full bg-[#63AC9A] mt-1.5 flex-shrink-0" />
                       <div>
                         <span>{a.details}</span>
                         <div className="text-xs text-gray-400">{new Date(a.timestamp).toLocaleString()}</div>
@@ -375,14 +375,14 @@ function ClientDetailModal({ client, onClose }) {
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-5 border-b">
           <h2 className="text-lg font-bold flex items-center gap-2">
-            <Eye size={20} className="text-[#7BA899]" /> {client.name}
+            <Eye size={20} className="text-[#63AC9A]" /> {client.name}
           </h2>
           <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded" data-testid="close-detail-modal-btn"><X size={20} /></button>
         </div>
         <div className="p-5 space-y-3">
           {rows.map(({ icon: Icon, label, value }) => (
             <div key={label} className="flex items-start gap-3">
-              <Icon size={16} className="text-[#7BA899] mt-0.5 flex-shrink-0" />
+              <Icon size={16} className="text-[#63AC9A] mt-0.5 flex-shrink-0" />
               <div className="min-w-0">
                 <p className="text-xs text-gray-400 leading-none mb-0.5">{label}</p>
                 <p className="text-sm text-gray-800 break-words">{value || <span className="text-gray-300 italic">No registrado</span>}</p>
