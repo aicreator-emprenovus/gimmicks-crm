@@ -131,7 +131,7 @@ export default function QuoteHistory() {
             <Archive size={16} className="mr-1" /> {showTrash ? "Ver activos" : "Papelera"}
           </Button>
           {!showTrash && (
-            <Button size="sm" className="bg-[#63AC9A] hover:bg-[#5E8A7A]" onClick={() => navigate(`${newPath}?type=${docType}`)} data-testid="new-quote-btn">
+            <Button size="sm" className="bg-[#63AC9A] hover:bg-[#4F9A87]" onClick={() => navigate(`${newPath}?type=${docType}`)} data-testid="new-quote-btn">
               <Plus size={16} className="mr-1" /> {isPO ? "Nueva OC" : "Nueva Cotizacion"}
             </Button>
           )}
@@ -324,7 +324,7 @@ function SendEmailModal({ quote, onClose, onSent }) {
         </div>
         <div className="flex justify-end gap-2 p-5 border-t">
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
-          <Button className="bg-[#63AC9A] hover:bg-[#5E8A7A]" onClick={handleSend} disabled={sending} data-testid="confirm-send-btn">
+          <Button className="bg-[#63AC9A] hover:bg-[#4F9A87]" onClick={handleSend} disabled={sending} data-testid="confirm-send-btn">
             {sending ? <Loader2 size={16} className="animate-spin mr-1" /> : <Send size={16} className="mr-1" />}
             Enviar
           </Button>
