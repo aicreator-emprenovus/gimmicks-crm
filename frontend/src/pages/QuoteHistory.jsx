@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import { toast } from "sonner";
 import { formatCurrency } from "@/utils/currency";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   FileText, Plus, Trash2, Search, Eye, Send, RotateCcw, Archive,
   Download, Loader2, ShoppingBag, Clock, Filter, X, ChevronDown
