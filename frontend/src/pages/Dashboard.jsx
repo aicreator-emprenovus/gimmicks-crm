@@ -114,7 +114,8 @@ export default function Dashboard() {
                   <YAxis fontSize={11} stroke="#9ca3af" allowDecimals={false} />
                   <Tooltip contentStyle={{ borderRadius: "8px", border: "1px solid #e5e7eb" }} />
                   <Bar dataKey="cotizaciones" name="Cotizaciones" fill="#63AC9A" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="ordenes" name="Órdenes" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="ordenes" name="Ordenes" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="leads" name="Leads" fill="#f59e0b" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
