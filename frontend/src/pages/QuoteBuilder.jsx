@@ -468,7 +468,8 @@ function ClientDropdown({ clients, onSelect }) {
 }
 
 function CartItemCompact({ item, onUpdate, onRemove, onDuplicate, getImageUrl }) {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(true);
+  const [showCharsModal, setShowCharsModal] = useState(false);
 
   return (
     <div className="border rounded-lg p-2 text-xs" data-testid={`cart-item-${item.item_id}`}>
@@ -488,7 +489,7 @@ function CartItemCompact({ item, onUpdate, onRemove, onDuplicate, getImageUrl })
             </div>
             <div className="text-right flex-shrink-0 ml-1">
               <p className="text-gray-500">{formatCurrency(item.unit_price)} x {item.quantity}</p>
-              <p className="font-bold">{formatCurrency(item.total_price)}</p>
+              <p className="font-bold text-[#63AC9A]">{formatCurrency(item.total_price)}</p>
             </div>
           </div>
           <div className="flex items-center gap-1 mt-1">
@@ -512,13 +513,28 @@ function CartItemCompact({ item, onUpdate, onRemove, onDuplicate, getImageUrl })
         </div>
       </div>
       {expanded && (
-        <div className="mt-2 pt-2 border-t grid grid-cols-2 gap-2">
+        <div className="mt-2 pt-2 border-t space-y-2">
+          {/* Características */}
           <div>
-            <label className="text-[10px] text-gray-500">Precio unitario</label>
-            <Input type="number" step="0.01" value={item.unit_price} onChange={e => onUpdate(item.item_id, "unit_price", parseFloat(e.target.value) || 0)} className="h-7 text-xs" />
+            <p className="text-xs font-semibold text-gray-600 flex items-center gap-1 mb-1"><Tag size={12} /> Caracteristicas</p>
+            {item.selected_characteristics?.length > 0 && (
+              <div className="flex flex-wrap gap-1 mb-1">
+                {item.selected_characteristics.map(c => (
+                  <span key={c} className="bg-[#63AC9A]/15 text-[#63AC9A] text-[10px] px-1.5 py-0.5 rounded">{c}</span>
+                ))}
+              </div>
+            )}
+            <button
+              onClick={() => setShowCharsModal(true)}
+              className="w-full flex items-center justify-center gap-1.5 py-1.5 border rounded-lg text-xs text-gray-600 hover:bg-gray-50 transition-colors"
+              data-testid={`manage-chars-${item.item_id}`}
+            >
+              <Tag size={12} /> Gestionar Caracteristicas
+            </button>
           </div>
+          {/* % Descuento */}
           <div>
-            <label className="text-[10px] text-gray-500">Descuento</label>
+            <p className="text-xs font-semibold text-gray-600 mb-1">% Descuento</p>
             <div className="flex gap-1">
               <Input type="number" step="0.01" value={item.discount_amount} onChange={e => onUpdate(item.item_id, "discount_amount", parseFloat(e.target.value) || 0)} className="h-7 text-xs flex-1" />
               <select value={item.discount_type} onChange={e => onUpdate(item.item_id, "discount_type", e.target.value)} className="border rounded h-7 text-xs px-1">
@@ -527,8 +543,9 @@ function CartItemCompact({ item, onUpdate, onRemove, onDuplicate, getImageUrl })
               </select>
             </div>
           </div>
+          {/* Valor adicional */}
           <div>
-            <label className="text-[10px] text-gray-500">Valor adicional</label>
+            <p className="text-xs font-semibold text-gray-600 flex items-center gap-1 mb-1"><Plus size={12} /> Valor adicional</p>
             <div className="flex gap-1">
               <Input type="number" step="0.01" value={item.additional_amount} onChange={e => onUpdate(item.item_id, "additional_amount", parseFloat(e.target.value) || 0)} className="h-7 text-xs flex-1" />
               <select value={item.additional_type} onChange={e => onUpdate(item.item_id, "additional_type", e.target.value)} className="border rounded h-7 text-xs px-1">
@@ -537,12 +554,92 @@ function CartItemCompact({ item, onUpdate, onRemove, onDuplicate, getImageUrl })
               </select>
             </div>
           </div>
+          {/* Otros */}
           <div>
-            <label className="text-[10px] text-gray-500">Otros</label>
-            <Input value={item.otros} onChange={e => onUpdate(item.item_id, "otros", e.target.value)} className="h-7 text-xs" placeholder="Personalización" />
+            <p className="text-xs font-semibold text-gray-600 flex items-center gap-1 mb-1"><FileText size={12} /> Otros</p>
+            <textarea value={item.otros} onChange={e => onUpdate(item.item_id, "otros", e.target.value)} className="w-full border rounded-lg px-2 py-1.5 text-xs resize-none" rows={2} placeholder="Agregar otros u observaciones..." />
           </div>
         </div>
       )}
+      {showCharsModal && (
+        <CharacteristicsModal
+          categories={item.categories || []}
+          selected={item.selected_characteristics || []}
+          onSave={(chars) => { onUpdate(item.item_id, "selected_characteristics", chars); setShowCharsModal(false); }}
+          onClose={() => setShowCharsModal(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+function CharacteristicsModal({ categories, selected, onSave, onClose }) {
+  const [chars, setChars] = useState([...selected]);
+  const [newChar, setNewChar] = useState("");
+
+  const toggle = (cat) => {
+    setChars(prev => prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat]);
+  };
+
+  const addNew = () => {
+    const val = newChar.trim();
+    if (val && !chars.includes(val)) {
+      setChars(prev => [...prev, val]);
+      setNewChar("");
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" data-testid="characteristics-modal">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm mx-4">
+        <div className="flex items-center justify-between p-4 border-b">
+          <h3 className="font-bold text-base">Gestionar Caracteristicas</h3>
+          <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded"><X size={18} /></button>
+        </div>
+        <div className="p-4 space-y-3">
+          <div>
+            <p className="text-sm font-semibold text-gray-700 mb-1">Caracteristicas Seleccionadas:</p>
+            {chars.length === 0 ? (
+              <p className="text-sm text-[#63AC9A] italic">Ninguna categoria seleccionada</p>
+            ) : (
+              <div className="flex flex-wrap gap-1">
+                {chars.map(c => (
+                  <span key={c} className="bg-[#63AC9A] text-white text-xs px-2 py-0.5 rounded flex items-center gap-1">
+                    {c} <button onClick={() => toggle(c)}><X size={10} /></button>
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-gray-700 mb-1">Caracteristicas del Inventario:</p>
+            <div className="border rounded-lg p-2 max-h-40 overflow-y-auto space-y-1">
+              {categories.length === 0 ? (
+                <p className="text-xs text-gray-400 italic">Sin categorias en este producto</p>
+              ) : categories.map(cat => (
+                <label key={cat} className="flex items-center gap-2 cursor-pointer py-1 text-sm">
+                  <input type="checkbox" checked={chars.includes(cat)} onChange={() => toggle(cat)} className="rounded border-gray-300" />
+                  {cat}
+                </label>
+              ))}
+            </div>
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-gray-700 mb-1">Agregar Nueva Caracteristica:</p>
+            <div className="flex gap-2">
+              <Input value={newChar} onChange={e => setNewChar(e.target.value)} onKeyDown={e => e.key === "Enter" && (e.preventDefault(), addNew())} placeholder="Nombre de la caracteristica..." className="flex-1" />
+              <button onClick={addNew} className="w-9 h-9 bg-gray-800 text-white rounded-lg flex items-center justify-center hover:bg-gray-900 flex-shrink-0">
+                <Plus size={16} />
+              </button>
+            </div>
+          </div>
+        </div>
+        <div className="p-4 pt-0">
+          <button onClick={() => onSave(chars)} className="w-full py-2.5 rounded-xl bg-gray-800 hover:bg-gray-900 text-white font-medium text-sm transition-colors" data-testid="save-chars-btn">
+            Cerrar
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
