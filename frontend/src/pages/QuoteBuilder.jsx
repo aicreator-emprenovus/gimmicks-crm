@@ -264,6 +264,7 @@ export default function QuoteBuilder() {
               <option value="">Categorias</option>
               {categories.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
+            </div>
           </div>
           <div className="flex items-center gap-2">
             <div>
