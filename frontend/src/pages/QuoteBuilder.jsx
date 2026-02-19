@@ -366,7 +366,7 @@ export default function QuoteBuilder() {
 
           {/* Cart Items */}
           {cart.length === 0 ? (
-            <p className="text-center text-gray-400 py-4 text-xs">Agregue productos</p>
+            <p className="text-center text-gray-500 py-4 text-xs">Agregue productos</p>
           ) : (
             <div className="space-y-2">
               {cart.map(item => (
