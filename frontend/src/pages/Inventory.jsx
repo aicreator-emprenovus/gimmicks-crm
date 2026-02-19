@@ -123,7 +123,7 @@ export default function Inventory() {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4 flex-shrink-0">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-            <Package size={24} className="text-[#7BA899]" /> Inventario
+            <Package size={24} className="text-[#63AC9A]" /> Inventario
           </h1>
           <p className="text-sm text-gray-500 mt-1">{total.toLocaleString()} productos</p>
         </div>
@@ -136,7 +136,7 @@ export default function Inventory() {
             {uploading ? "Subiendo..." : "Subir Excel"}
           </Button>
           <input ref={fileInputRef} type="file" accept=".xlsx,.xls,.csv" onChange={handleUpload} className="hidden" />
-          <Button size="sm" className="bg-[#7BA899] hover:bg-[#5E8A7A]" onClick={() => { setEditProduct(null); setShowAddModal(true); }} data-testid="add-product-btn">
+          <Button size="sm" className="bg-[#63AC9A] hover:bg-[#5E8A7A]" onClick={() => { setEditProduct(null); setShowAddModal(true); }} data-testid="add-product-btn">
             <Plus size={16} className="mr-1" /> Agregar
           </Button>
         </div>
@@ -273,7 +273,7 @@ function CategoryCell({ categories }) {
     <div className="flex items-center gap-1 max-w-[220px]">
       <div className="flex flex-wrap gap-0.5">
         {visible.map((c, i) => (
-          <span key={i} className="bg-[#7BA899] text-white text-[10px] leading-tight px-1.5 py-[1px] rounded font-medium whitespace-nowrap">{c}</span>
+          <span key={i} className="bg-[#63AC9A] text-white text-[10px] leading-tight px-1.5 py-[1px] rounded font-medium whitespace-nowrap">{c}</span>
         ))}
       </div>
       {hasMore && (
@@ -441,7 +441,7 @@ function ProductModal({ product, onClose, onSave }) {
             </div>
             <div className="flex flex-wrap gap-1 mt-2">
               {form.categories.map(c => (
-                <span key={c} className="bg-[#7BA899] text-white text-xs px-2 py-0.5 rounded flex items-center gap-1">
+                <span key={c} className="bg-[#63AC9A] text-white text-xs px-2 py-0.5 rounded flex items-center gap-1">
                   {c} <button onClick={() => removeCategory(c)}><X size={12} /></button>
                 </span>
               ))}
