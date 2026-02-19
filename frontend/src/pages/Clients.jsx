@@ -95,6 +95,9 @@ export default function Clients() {
           <p className="text-sm text-gray-500 mt-1">{filtered.length} clientes</p>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={handleExportExcel} data-testid="export-clients-btn">
+            <Download size={16} className="mr-1" /> Exportar
+          </Button>
           <Button variant={showTrash ? "default" : "outline"} size="sm" onClick={() => setShowTrash(!showTrash)} data-testid="toggle-trash-btn">
             <Archive size={16} className="mr-1" /> {showTrash ? "Ver activos" : "Papelera"}
           </Button>
