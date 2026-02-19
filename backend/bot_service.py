@@ -537,6 +537,47 @@ def _new_state(phone_number: str, now: datetime) -> dict:
     }
 
 
+STAFF_NOTIFICATION_PHONE = "593963266566"
+
+
+async def notify_staff_new_quote(db: AsyncIOMotorDatabase, customer_phone: str, collected_data: Dict, is_update: bool, send_message_fn):
+    """Send WhatsApp notification to staff when a new/updated quote is created"""
+    try:
+        client_name = collected_data.get("nombre", "Cliente desconocido")
+        correo = collected_data.get("correo", "No proporcionado")
+        producto = collected_data.get("codigos_producto") or collected_data.get("producto", "No especificado")
+        cantidad = collected_data.get("cantidad", "No especificada")
+        action = "ACTUALIZADA" if is_update else "NUEVA"
+
+        # Get the quote number
+        quote = await db.quotes_v2.find_one(
+            {"phone_number": customer_phone, "status": "pending", "is_deleted": False},
+            {"_id": 0, "quote_number": 1}
+        )
+        quote_num = quote.get("quote_number", "?") if quote else "?"
+
+        notification = (
+            f"ALERTA COTIZACION {action}\n\n"
+            f"Cotizacion #{quote_num}\n"
+            f"Cliente: {client_name}\n"
+            f"Telefono: {customer_phone}\n"
+            f"Correo: {correo}\n"
+            f"Productos: {producto}\n"
+            f"Cantidad: {cantidad}\n\n"
+            f"Revisa el CRM para mas detalles."
+        )
+
+        # Find or create a conversation for the staff number
+        staff_conv = await db.conversations.find_one({"phone_number": STAFF_NOTIFICATION_PHONE}, {"_id": 0, "id": 1})
+        staff_conv_id = staff_conv["id"] if staff_conv else "notification"
+
+        await send_message_fn(STAFF_NOTIFICATION_PHONE, staff_conv_id, notification)
+        logger.info(f"Staff notification sent to {STAFF_NOTIFICATION_PHONE} for quote from {customer_phone}")
+    except Exception as e:
+        logger.error(f"Failed to send staff notification: {e}")
+
+
+
 async def process_ai_conversation(
     db: AsyncIOMotorDatabase,
     phone_number: str,
