@@ -75,6 +75,20 @@ async def restore_client(id: str):
     })
     return {"message": "Cliente restaurado"}
 
+@router.post("/{id}/promote")
+async def promote_to_client(id: str):
+    existing = await db.clients.find_one({"id": id})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Interesado no encontrado")
+    if existing.get("source") != "whatsapp":
+        raise HTTPException(status_code=400, detail="Este registro ya es un cliente")
+    await db.clients.update_one(
+        {"id": id},
+        {"$set": {"source": "manual"}}
+    )
+    await log_client_activity(id, "promoted", "Promovido de Interesado a Cliente")
+    return {"message": "Interesado promovido a Cliente exitosamente"}
+
 @router.get("/{id}/history")
 async def get_client_history(id: str) -> Dict[str, Any]:
     client = await db.clients.find_one({"id": id}, {"_id": 0})
