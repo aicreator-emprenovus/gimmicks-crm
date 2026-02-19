@@ -522,7 +522,7 @@ function CartItemCompact({ item, onUpdate, onRemove, onDuplicate, getImageUrl })
           </div>
           {/* % Descuento */}
           <div>
-            <p className="text-xs font-semibold text-gray-600 mb-1">% Descuento</p>
+            <p className="text-xs font-semibold text-gray-600 mb-1">Descuento</p>
             <div className="flex gap-1">
               <Input type="number" step="0.01" value={item.discount_amount} onChange={e => onUpdate(item.item_id, "discount_amount", parseFloat(e.target.value) || 0)} className="h-7 text-xs flex-1" />
               <select value={item.discount_type} onChange={e => onUpdate(item.item_id, "discount_type", e.target.value)} className="border rounded h-7 text-xs px-1">
