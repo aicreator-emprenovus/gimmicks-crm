@@ -618,7 +618,7 @@ function CharacteristicsModal({ categories, selected, onSave, onClose }) {
           <div>
             <p className="text-sm font-semibold text-gray-700 mb-1">Agregar Nueva Característica:</p>
             <div className="flex gap-2">
-              <Input value={newChar} onChange={e => setNewChar(e.target.value)} onKeyDown={e => e.key === "Enter" && (e.preventDefault(), addNew())} placeholder="Nombre de la caracteristica..." className="flex-1" />
+              <Input value={newChar} onChange={e => setNewChar(e.target.value)} onKeyDown={e => e.key === "Enter" && (e.preventDefault(), addNew())} placeholder="Nombre de la característica..." className="flex-1" />
               <button onClick={addNew} className="w-9 h-9 bg-gray-800 text-white rounded-lg flex items-center justify-center hover:bg-gray-900 flex-shrink-0">
                 <Plus size={16} />
               </button>
