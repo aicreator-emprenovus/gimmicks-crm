@@ -127,7 +127,7 @@ export default function Layout() {
           <div className={`border-t border-[#2d2d30] ${collapsed ? "p-2" : "p-3"}`}>
             {collapsed ? (
               <div className="flex flex-col items-center gap-2">
-                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#63AC9A] to-[#5E8A7A] flex items-center justify-center text-white font-bold text-sm shadow-lg">
+                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#63AC9A] to-[#4F9A87] flex items-center justify-center text-white font-bold text-sm shadow-lg">
                   {user?.name?.charAt(0)?.toUpperCase() || "A"}
                 </div>
                 <button
@@ -140,7 +140,7 @@ export default function Layout() {
               </div>
             ) : (
               <div className="flex items-center gap-2 p-2 rounded-xl bg-[#2d2d30]/50">
-                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#63AC9A] to-[#5E8A7A] flex items-center justify-center text-white font-bold text-sm shadow-lg flex-shrink-0">
+                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#63AC9A] to-[#4F9A87] flex items-center justify-center text-white font-bold text-sm shadow-lg flex-shrink-0">
                   {user?.name?.charAt(0)?.toUpperCase() || "A"}
                 </div>
                 <div className="flex-1 min-w-0">
