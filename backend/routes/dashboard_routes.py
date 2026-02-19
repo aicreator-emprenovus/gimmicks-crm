@@ -74,24 +74,29 @@ async def get_activity_chart(days: int = 30, authorization: str = Header(None)):
     if not user:
         raise HTTPException(status_code=401, detail="No autorizado")
     now = datetime.now(timezone.utc)
-    start_date = now - timedelta(days=days)
+    start_date = (now - timedelta(days=days - 1)).replace(hour=0, minute=0, second=0, microsecond=0)
     chart_data = []
     for i in range(days):
         day = start_date + timedelta(days=i)
         day_start = day.replace(hour=0, minute=0, second=0, microsecond=0)
         day_end = day_start + timedelta(days=1)
         quotes_count = await db.quotes_v2.count_documents({
-            "doc_type": "QUOTE", "is_deleted": False,
-            "created_at": {"$gte": day_start, "$lt": day_end}
+            "is_deleted": False,
+            "created_at": {"$gte": day_start, "$lt": day_end},
+            "$or": [{"doc_type": "QUOTE"}, {"doc_type": {"$exists": False}}]
         })
         pos_count = await db.quotes_v2.count_documents({
             "doc_type": "PO", "is_deleted": False,
             "created_at": {"$gte": day_start, "$lt": day_end}
         })
+        leads_count = await db.leads.count_documents({
+            "created_at": {"$gte": day_start.isoformat(), "$lt": day_end.isoformat()}
+        })
         chart_data.append({
             "date": day.strftime("%Y-%m-%d"),
             "cotizaciones": quotes_count,
-            "ordenes": pos_count
+            "ordenes": pos_count,
+            "leads": leads_count
         })
     return chart_data
 
