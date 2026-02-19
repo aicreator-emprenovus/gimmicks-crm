@@ -595,8 +595,7 @@ async def notify_staff_new_quote(db: AsyncIOMotorDatabase, customer_phone: str, 
             f"Cliente: {client_name}\n"
             f"Telefono: {customer_phone}\n"
             f"Correo: {correo}\n"
-            f"Productos: {producto}\n"
-            f"Cantidad: {cantidad}\n\n"
+            f"Productos: {producto}\n\n"
             f"Revisa el CRM para mas detalles."
         )
 
