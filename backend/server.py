@@ -2327,14 +2327,19 @@ ESTADO DE LA CONVERSACION:
 
 Analiza: 1) El cliente tiene intencion de cotizar? 2) Ya cotizo? 3) Que datos faltan? 4) Cual es la mejor accion siguiente?"""
 
-        chat = LlmChat(
-            api_key=api_key,
-            session_id=f"analyze-{uuid.uuid4().hex[:8]}",
-            system_message=system_msg
-        )
-        chat.with_model("openai", "gpt-4o-mini")
-        
-        response_text = await chat.send_message(UserMessage(text=user_msg))
+        if use_emergent:
+            chat = LlmChat(api_key=api_key, session_id=f"analyze-{uuid.uuid4().hex[:8]}", system_message=system_msg)
+            chat.with_model("openai", "gpt-4o-mini")
+            response_text = await chat.send_message(UserMessage(text=user_msg))
+        else:
+            import openai
+            client = openai.AsyncOpenAI(api_key=api_key)
+            resp = await client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[{"role": "system", "content": system_msg}, {"role": "user", "content": user_msg}],
+                temperature=0.7, max_tokens=1000
+            )
+            response_text = resp.choices[0].message.content
         
         json_match = re.search(r'\{[\s\S]*\}', response_text)
         if json_match:
