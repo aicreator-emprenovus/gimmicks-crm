@@ -151,11 +151,11 @@ export default function QuoteBuilder() {
       let base = updated.quantity * updated.unit_price;
       if (updated.discount_amount > 0) {
         if (updated.discount_type === "%") base -= base * (updated.discount_amount / 100);
-        else base -= updated.discount_amount * updated.quantity;
+        else base -= updated.discount_amount;
       }
       if (updated.additional_amount > 0) {
         if (updated.additional_type === "%") base += base * (updated.additional_amount / 100);
-        else base += updated.additional_amount * updated.quantity;
+        else base += updated.additional_amount;
       }
       updated.total_price = Math.max(0, base);
       return updated;
