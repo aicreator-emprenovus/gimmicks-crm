@@ -112,30 +112,30 @@ export default function Clients() {
               {client.phone && <p className="flex items-center gap-1.5"><Phone size={13} className="text-gray-400" /> {client.phone}</p>}
               {client.city && <p className="flex items-center gap-1.5"><MapPin size={13} className="text-gray-400" /> {client.city}</p>}
             </div>
-            <div className="flex gap-1 mt-3 pt-3 border-t">
+            <div className="flex gap-1 mt-3 pt-3 border-t justify-center">
               {showTrash ? (
                 <>
-                  <Button variant="ghost" size="sm" onClick={() => handleRestore(client.id)} className="text-green-600 hover:text-green-700 text-xs">
-                    <RotateCcw size={14} className="mr-1" /> Restaurar
-                  </Button>
-                  <Button variant="ghost" size="sm" onClick={() => handleDelete(client.id)} className="text-red-600 hover:text-red-700 text-xs">
-                    <Trash2 size={14} className="mr-1" /> Eliminar
-                  </Button>
+                  <button onClick={() => handleRestore(client.id)} className="p-2 rounded-lg hover:bg-green-50 text-green-600 transition-colors" title="Restaurar">
+                    <RotateCcw size={16} />
+                  </button>
+                  <button onClick={() => handleDelete(client.id)} className="p-2 rounded-lg hover:bg-red-50 text-red-500 transition-colors" title="Eliminar">
+                    <Trash2 size={16} />
+                  </button>
                 </>
               ) : (
                 <>
-                  <Button variant="ghost" size="sm" onClick={() => setDetailClient(client)} className="text-[#7BA899] text-xs" data-testid={`view-btn-${client.id}`}>
-                    <Eye size={14} className="mr-1" /> Ver
-                  </Button>
-                  <Button variant="ghost" size="sm" onClick={() => setSelectedClient(client)} className="text-gray-500 text-xs" data-testid={`history-btn-${client.id}`}>
-                    <History size={14} className="mr-1" /> Historial
-                  </Button>
-                  <Button variant="ghost" size="sm" onClick={() => { setEditClient(client); setShowModal(true); }} className="text-blue-600 text-xs" data-testid={`edit-client-btn-${client.id}`}>
-                    <Edit size={14} className="mr-1" /> Editar
-                  </Button>
-                  <Button variant="ghost" size="sm" onClick={() => handleDelete(client.id)} className="text-red-500 text-xs">
-                    <Trash2 size={14} className="mr-1" /> Eliminar
-                  </Button>
+                  <button onClick={() => setDetailClient(client)} className="p-2 rounded-lg hover:bg-[#7BA899]/10 text-[#7BA899] transition-colors" title="Ver información" data-testid={`view-btn-${client.id}`}>
+                    <Eye size={16} />
+                  </button>
+                  <button onClick={() => setSelectedClient(client)} className="p-2 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors" title="Historial" data-testid={`history-btn-${client.id}`}>
+                    <History size={16} />
+                  </button>
+                  <button onClick={() => { setEditClient(client); setShowModal(true); }} className="p-2 rounded-lg hover:bg-blue-50 text-blue-600 transition-colors" title="Editar" data-testid={`edit-client-btn-${client.id}`}>
+                    <Edit size={16} />
+                  </button>
+                  <button onClick={() => handleDelete(client.id)} className="p-2 rounded-lg hover:bg-red-50 text-red-500 transition-colors" title="Eliminar">
+                    <Trash2 size={16} />
+                  </button>
                 </>
               )}
             </div>
