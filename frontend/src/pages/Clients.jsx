@@ -124,6 +124,9 @@ export default function Clients() {
                 </>
               ) : (
                 <>
+                  <Button variant="ghost" size="sm" onClick={() => setDetailClient(client)} className="text-[#7BA899] text-xs" data-testid={`view-btn-${client.id}`}>
+                    <Eye size={14} className="mr-1" /> Ver
+                  </Button>
                   <Button variant="ghost" size="sm" onClick={() => setSelectedClient(client)} className="text-gray-500 text-xs" data-testid={`history-btn-${client.id}`}>
                     <History size={14} className="mr-1" /> Historial
                   </Button>
