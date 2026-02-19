@@ -606,7 +606,7 @@ function CharacteristicsModal({ categories, selected, onSave, onClose }) {
             <p className="text-sm font-semibold text-gray-700 mb-1">Características del Inventario:</p>
             <div className="border rounded-lg p-2 max-h-40 overflow-y-auto space-y-1">
               {categories.length === 0 ? (
-                <p className="text-xs text-gray-400 italic">Sin categorias en este producto</p>
+                <p className="text-xs text-gray-400 italic">Sin categorías en este producto</p>
               ) : categories.map(cat => (
                 <label key={cat} className="flex items-center gap-2 cursor-pointer py-1 text-sm">
                   <input type="checkbox" checked={chars.includes(cat)} onChange={() => toggle(cat)} className="rounded border-gray-300" />
