@@ -892,6 +892,17 @@ MENSAJE ACTUAL DEL CLIENTE: {message_text}"""
             await send_message_fn(phone_number, conversation_id, response_text)
 
         # Handle quote - only create and notify AFTER email is collected
+        # Detect explicit quote request from user message even if LLM didn't set needs_quote
+        quote_keywords = ["cotiza", "cotización", "cotizacion", "generar", "genera", "actualiza", "actualizar", "registra", "registrar", "nuevo pedido", "nueva cotización"]
+        user_wants_quote = any(kw in message_text.lower() for kw in quote_keywords)
+        if user_wants_quote and not needs_quote:
+            has_codes = bool(collected_data.get("codigos_producto") or collected_data.get("producto"))
+            has_qty = bool(collected_data.get("cantidad"))
+            has_email = bool(collected_data.get("correo"))
+            if has_codes and has_qty and has_email:
+                needs_quote = True
+                logger.info(f"Force needs_quote=True for {phone_number} (user keyword match)")
+
         if needs_quote:
             has_full_data = (collected_data.get("codigos_producto") or collected_data.get("producto")) and collected_data.get("cantidad") and collected_data.get("correo")
             if has_full_data:
@@ -899,8 +910,11 @@ MENSAJE ACTUAL DEL CLIENTE: {message_text}"""
                     {"phone_number": phone_number, "status": "pending", "is_deleted": False},
                     {"_id": 0, "items": 1, "client_name": 1}
                 )
-                await upsert_quote(db, phone_number, collected_data, conversation_id)
+                quote_msg = await upsert_quote(db, phone_number, collected_data, conversation_id)
                 state_quote = True
+
+                # Notify staff via WhatsApp
+                await notify_staff_new_quote(db, phone_number, collected_data, existing_quote is not None, send_message_fn)
 
                 if not existing_quote:
                     correo = collected_data.get("correo", "tu correo")
