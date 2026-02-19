@@ -2582,23 +2582,23 @@ async def reset_single_conversation(phone_number: str, current_user: dict = Depe
 # ============== PUBLIC CATALOG (NO AUTH) ==============
 
 @api_router.get("/catalog/public")
-async def public_catalog(q: str = "", limit: int = 40):
+async def public_catalog(q: str = "", category: str = "", limit: int = 40):
     """Public endpoint - no auth required. Returns filtered products for WhatsApp catalog links."""
-    if not q.strip():
+    if not q.strip() and not category.strip():
         return []
     
-    words = q.strip().split()
-    stems = set()
-    for w in words:
-        stems.add(re.escape(w))
-        if w.endswith("es") and len(w) > 3:
-            stems.add(re.escape(w[:-2]))
-        if w.endswith("s") and len(w) > 2:
-            stems.add(re.escape(w[:-1]))
-    regex = "|".join(stems)
-    
-    products = await db.products.find(
-        {"$or": [
+    conditions = []
+    if q.strip():
+        words = q.strip().split()
+        stems = set()
+        for w in words:
+            stems.add(re.escape(w))
+            if w.endswith("es") and len(w) > 3:
+                stems.add(re.escape(w[:-2]))
+            if w.endswith("s") and len(w) > 2:
+                stems.add(re.escape(w[:-1]))
+        regex = "|".join(stems)
+        conditions.append({"$or": [
             {"name": {"$regex": regex, "$options": "i"}},
             {"description": {"$regex": regex, "$options": "i"}},
             {"code": {"$regex": regex, "$options": "i"}},
@@ -2606,11 +2606,27 @@ async def public_catalog(q: str = "", limit: int = 40):
             {"category_1": {"$regex": regex, "$options": "i"}},
             {"category_2": {"$regex": regex, "$options": "i"}},
             {"category_3": {"$regex": regex, "$options": "i"}}
-        ]},
+        ]})
+    if category.strip():
+        conditions.append({"categories": {"$regex": re.escape(category.strip()), "$options": "i"}})
+    
+    query_filter = {"$and": conditions} if len(conditions) > 1 else conditions[0] if conditions else {}
+    
+    products = await db.products.find(
+        query_filter,
         {"_id": 0, "code": 1, "name": 1, "description": 1, "image_url": 1, "price": 1, "categories": 1}
     ).limit(limit).to_list(limit)
     
     return products
+
+@api_router.get("/catalog/public/categories")
+async def public_catalog_categories():
+    """Public endpoint - returns all product categories."""
+    try:
+        categories = await db.products.distinct("categories")
+        return sorted([c for c in categories if c])
+    except:
+        return []
 
 # ============== QUOTES MANAGEMENT ROUTES ==============
 
