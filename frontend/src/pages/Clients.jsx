@@ -25,6 +25,7 @@ export default function Clients() {
   const [showModal, setShowModal] = useState(false);
   const [editClient, setEditClient] = useState(null);
   const [selectedClient, setSelectedClient] = useState(null);
+  const [detailClient, setDetailClient] = useState(null);
   const token = localStorage.getItem("token");
   const headers = { Authorization: `Bearer ${token}` };
 
