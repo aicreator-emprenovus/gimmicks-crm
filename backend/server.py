@@ -2245,9 +2245,13 @@ async def analyze_message(
 ):
     """Analyze full conversation context using AI to provide actionable insights"""
     try:
-        from emergentintegrations.llm.chat import LlmChat, UserMessage
-        
-        api_key = os.environ.get("EMERGENT_LLM_KEY")
+        try:
+            from emergentintegrations.llm.chat import LlmChat, UserMessage
+            use_emergent = True
+        except ImportError:
+            use_emergent = False
+
+        api_key = os.environ.get("EMERGENT_LLM_KEY") or os.environ.get("OPENAI_API_KEY")
         if not api_key:
             return {
                 "intent": "consulta",
