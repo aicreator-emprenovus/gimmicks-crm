@@ -404,7 +404,7 @@ async def upsert_quote(db: AsyncIOMotorDatabase, phone_number: str, collected_da
         products = await search_products_by_keyword(db, collected_data["producto"], limit=5)
         for p in products:
             code = p.get("code", "")
-            qty = qty_map.get(code.upper(), general_qty)
+            qty = match_qty(code)
             unit_price = p.get("price", 0) or p.get("cost", 0) or 0
             total_price = unit_price * qty
             quote_items.append({
