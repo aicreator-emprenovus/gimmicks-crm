@@ -339,7 +339,7 @@ export default function Inbox() {
                 >
                   <div className="flex items-start gap-3">
                     <div className="relative">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#63AC9A] to-[#5E8A7A] flex items-center justify-center text-white font-medium flex-shrink-0">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#63AC9A] to-[#4F9A87] flex items-center justify-center text-white font-medium flex-shrink-0">
                         {conv.contact_name?.charAt(0)?.toUpperCase() ||
                           conv.phone_number.slice(-2)}
                       </div>
@@ -385,7 +385,7 @@ export default function Inbox() {
             {/* Chat Header */}
             <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-white">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#63AC9A] to-[#5E8A7A] flex items-center justify-center text-white font-medium">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#63AC9A] to-[#4F9A87] flex items-center justify-center text-white font-medium">
                   {selectedConv.contact_name?.charAt(0)?.toUpperCase() ||
                     selectedConv.phone_number.slice(-2)}
                 </div>
@@ -458,7 +458,7 @@ export default function Inbox() {
               <div className="p-4 bg-[#63AC9A]/10 border-b border-[#63AC9A]/20">
                 <div className="flex items-start gap-3">
                   <div className="w-8 h-8 rounded-lg bg-[#63AC9A]/20 flex items-center justify-center flex-shrink-0">
-                    <Bot className="w-4 h-4 text-[#5E8A7A]" />
+                    <Bot className="w-4 h-4 text-[#4F9A87]" />
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center justify-between">
@@ -476,7 +476,7 @@ export default function Inbox() {
                     <div className="mt-2 grid grid-cols-3 gap-2 text-xs">
                       <div className="bg-white rounded-lg p-2 border border-gray-200">
                         <span className="text-gray-500 block">Intención</span>
-                        <Badge className="mt-0.5 capitalize bg-[#63AC9A]/15 text-[#5E8A7A]">
+                        <Badge className="mt-0.5 capitalize bg-[#63AC9A]/15 text-[#4F9A87]">
                           {aiSuggestion.intent}
                         </Badge>
                       </div>
@@ -545,7 +545,7 @@ export default function Inbox() {
                           size="sm"
                           variant="outline"
                           onClick={useSuggestedResponse}
-                          className="mt-2 border-[#63AC9A] text-[#5E8A7A] hover:bg-[#63AC9A]/10"
+                          className="mt-2 border-[#63AC9A] text-[#4F9A87] hover:bg-[#63AC9A]/10"
                           data-testid="use-suggestion-btn"
                         >
                           Usar esta respuesta
