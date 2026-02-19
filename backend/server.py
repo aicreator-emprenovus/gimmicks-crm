@@ -608,27 +608,46 @@ async def get_lead(lead_id: str, current_user: dict = Depends(get_current_user))
 
 
 async def _create_client_from_lead(lead_id: str, lead: dict, update_dict: dict):
-    """Create a client from lead data when lead reaches 'entregado' stage."""
+    """Promote interesado to client or create a new client when lead reaches 'entregado'."""
     now = datetime.now(timezone.utc)
     name = update_dict.get("name") or lead.get("name", "")
     phone = lead.get("phone_number", "")
     email = lead.get("correo", "")
 
-    # Skip if no useful data
     if not name and not phone:
         return
 
-    # Check if client already exists by phone or email
+    # Check if an interesado (source=whatsapp) already exists for this phone/email
     existing = None
     if email:
-        existing = await db.clients.find_one({"email": email, "is_deleted": False}, {"_id": 0, "id": 1})
+        existing = await db.clients.find_one({"email": email, "is_deleted": False}, {"_id": 0, "id": 1, "source": 1})
     if not existing and phone:
         phone_clean = phone.lstrip("+")[-10:]
-        existing = await db.clients.find_one({"phone": {"$regex": phone_clean}, "is_deleted": False}, {"_id": 0, "id": 1})
+        existing = await db.clients.find_one({"phone": {"$regex": phone_clean}, "is_deleted": False}, {"_id": 0, "id": 1, "source": 1})
 
     if existing:
-        return  # Client already exists, no duplicates
+        # Promote existing interesado to client
+        update_fields = {"source": "manual"}
+        if name:
+            update_fields["name"] = name
+        if email:
+            update_fields["email"] = email
+        if lead.get("ciudad"):
+            update_fields["city"] = lead["ciudad"]
+        if lead.get("empresa"):
+            update_fields["sector_details"] = lead["empresa"]
+        await db.clients.update_one({"id": existing["id"]}, {"$set": update_fields})
+        await db.client_activities.insert_one({
+            "id": str(uuid.uuid4()),
+            "client_id": existing["id"],
+            "action": "promoted",
+            "details": f"Promovido de Interesado a Cliente al mover Lead #{lead_id} a Entregado",
+            "timestamp": now
+        })
+        logger.info(f"Promoted interesado {existing['id']} to client from lead {lead_id} (entregado)")
+        return
 
+    # No existing interesado - create new client directly
     client_id = str(uuid.uuid4())
     client_doc = {
         "id": client_id,
@@ -643,7 +662,7 @@ async def _create_client_from_lead(lead_id: str, lead: dict, update_dict: dict):
         "sector": "",
         "sector_details": lead.get("empresa", ""),
         "notes": f"Creado automaticamente desde Lead #{lead_id} al pasar a Entregado",
-        "source": "whatsapp",
+        "source": "manual",
         "is_deleted": False,
         "deleted_at": None,
         "created_at": now
