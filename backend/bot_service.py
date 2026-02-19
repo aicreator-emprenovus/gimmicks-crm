@@ -351,6 +351,23 @@ async def upsert_quote(db: AsyncIOMotorDatabase, phone_number: str, collected_da
     except:
         general_qty = 1
 
+    def match_qty(product_code: str) -> int:
+        """Match product code to qty_map flexibly (handles codes like 'JARVID00020 - AZ' vs 'JARVID00020')"""
+        code_upper = product_code.upper().strip()
+        # Exact match
+        if code_upper in qty_map:
+            return qty_map[code_upper]
+        # Try without spaces and suffixes (e.g. "JARVID00020 - AZ" → "JARVID00020")
+        code_base = re.split(r'\s*[-/]\s*', code_upper)[0].strip()
+        if code_base in qty_map:
+            return qty_map[code_base]
+        # Try if any key in qty_map starts with this code or vice versa
+        for key, val in qty_map.items():
+            key_base = re.split(r'\s*[-/]\s*', key)[0].strip()
+            if code_base.startswith(key_base) or key_base.startswith(code_base):
+                return val
+        return general_qty
+
     # Build product items from codes
     codes_raw = collected_data.get("codigos_producto", "")
     quote_items = []
@@ -361,7 +378,7 @@ async def upsert_quote(db: AsyncIOMotorDatabase, phone_number: str, collected_da
         products = await validate_product_codes(db, code_list)
         for p in products:
             code = p.get("code", "")
-            qty = qty_map.get(code.upper(), general_qty)
+            qty = match_qty(code)
             unit_price = p.get("price", 0) or p.get("cost", 0) or 0
             total_price = unit_price * qty
             quote_items.append({
