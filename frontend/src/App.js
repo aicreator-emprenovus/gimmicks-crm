@@ -76,6 +76,8 @@ function AppRoutes() {
         <Route path="clients" element={<Clients />} />
         <Route path="quotes" element={<QuoteHistory />} />
         <Route path="quotes/new" element={<QuoteBuilder />} />
+        <Route path="purchase-orders" element={<QuoteHistory />} />
+        <Route path="purchase-orders/new" element={<QuoteBuilder />} />
         <Route path="users" element={
           <ProtectedRoute adminOnly>
             <Users />
