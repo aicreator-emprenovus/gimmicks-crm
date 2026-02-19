@@ -307,7 +307,7 @@ export default function Settings() {
             </div>
             <Dialog open={isCreateOpen} onOpenChange={(open) => { setIsCreateOpen(open); if (!open) resetForm(); }}>
               <DialogTrigger asChild>
-                <Button className="bg-[#7BA899] hover:bg-[#6A9688] gap-2" data-testid="create-rule-btn">
+                <Button className="bg-[#63AC9A] hover:bg-[#6A9688] gap-2" data-testid="create-rule-btn">
                   <Plus size={18} />
                   Nueva Regla
                 </Button>
@@ -319,7 +319,7 @@ export default function Settings() {
                 <RuleFormFields />
                 <Button
                   onClick={createRule}
-                  className="w-full bg-[#7BA899] hover:bg-[#6A9688]"
+                  className="w-full bg-[#63AC9A] hover:bg-[#6A9688]"
                   disabled={!formData.name || !formData.action_value}
                   data-testid="submit-rule-btn"
                 >
@@ -338,7 +338,7 @@ export default function Settings() {
               <RuleFormFields />
               <Button
                 onClick={updateRule}
-                className="w-full bg-[#7BA899] hover:bg-[#6A9688]"
+                className="w-full bg-[#63AC9A] hover:bg-[#6A9688]"
                 disabled={!formData.name || !formData.action_value}
                 data-testid="save-edit-btn"
               >
@@ -349,7 +349,7 @@ export default function Settings() {
 
           {loading ? (
             <div className="flex items-center justify-center py-12">
-              <Loader2 className="w-8 h-8 animate-spin text-[#7BA899]" />
+              <Loader2 className="w-8 h-8 animate-spin text-[#63AC9A]" />
             </div>
           ) : rules.length === 0 ? (
             <Card className="border border-zinc-200">
@@ -498,7 +498,7 @@ export default function Settings() {
             <CardContent className="space-y-4">
               <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-lg">
                 <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-[#7BA899] rounded-full animate-pulse"></div>
+                  <div className="w-2 h-2 bg-[#63AC9A] rounded-full animate-pulse"></div>
                   <span className="font-medium text-emerald-800">IA Activa</span>
                 </div>
                 <p className="text-sm text-emerald-700 mt-2">
