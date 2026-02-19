@@ -118,7 +118,7 @@ export default function QuoteHistory() {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-            <FileText size={24} className="text-[#7BA899]" />
+            <FileText size={24} className="text-[#63AC9A]" />
             {docType === "PO" ? "Órdenes de Compra" : "Cotizaciones"}
           </h1>
           <p className="text-sm text-gray-500 mt-1">{filtered.length} documentos</p>
@@ -131,7 +131,7 @@ export default function QuoteHistory() {
             <Archive size={16} className="mr-1" /> {showTrash ? "Ver activos" : "Papelera"}
           </Button>
           {!showTrash && (
-            <Button size="sm" className="bg-[#7BA899] hover:bg-[#5E8A7A]" onClick={() => navigate(`${newPath}?type=${docType}`)} data-testid="new-quote-btn">
+            <Button size="sm" className="bg-[#63AC9A] hover:bg-[#5E8A7A]" onClick={() => navigate(`${newPath}?type=${docType}`)} data-testid="new-quote-btn">
               <Plus size={16} className="mr-1" /> {isPO ? "Nueva OC" : "Nueva Cotizacion"}
             </Button>
           )}
@@ -172,7 +172,7 @@ export default function QuoteHistory() {
                 </div>
               </div>
               <div className="text-right">
-                <p className="text-lg font-bold text-[#7BA899]">{formatCurrency(q.total)}</p>
+                <p className="text-lg font-bold text-[#63AC9A]">{formatCurrency(q.total)}</p>
               </div>
               <div className="flex gap-1 flex-wrap">
                 {showTrash ? (
@@ -257,7 +257,7 @@ export default function QuoteHistory() {
                 <p className="text-center text-gray-400 py-4">Sin actividad registrada</p>
               ) : activities.map((a, i) => (
                 <div key={i} className="flex items-start gap-2 py-2 border-b last:border-0">
-                  <div className="w-1.5 h-1.5 rounded-full bg-[#7BA899] mt-2 flex-shrink-0" />
+                  <div className="w-1.5 h-1.5 rounded-full bg-[#63AC9A] mt-2 flex-shrink-0" />
                   <div className="text-sm">
                     <p className="text-gray-700"><span className="font-medium">{a.user_name}</span> {a.action} #{a.document_number}</p>
                     {a.details && <p className="text-xs text-gray-400">{a.details}</p>}
@@ -324,7 +324,7 @@ function SendEmailModal({ quote, onClose, onSent }) {
         </div>
         <div className="flex justify-end gap-2 p-5 border-t">
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
-          <Button className="bg-[#7BA899] hover:bg-[#5E8A7A]" onClick={handleSend} disabled={sending} data-testid="confirm-send-btn">
+          <Button className="bg-[#63AC9A] hover:bg-[#5E8A7A]" onClick={handleSend} disabled={sending} data-testid="confirm-send-btn">
             {sending ? <Loader2 size={16} className="animate-spin mr-1" /> : <Send size={16} className="mr-1" />}
             Enviar
           </Button>
