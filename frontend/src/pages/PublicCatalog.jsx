@@ -221,7 +221,7 @@ export default function PublicCatalog() {
         {products.length > 0 && (
           <div className="text-center mt-8 py-4 border-t border-gray-200">
             <p className="text-sm text-gray-600 font-medium">
-              Comparte los codigos de los productos que te interesen con tu asesor por WhatsApp
+              Comparte los códigos de los productos que te interesen con tu asesor por WhatsApp
             </p>
           </div>
         )}
