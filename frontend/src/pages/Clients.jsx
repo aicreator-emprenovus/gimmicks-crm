@@ -89,7 +89,7 @@ export default function Clients() {
         <Input placeholder="Buscar clientes..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9 bg-white" data-testid="search-clients-input" />
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <div className="grid gap-3 grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
         {loading ? (
           <div className="col-span-full flex justify-center py-10"><Loader2 size={24} className="animate-spin text-gray-400" /></div>
         ) : filtered.length === 0 ? (
@@ -97,20 +97,14 @@ export default function Clients() {
             {showTrash ? "No hay clientes en papelera" : "No se encontraron clientes"}
           </div>
         ) : filtered.map(client => (
-          <div key={client.id} className="bg-white rounded-xl shadow-sm border p-4 hover:shadow-md transition-shadow" data-testid={`client-card-${client.id}`}>
-            <div className="flex items-start justify-between mb-3">
-              <div>
-                <h3 className="font-bold text-gray-900">{client.name}</h3>
-                {client.contact_person && <p className="text-xs text-gray-500">Contacto: {client.contact_person}</p>}
-              </div>
-              {client.sector && (
-                <span className="bg-[#7BA899]/10 text-[#5E8A7A] text-xs px-2 py-0.5 rounded-full">{client.sector}</span>
-              )}
+          <div key={client.id} className="bg-white rounded-xl shadow-sm border p-3 hover:shadow-md transition-shadow" data-testid={`client-card-${client.id}`}>
+            <div className="mb-2">
+              <h3 className="font-bold text-gray-900 text-sm truncate">{client.name}</h3>
+              {client.contact_person && <p className="text-xs text-gray-500 truncate">Contacto: {client.contact_person}</p>}
             </div>
-            <div className="space-y-1.5 text-sm text-gray-600">
-              {client.email && <p className="flex items-center gap-1.5"><Mail size={13} className="text-gray-400" /> {client.email}</p>}
-              {client.phone && <p className="flex items-center gap-1.5"><Phone size={13} className="text-gray-400" /> {client.phone}</p>}
-              {client.city && <p className="flex items-center gap-1.5"><MapPin size={13} className="text-gray-400" /> {client.city}</p>}
+            <div className="space-y-1 text-xs text-gray-600">
+              {client.email && <p className="flex items-center gap-1.5 truncate"><Mail size={12} className="text-gray-400 flex-shrink-0" /> <span className="truncate">{client.email}</span></p>}
+              {client.phone && <p className="flex items-center gap-1.5 truncate"><Phone size={12} className="text-gray-400 flex-shrink-0" /> {client.phone}</p>}
             </div>
             <div className="flex gap-1 mt-3 pt-3 border-t justify-center">
               {showTrash ? (
