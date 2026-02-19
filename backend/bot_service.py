@@ -699,32 +699,56 @@ async def process_ai_conversation(
         catalogs_sent = state.get("catalog_sent", [])
         catalog_info = f"Catalogos ya enviados: {', '.join(catalogs_sent)}" if catalogs_sent else ""
 
-        # Determine next data to ask - ONE at a time in order
-        has_product = bool(collected_data.get("codigos_producto") or collected_data.get("producto"))
-        ordered_fields = [
-            ("cantidad", "cantidad de unidades"),
-            ("personalizacion", "tipo de personalización"),
-            ("correo", "correo electrónico"),
-            ("nombre", "nombre"),
-            ("empresa", "empresa"),
-            ("ciudad", "ciudad de entrega"),
-            ("fecha_entrega", "fecha de entrega"),
-        ]
-        
+        # Determine next data to ask - follow the strict flow
+        has_codes = bool(collected_data.get("codigos_producto"))
+        has_product_interest = bool(collected_data.get("producto"))
+        catalog_already_sent = len(catalogs_sent) > 0
+
+        ordered_fields = []
         next_to_ask = ""
         all_required_done = False
         missing_fields = []
-        if has_product:
+
+        if has_codes:
+            # Client confirmed codes -> now ask quantity, then rest
+            ordered_fields = [
+                ("cantidad", "cantidad exacta de unidades para cada producto"),
+                ("personalizacion", "tipo de personalización"),
+                ("correo", "correo electrónico"),
+                ("nombre", "nombre"),
+                ("empresa", "empresa"),
+                ("ciudad", "ciudad de entrega"),
+                ("fecha_entrega", "fecha de entrega"),
+            ]
             for field_key, field_label in ordered_fields:
                 if not collected_data.get(field_key):
                     missing_fields.append(field_label)
-            
+
             has_min = collected_data.get("cantidad") and collected_data.get("correo")
             if has_min and not missing_fields:
                 all_required_done = True
                 next_to_ask = "Ya tienes todos los datos necesarios. Marca needs_quote=true."
             elif missing_fields:
                 next_to_ask = f"SIGUIENTE dato a pedir (SOLO este, nada más): {missing_fields[0]}"
+
+            # Resolve product names for codes so bot can mention them
+            codes_raw = collected_data.get("codigos_producto", "")
+            if codes_raw and not collected_data.get("cantidad"):
+                clean = str(codes_raw).replace("[","").replace("]","").replace("'","").replace('"','')
+                code_list = [c.strip() for c in re.split(r'[,\s]+', clean) if c.strip()]
+                validated = await validate_product_codes(db, code_list)
+                if validated:
+                    product_names_list = ", ".join([f"{p.get('name','')} ({p.get('code','')})" for p in validated])
+                    next_to_ask += f"\nPRODUCTOS CONFIRMADOS POR EL CLIENTE: {product_names_list}. Pregunta cuántas unidades de CADA UNO mencionando sus nombres."
+
+        elif has_product_interest and catalog_already_sent:
+            # Catalog was sent, waiting for codes
+            next_to_ask = "ESPERANDO: El cliente ya vio el catálogo. Espera a que comparta los CÓDIGOS de los productos que le gusten. NO pidas cantidad todavía. Si el cliente pregunta algo, responde y recuérdale que comparta los códigos."
+        elif has_product_interest and not catalog_already_sent:
+            # Product mentioned but catalog not sent yet
+            next_to_ask = "Debes enviar el catálogo (catalog_search) con la palabra clave del producto. NO preguntes cantidad."
+        else:
+            next_to_ask = "Aún no se ha definido el producto. Pregunta qué necesita el cliente."
         
         # Pre-check catalog availability for product searches
         catalog_availability = ""
