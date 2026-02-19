@@ -268,7 +268,7 @@ export default function QuoteBuilder() {
           </div>
           <div className="flex items-center gap-2">
             <div>
-              <label className="text-xs text-gray-500">Precio Minimo</label>
+              <label className="text-xs text-gray-500">Precio Mínimo</label>
               <Input type="number" step="0.01" placeholder="$ Min" value={minPrice} onChange={e => { setMinPrice(e.target.value); setProdPage(1); }} className="h-8 text-sm" data-testid="catalog-min-price" />
             </div>
             <span className="text-gray-400 mt-4">-</span>
