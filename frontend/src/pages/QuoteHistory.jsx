@@ -186,7 +186,7 @@ export default function QuoteHistory() {
                   </>
                 ) : (
                   <>
-                    <Button variant="ghost" size="sm" onClick={() => navigate(`/quotes/new?edit=${q.id}&type=${q.doc_type}`)} className="text-xs" data-testid={`edit-quote-btn-${q.id}`}>
+                    <Button variant="ghost" size="sm" onClick={() => navigate(`${newPath}?edit=${q.id}&type=${q.doc_type}`)} className="text-xs" data-testid={`edit-quote-btn-${q.id}`}>
                       Editar
                     </Button>
                     <Button variant="ghost" size="sm" onClick={() => handleGeneratePDF(q.id, q.doc_type === "PO" ? "ORDEN_COMPRA" : "PROFORMA")} className="text-xs" data-testid={`pdf-btn-${q.id}`}>
