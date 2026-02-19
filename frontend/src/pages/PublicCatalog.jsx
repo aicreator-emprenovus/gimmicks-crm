@@ -174,7 +174,7 @@ export default function PublicCatalog() {
           <div className="text-center py-16 text-gray-500">
             <Package className="w-16 h-16 mx-auto mb-4 opacity-40" />
             <p className="text-lg font-medium">{hasFilters ? "No se encontraron productos" : "Busca un producto o selecciona una categoría"}</p>
-            {hasFilters && <p className="text-sm mt-1 text-gray-500">Intenta con otra palabra clave o categoria</p>}
+            {hasFilters && <p className="text-sm mt-1 text-gray-500">Intenta con otra palabra clave o categoría</p>}
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4" data-testid="catalog-grid">
