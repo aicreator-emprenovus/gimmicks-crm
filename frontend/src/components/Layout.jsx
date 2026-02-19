@@ -99,13 +99,18 @@ export default function Layout() {
                 <li key={item.to}>
                   <NavLink
                     to={item.to}
+                    end={item.to === "/quotes/new" || item.to === "/purchase-orders/new"}
                     onClick={() => setSidebarOpen(false)}
                     title={collapsed ? item.label : undefined}
                     className={({ isActive }) =>
                       `flex items-center ${collapsed ? "justify-center" : "gap-3"} ${collapsed ? "px-2" : "px-3"} py-2.5 rounded-xl transition-all duration-200 group ${
-                        isActive
-                          ? "bg-gradient-to-r from-[#2d2d30] to-[#3d3d40] text-white border-l-3 border-[#7BA899]"
-                          : "text-[#8a8a8a] hover:text-white hover:bg-[#2d2d30]/50"
+                        item.accent
+                          ? isActive
+                            ? "bg-[#7BA899] text-white"
+                            : "bg-[#7BA899]/80 text-white hover:bg-[#7BA899]"
+                          : isActive
+                            ? "bg-gradient-to-r from-[#2d2d30] to-[#3d3d40] text-white border-l-3 border-[#7BA899]"
+                            : "text-[#8a8a8a] hover:text-white hover:bg-[#2d2d30]/50"
                       }`
                     }
                     data-testid={`nav-${item.label.toLowerCase().replace(/\s+/g, '-')}`}
