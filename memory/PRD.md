@@ -83,6 +83,16 @@ CRM para ventas comerciales con WhatsApp Business que integra bot IA (GPT-4o), g
 - Modal ClientDetailModal muestra TODA la información registrada: nombre, contacto, emails, teléfono, ciudad, dirección, RUC/CI, sector, notas y fecha de creación
 - Campos vacíos mostrados como "No registrado" en gris cursiva
 
+### Mejora: Rediseño Cotizaciones/Ordenes de Compra - COMPLETADA (Feb 19, 2026)
+- Menú lateral dividido en 4 accesos: Cotizaciones, Órdenes de Compra, Nueva Cotización, Nueva Orden
+- QuoteBuilder rediseñado: catálogo de productos a la izquierda (buscador, filtro categorías, precio min/max, limpiar filtros, grid de productos con imagen/código/nombre/precio/Agregar/Detalles)
+- Panel de cotización a la derecha con selector de cliente, carrito, subtotal/total, guardar
+- Modal "Detalles del Producto" con imagen, info completa, categorías y navegación prev/next
+- Comportamiento "Agregar": DUPLICA el producto en el cotizador (no suma cantidad)
+- Botón "Duplicar" en cada item del carrito
+- QuoteHistory usa rutas separadas: /quotes (QUOTE) y /purchase-orders (PO)
+- Testing iteration 10: 100% pass rate (14 tests frontend)
+
 ## Remaining/Future Tasks
 1. **P1 - SMTP credentials**: Configure SMTP/Gmail/Resend for real email sending (cotizaciones)
 2. **P2 - Refactoring**: Split bot_service.py and Leads.jsx into smaller modules
