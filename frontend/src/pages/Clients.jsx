@@ -334,7 +334,6 @@ function ClientHistoryModal({ client, onClose }) {
 
 function ClientDetailModal({ client, onClose }) {
   const rows = [
-    { icon: Building2, label: "Empresa / Nombre", value: client.name },
     { icon: User, label: "Persona de contacto", value: client.contact_person },
     { icon: Mail, label: "Email", value: client.email },
     { icon: Mail, label: "Email comercial", value: client.commercial_email },
@@ -343,7 +342,6 @@ function ClientDetailModal({ client, onClose }) {
     { icon: MapPin, label: "Dirección", value: client.address },
     { icon: Hash, label: "RUC / CI", value: client.tax_id },
     { icon: FileText, label: "Sector", value: client.sector },
-    { icon: FileText, label: "Detalle sector", value: client.sector_details },
     { icon: StickyNote, label: "Notas", value: client.notes },
   ];
 
@@ -352,7 +350,7 @@ function ClientDetailModal({ client, onClose }) {
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-5 border-b">
           <h2 className="text-lg font-bold flex items-center gap-2">
-            <Eye size={20} className="text-[#7BA899]" /> Información del Cliente
+            <Eye size={20} className="text-[#7BA899]" /> {client.name}
           </h2>
           <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded" data-testid="close-detail-modal-btn"><X size={20} /></button>
         </div>
