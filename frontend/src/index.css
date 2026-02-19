@@ -71,7 +71,7 @@
 
 /* Chat message bubbles - light theme */
 .msg-bubble-sent {
-    @apply bg-[#7BA899] text-white rounded-2xl rounded-br-md px-4 py-2;
+    @apply bg-[#63AC9A] text-white rounded-2xl rounded-br-md px-4 py-2;
 }
 
 .msg-bubble-received {
@@ -80,7 +80,7 @@
 
 /* Legacy bubbles for backwards compatibility */
 .message-bubble-user {
-    @apply bg-[#7BA899] text-white rounded-2xl rounded-br-md px-4 py-2;
+    @apply bg-[#63AC9A] text-white rounded-2xl rounded-br-md px-4 py-2;
 }
 
 .message-bubble-business {
@@ -151,17 +151,17 @@
 
 /* Input focus states */
 input:focus, textarea:focus, select:focus {
-    @apply ring-2 ring-[#7BA899] border-transparent;
+    @apply ring-2 ring-[#63AC9A] border-transparent;
 }
 
 /* Button hover effects */
 .btn-primary {
-    @apply bg-[#7BA899] hover:bg-[#6A9688] text-white transition-all duration-200 active:scale-95;
+    @apply bg-[#63AC9A] hover:bg-[#6A9688] text-white transition-all duration-200 active:scale-95;
 }
 
 /* Sidebar active state */
 .sidebar-item-active {
-    @apply bg-zinc-800 text-white border-l-2 border-[#7BA899];
+    @apply bg-zinc-800 text-white border-l-2 border-[#63AC9A];
 }
 
 /* WhatsApp-like chat interface - light theme */
