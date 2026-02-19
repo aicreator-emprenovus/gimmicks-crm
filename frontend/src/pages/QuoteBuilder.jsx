@@ -191,7 +191,7 @@ export default function QuoteBuilder() {
     try {
       if (isEdit) {
         await axios.put(`${API_URL}/api/quotes-v2/${editId}`, quoteData, { headers });
-        toast.success(docType === "PO" ? "Orden actualizada" : "Cotizacion actualizada");
+        toast.success(docType === "PO" ? "Orden actualizada" : "Cotización actualizada");
       } else {
         await axios.post(`${API_URL}/api/quotes-v2/`, quoteData, { headers });
         toast.success(docType === "PO" ? "Orden creada" : "Cotizacion creada");
