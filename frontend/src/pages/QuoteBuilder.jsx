@@ -243,7 +243,7 @@ export default function QuoteBuilder() {
         {/* Filters */}
         <div className="bg-white rounded-xl shadow-sm border p-4 mb-3 flex-shrink-0" data-testid="catalog-filters">
           <div className="flex gap-2 mb-2">
-            <div className="relative flex-1">
+            <div className="relative" style={{flex:'6'}}>
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
               <Input
                 placeholder="Buscar por codigo, nombre, categoria..."
@@ -256,7 +256,8 @@ export default function QuoteBuilder() {
             <select
               value={selectedCategory}
               onChange={e => { setSelectedCategory(e.target.value); setProdPage(1); }}
-              className="border rounded-lg px-3 py-2 text-sm bg-white min-w-[150px]"
+              className="border rounded-lg px-3 py-2 text-sm bg-white"
+              style={{flex:'4'}}
               data-testid="catalog-category-filter"
             >
               <option value="">Categorias</option>
