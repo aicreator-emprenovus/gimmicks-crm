@@ -331,7 +331,7 @@ function SendEmailModal({ quote, onClose, onSent }) {
         </div>
         <div className="p-5 space-y-3">
           <div className="flex gap-2">
-            <Input type="email" value={newEmail} onChange={e => setNewEmail(e.target.value)} onKeyDown={e => e.key === "Enter" && (e.preventDefault(), addEmail())} placeholder="Agregar email (separar con coma)..." data-testid="add-email-input" />
+            <Input type="email" value={newEmail} onChange={e => setNewEmail(e.target.value)} onKeyDown={e => e.key === "Enter" && (e.preventDefault(), addEmail())} placeholder="Agregar correos (separar con coma)..." data-testid="add-email-input" />
             <Button variant="outline" onClick={addEmail}>+</Button>
           </div>
           <div className="space-y-1">
