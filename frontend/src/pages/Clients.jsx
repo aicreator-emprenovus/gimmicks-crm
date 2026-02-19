@@ -32,7 +32,9 @@ export default function Clients() {
   const fetchClients = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await axios.get(`${API_URL}/api/clients/`, { params: { trash: showTrash }, headers });
+      const params = { trash: showTrash };
+      if (!showTrash) params.source = "manual";
+      const res = await axios.get(`${API_URL}/api/clients/`, { params, headers });
       setClients(res.data || []);
     } catch { toast.error("Error al cargar clientes"); }
     setLoading(false);
