@@ -483,10 +483,10 @@ function CartItemCompact({ item, onUpdate, onRemove, onDuplicate, getImageUrl })
           <div className="flex justify-between items-start">
             <div className="min-w-0">
               <p className="font-medium truncate leading-tight">{item.name}</p>
-              <p className="text-gray-400">{item.code}</p>
+              <p className="text-gray-500">{item.code}</p>
             </div>
             <div className="text-right flex-shrink-0 ml-1">
-              <p className="text-gray-400">{formatCurrency(item.unit_price)} x {item.quantity}</p>
+              <p className="text-gray-500">{formatCurrency(item.unit_price)} x {item.quantity}</p>
               <p className="font-bold">{formatCurrency(item.total_price)}</p>
             </div>
           </div>
