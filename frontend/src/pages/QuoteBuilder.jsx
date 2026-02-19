@@ -6,7 +6,7 @@ import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import {
   Plus, Trash2, Search, FileText, X, Loader2, Save, Send,
   Minus, ChevronDown, ChevronUp, ChevronLeft, ChevronRight,
-  Image as ImageIcon, Eye, Copy, FilterX
+  Image as ImageIcon, Eye, Copy, FilterX, Tag
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
