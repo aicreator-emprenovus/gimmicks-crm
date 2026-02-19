@@ -173,7 +173,7 @@ export default function PublicCatalog() {
         ) : products.length === 0 ? (
           <div className="text-center py-16 text-gray-500">
             <Package className="w-16 h-16 mx-auto mb-4 opacity-40" />
-            <p className="text-lg font-medium">{hasFilters ? "No se encontraron productos" : "Busca un producto o selecciona una categoria"}</p>
+            <p className="text-lg font-medium">{hasFilters ? "No se encontraron productos" : "Busca un producto o selecciona una categoría"}</p>
             {hasFilters && <p className="text-sm mt-1 text-gray-500">Intenta con otra palabra clave o categoria</p>}
           </div>
         ) : (
