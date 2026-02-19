@@ -128,31 +128,22 @@ export default function PublicCatalog() {
               Buscar
             </button>
           </form>
-          {/* Category chips */}
-          <div className="flex flex-wrap gap-2 items-center">
-            <span className="text-sm font-semibold text-gray-600">Categorías:</span>
-            <button
-              onClick={() => handleCategoryChange("")}
-              className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-                !selectedCategory ? "bg-[#63AC9A] text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-              }`}
+          {/* Category dropdown */}
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-semibold text-gray-600 flex-shrink-0">Categorías:</span>
+            <select
+              value={selectedCategory}
+              onChange={(e) => handleCategoryChange(e.target.value)}
+              className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#63AC9A] focus:border-transparent"
+              data-testid="catalog-category-select"
             >
-              Todas
-            </button>
-            {categories.slice(0, 20).map(cat => (
-              <button
-                key={cat}
-                onClick={() => handleCategoryChange(cat)}
-                className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-                  selectedCategory === cat ? "bg-[#63AC9A] text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                }`}
-                data-testid={`cat-filter-${cat}`}
-              >
-                {cat}
-              </button>
-            ))}
+              <option value="">Todas las categorías</option>
+              {categories.filter(c => c && !c.includes("(") && c.length < 40).map(cat => (
+                <option key={cat} value={cat}>{cat}</option>
+              ))}
+            </select>
             {hasFilters && (
-              <button onClick={clearFilters} className="flex items-center gap-1 text-xs text-gray-500 hover:text-red-500 ml-2">
+              <button onClick={clearFilters} className="flex items-center gap-1 text-sm text-gray-500 hover:text-red-500 flex-shrink-0">
                 <FilterX size={14} /> Limpiar
               </button>
             )}
