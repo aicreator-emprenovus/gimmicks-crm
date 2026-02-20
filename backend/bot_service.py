@@ -980,7 +980,8 @@ MENSAJE ACTUAL DEL CLIENTE: {message_text}"""
             has_codes = bool(collected_data.get("codigos_producto") or collected_data.get("producto"))
             has_qty = bool(collected_data.get("cantidad") or collected_data.get("cantidades_por_producto"))
             has_email = bool(collected_data.get("correo"))
-            if has_codes and has_qty and has_email:
+            has_empresa = bool(collected_data.get("empresa"))
+            if has_codes and has_qty and has_email and has_empresa:
                 needs_quote = True
                 logger.info(f"Force needs_quote=True for {phone_number} (user keyword match)")
 
@@ -988,7 +989,8 @@ MENSAJE ACTUAL DEL CLIENTE: {message_text}"""
             has_products = bool(collected_data.get("codigos_producto") or collected_data.get("producto"))
             has_qty = bool(collected_data.get("cantidad") or collected_data.get("cantidades_por_producto"))
             has_email = bool(collected_data.get("correo"))
-            has_full_data = has_products and has_qty and has_email
+            has_empresa = bool(collected_data.get("empresa"))
+            has_full_data = has_products and has_qty and has_email and has_empresa
             if has_full_data:
                 existing_quote = await db.quotes_v2.find_one(
                     {"phone_number": phone_number, "status": "pending", "is_deleted": False},
