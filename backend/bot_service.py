@@ -805,9 +805,14 @@ async def process_ai_conversation(
                     missing_fields.append(field_label)
 
             has_min = (collected_data.get("cantidad") or collected_data.get("cantidades_por_producto")) and collected_data.get("correo") and collected_data.get("empresa")
-            if has_min and not missing_fields:
+            if has_min:
+                # Required data complete - generate quote. Optional fields can be asked after.
                 all_required_done = True
-                next_to_ask = "Ya tienes todos los datos necesarios. Marca needs_quote=true."
+                optional_missing = [f for f in missing_fields if f in ("ciudad de entrega", "fecha de entrega deseada")]
+                if optional_missing:
+                    next_to_ask = f"IMPORTANTE: Ya tienes TODOS los datos obligatorios. DEBES marcar needs_quote=true AHORA. Además, puedes preguntar: {optional_missing[0]}"
+                else:
+                    next_to_ask = "Ya tienes todos los datos necesarios. Marca needs_quote=true."
             elif missing_fields:
                 next_to_ask = f"SIGUIENTE dato a pedir (SOLO este, nada más): {missing_fields[0]}"
 
