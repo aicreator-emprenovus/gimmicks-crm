@@ -3218,6 +3218,30 @@ async def root_page():
     return HTMLResponse(content=html_content)
 
 
+# ============== PRODUCTION SYNC ROUTES ==============
+
+@api_router.post("/sync/production")
+async def trigger_production_sync(current_user: dict = Depends(get_current_user)):
+    """Manually trigger a sync from production MongoDB"""
+    from services.sync_service import sync_from_production
+    result = await sync_from_production(db)
+    return result
+
+@api_router.get("/sync/status")
+async def get_sync_status(current_user: dict = Depends(get_current_user)):
+    """Get the status of the background sync task"""
+    global _bg_sync
+    if _bg_sync:
+        return {
+            "running": _bg_sync._task is not None and not _bg_sync._task.done(),
+            "interval_seconds": _bg_sync.interval,
+            "last_sync": _bg_sync.last_sync,
+            "last_result": _bg_sync.last_result
+        }
+    return {"running": False, "last_sync": None}
+
+_bg_sync = None
+
 app.include_router(api_router)
 
 # ============== PUBLIC CATALOG PAGE (HTML) ==============
