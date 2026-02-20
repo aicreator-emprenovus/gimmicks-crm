@@ -304,6 +304,25 @@ def hash_password(password: str) -> str:
 def verify_password(password: str, hashed: str) -> bool:
     return bcrypt.checkpw(password.encode('utf-8'), hashed.encode('utf-8'))
 
+def validate_password_strength(password: str) -> str | None:
+    """Returns error message if password is weak, None if ok."""
+    if len(password) < 8:
+        return "La contraseña debe tener al menos 8 caracteres"
+    if not re.search(r'[A-Za-z]', password):
+        return "La contraseña debe contener al menos una letra"
+    if not re.search(r'[0-9]', password):
+        return "La contraseña debe contener al menos un número"
+    return None
+
+def sanitize_input(value: str) -> str:
+    """Basic input sanitization to prevent NoSQL injection."""
+    if not isinstance(value, str):
+        return value
+    dangerous = ['$', '{', '}']
+    for char in dangerous:
+        value = value.replace(char, '')
+    return value.strip()
+
 def create_token(user_id: str, email: str) -> str:
     expiration = datetime.now(timezone.utc) + timedelta(hours=JWT_EXPIRATION_HOURS)
     payload = {
