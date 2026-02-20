@@ -86,8 +86,8 @@ REGLAS ADICIONALES:
 - Si el cliente menciona un producto genérico (ej: "jarros"), ponlo en extracted_data.producto.
 
 COTIZACIÓN:
-Marca needs_quote=true ÚNICAMENTE cuando tengas: códigos de producto + cantidad + correo electrónico. Los tres datos son obligatorios.
-NUNCA marques needs_quote=true si aún no tienes el correo del cliente.
+Marca needs_quote=true ÚNICAMENTE cuando tengas TODOS estos datos: códigos de producto + cantidad + correo electrónico + nombre de empresa. Los cuatro datos son obligatorios.
+NUNCA marques needs_quote=true si aún no tienes el correo Y la empresa del cliente.
 Si el cliente cambia productos o cantidades DESPUÉS de la primera cotización, marca needs_quote=true de nuevo para actualizarla.
 
 INFORMACIÓN DE LA EMPRESA:
