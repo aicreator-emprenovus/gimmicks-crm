@@ -1,16 +1,20 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Depends, UploadFile, File, Query, status
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, UploadFile, File, Query, status, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.responses import JSONResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
 import re
+import secrets
 from pathlib import Path
 from pydantic import BaseModel, Field, ConfigDict, EmailStr
 from typing import List, Optional, Dict, Any
 import uuid
 from datetime import datetime, timezone, timedelta
+from collections import defaultdict
 import jwt
 import bcrypt
 import json
@@ -27,9 +31,9 @@ client = AsyncIOMotorClient(mongo_url)
 db = client[db_name]
 
 # JWT Config
-JWT_SECRET = os.environ.get('JWT_SECRET_KEY', 'default-secret-key')
+JWT_SECRET = os.environ.get('JWT_SECRET_KEY') or secrets.token_hex(32)
 JWT_ALGORITHM = "HS256"
-JWT_EXPIRATION_HOURS = 24
+JWT_EXPIRATION_HOURS = 8
 
 # Security
 security = HTTPBearer()
