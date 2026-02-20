@@ -526,8 +526,13 @@ async def get_users(current_user: dict = Depends(require_admin)):
 
 @api_router.post("/users", response_model=UserResponse)
 async def create_user_by_admin(user_data: UserCreateByAdmin, current_user: dict = Depends(require_admin)):
+    # Validate password strength
+    pwd_error = validate_password_strength(user_data.password)
+    if pwd_error:
+        raise HTTPException(status_code=400, detail=pwd_error)
+
     # Check if user exists
-    existing = await db.users.find_one({"email": user_data.email})
+    existing = await db.users.find_one({"email": sanitize_input(user_data.email)})
     if existing:
         raise HTTPException(status_code=400, detail="El email ya está registrado")
     
