@@ -465,7 +465,7 @@ async def send_purchase_order(id: str, background_tasks: BackgroundTasks, payloa
         raise HTTPException(status_code=400, detail="No hay destinatarios especificados")
     pdf_bytes = _generate_pdf_bytes(quote, is_po=True)
     subject = f"Orden de Compra #{quote.quote_number} - Gimmicks"
-    html_content = f"""<h1>Orden de Compra</h1><p>Estimado {quote.client_name},</p><p>Adjunto encontrará la orden de compra #{quote.quote_number}.</p><p>Saludos,<br>Gimmicks Marketing Services</p>"""
+    html_content = f"""<h1>Orden de Compra</h1><p>Estimado/a {quote.client_name},</p><p>Adjunto encontrará la orden de compra #{quote.quote_number}.</p><p>Saludos,<br>Gimmicks Marketing Services</p>"""
     filename = f"ORDEN_COMPRA_{quote.quote_number}.pdf"
     for email in emails:
         background_tasks.add_task(send_po_email, email, subject, html_content, pdf_bytes, filename)
@@ -491,7 +491,7 @@ async def send_quote_email(id: str, background_tasks: BackgroundTasks, payload: 
         raise HTTPException(status_code=400, detail="No hay destinatarios especificados")
     pdf_bytes = _generate_pdf_bytes(quote, is_po=False)
     subject = f"Cotización #{quote.quote_number} - Gimmicks"
-    html_content = f"""<h1>Cotización</h1><p>Estimado {quote.client_name},</p><p>Adjunto encontrará la cotización #{quote.quote_number} para su revisión.</p><p>Quedamos atentos a sus comentarios.</p><p>Saludos,<br>Gimmicks Marketing Services</p>"""
+    html_content = f"""<h1>Cotización</h1><p>Estimado/a {quote.client_name},</p><p>Adjunto encontrará la cotización #{quote.quote_number} para su revisión.</p><p>Quedamos atentos a sus comentarios.</p><p>Saludos,<br>Gimmicks Marketing Services</p>"""
     filename = f"COTIZACION_{quote.quote_number}.pdf"
     for email in emails:
         background_tasks.add_task(send_po_email, email, subject, html_content, pdf_bytes, filename)
