@@ -3381,8 +3381,6 @@ async def start_followup_task():
     _bg_sync = BackgroundSyncTask(db, interval_seconds=120)
     _bg_sync.start()
 
-_bg_sync = None
-
 
 async def seed_system_automation_rules():
     """Seed all system automation rules on startup if they don't exist"""
