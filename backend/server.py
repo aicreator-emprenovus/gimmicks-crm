@@ -38,6 +38,56 @@ JWT_EXPIRATION_HOURS = 8
 # Security
 security = HTTPBearer()
 
+# ============== SECURITY: Rate Limiting & Login Protection ==============
+login_attempts = defaultdict(list)  # {ip: [timestamps]}
+MAX_LOGIN_ATTEMPTS = 5
+LOGIN_WINDOW_SECONDS = 300  # 5 minutes
+
+
+def check_rate_limit(ip: str, limit: int = 60, window: int = 60) -> bool:
+    """Simple in-memory rate limiter. Returns True if allowed."""
+    now = datetime.now(timezone.utc)
+    cutoff = now - timedelta(seconds=window)
+    login_attempts[ip] = [t for t in login_attempts.get(ip, []) if t > cutoff]
+    if len(login_attempts[ip]) >= limit:
+        return False
+    login_attempts[ip].append(now)
+    return True
+
+
+def check_login_attempts(ip: str) -> bool:
+    """Check if IP has exceeded login attempt limit."""
+    now = datetime.now(timezone.utc)
+    cutoff = now - timedelta(seconds=LOGIN_WINDOW_SECONDS)
+    login_attempts[f"login_{ip}"] = [t for t in login_attempts.get(f"login_{ip}", []) if t > cutoff]
+    return len(login_attempts[f"login_{ip}"]) < MAX_LOGIN_ATTEMPTS
+
+
+def record_login_attempt(ip: str):
+    login_attempts[f"login_{ip}"].append(datetime.now(timezone.utc))
+
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+        response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate"
+        return response
+
+
+class RequestSizeLimitMiddleware(BaseHTTPMiddleware):
+    MAX_BODY_SIZE = 10 * 1024 * 1024  # 10MB
+
+    async def dispatch(self, request: Request, call_next):
+        content_length = request.headers.get("content-length")
+        if content_length and int(content_length) > self.MAX_BODY_SIZE:
+            return JSONResponse(status_code=413, content={"detail": "Request demasiado grande"})
+        return await call_next(request)
+
 # Create the main app
 app = FastAPI(title="Gimmicks CRM - WhatsApp Business")
 
