@@ -1,284 +1,158 @@
 <analysis>**original_problem_statement:**
-The user wants to merge two separate projects: Proyecto A (CRM Gimmicks), the base system, and Proyecto B (Cotizador Gimmicks), which contains improved modules.
+The user's initial goal was to merge a CRM (Proyecto A) with a quoting tool (Proyecto B), replacing the CRM's catalog and quoting modules while integrating new features from the quoting tool. Throughout the process, the user added numerous requirements, which are now core to the product:
 
 **PRODUCT REQUIREMENTS:**
-1.  **Strict Replacement**: The Catálogo (Inventory) and Cotizaciones (Quotes) modules from Project A must be completely replaced by their counterparts from Project B.
-2.  **Full Integration**: All other modules from Project B must be integrated as new features into Project A without breaking Project A's existing functionality.
-3.  **Preserve Project A**: Project A is the source of truth for authentication, navigation, and existing modules (other than Catalog and Quotes).
-4.  **Bot Adaptation**: The existing WhatsApp bot () must be adapted to work with the new quoting system and have an improved, more logical conversation flow.
-5.  **Lead to Client Automation**: A lead should only be converted into a Client automatically when its status is moved to the Entregado (Delivered) column.
-6.  **Inventory UI/UX Overhaul**: The inventory page must be redesigned to include advanced filters, specific table layouts, improved Excel import, and image upload capabilities with client-side compression.
-7.  **Clients UI/UX**: The clients page should have view details functionality, an export-to-Excel feature, and a compact, responsive card layout.
-8.  **Quoting UI/UX Overhaul**: The quote builder page must be redesigned to feature a product catalog on the left and the quote details on the right, with a product details modal and specific item-duplication behavior.
-9.  **Public Catalog**: The public-facing catalog shared via link needs to be improved with category filters and better UI.
-10. **Production Bugs**: Fix issues in the live production environment on Railway, specifically related to the WhatsApp bot's incorrect responses and failure to save quotes.
+1.  **System Merge**: The Catálogo and Cotizaciones modules from Project A are replaced by those from Project B. All other Project B modules are integrated as new features. Project A's authentication and navigation are the base.
+2.  **WhatsApp Bot**: The bot () must handle a specific, multi-step conversational flow to gather customer information, understand product needs, generate quotes, and create leads.
+3.  **Client vs. Prospect (Interesado)**: Differentiate between manually created Clientes and prospects generated via WhatsApp, called Interesados. A new Interesados section in the UI is required.
+4.  **Lead-to-Client Automation**: An Interesado is automatically promoted to a Cliente only when their corresponding lead in the Leads Kanban board is moved to the Entregado (Delivered) column.
+5.  **Quote Emailing**: The system must be able to send quotes and purchase orders to clients via email using SMTP.
+6.  **Security Hardening**: Implement foundational security measures, including protection against common web vulnerabilities, rate limiting on login, and strong password policies.
+7.  **Dashboard Analytics**: The main dashboard chart must accurately reflect recent activity, including quotes, orders, and leads.
+8.  **Staff Notifications**: Send a WhatsApp alert to a specific staff number () whenever the bot creates or updates a quote.
+9.  **Production Bug Fixes**: Resolve deployment and operational issues in the live Railway environment, particularly concerning the bot's functionality.
 
 **User's preferred language**: Spanish
 
 **what currently exists?**
-A merged full-stack application (FastAPI backend, React frontend, MongoDB) that combines a CRM and a quoting system. Most of the user's UI/UX and feature requests for Inventory, Clients, and Quoting have been implemented in the preview environment. The backend has been modularized, and automation for lead-to-client conversion is in place. The WhatsApp bot logic has been significantly refactored. However, the live production environment on Railway is experiencing critical bugs where the bot fails to respond correctly and does not generate quotes, due to a deployment configuration issue.
+A full-stack application (FastAPI, React, MongoDB) that has successfully merged the two original projects. The core features requested by the user have been implemented, including: a sophisticated WhatsApp bot with a multi-step conversational flow, a clear distinction between Interesados (prospects from WhatsApp) and Clientes (manual/promoted clients), and an automated promotion process. Security has been significantly enhanced with rate limiting, security headers, and password validation. SMTP is configured for emailing quotes, and the dashboard chart now displays correct data. The production deployment issues on Railway have been resolved.
 
 **Last working item**:
--   **Last item agent was working**: Fixing a critical bug in the production environment (Railway) where the WhatsApp bot was failing. The bot would respond with a generic message because the underlying LLM call was failing. The agent identified that this was due to removing the  package from  to fix a previous deployment error. The  used in production is incompatible with the standard usage: openai [-h] [-v] [-b API_BASE] [-k API_KEY] [-p PROXY [PROXY ...]]
-              [-o ORGANIZATION] [-t {openai,azure}]
-              [--api-version API_VERSION] [--azure-endpoint AZURE_ENDPOINT]
-              [--azure-ad-token AZURE_AD_TOKEN] [-V]
-              {api,tools,migrate,grit} ...
-
-positional arguments:
-  {api,tools,migrate,grit}
-    api                 Direct API calls
-    tools               Client side tools for convenience
-
-options:
-  -h, --help            show this help message and exit
-  -v, --verbose         Set verbosity.
-  -b API_BASE, --api-base API_BASE
-                        What API base url to use.
-  -k API_KEY, --api-key API_KEY
-                        What API key to use.
-  -p PROXY [PROXY ...], --proxy PROXY [PROXY ...]
-                        What proxy to use.
-  -o ORGANIZATION, --organization ORGANIZATION
-                        Which organization to run as (will use your default
-                        organization if not specified)
-  -t {openai,azure}, --api-type {openai,azure}
-                        The backend API to call, must be `openai` or `azure`
-  --api-version API_VERSION
-                        The Azure API version, e.g.
-                        'https://learn.microsoft.com/en-us/azure/ai-
-                        services/openai/reference#rest-api-versioning'
-  --azure-endpoint AZURE_ENDPOINT
-                        The Azure endpoint, e.g.
-                        'https://endpoint.openai.azure.com'
-  --azure-ad-token AZURE_AD_TOKEN
-                        A token from Azure Active Directory,
-                        https://www.microsoft.com/en-
-                        us/security/business/identity-access/microsoft-entra-
-                        id
-  -V, --version         show program's version number and exit SDK, which was the fallback. The agent found the correct fix was to re-add  along with a private package index URL to  so Railway can install it.
+-   **Last item agent was working**: Refining the WhatsApp bot's conversational flow based on specific user feedback. The agent implemented three key changes:
+    1.  Removed a redundant explanatory paragraph from the bot's message when it sends the product catalog link.
+    2.  Strengthened the logic so that a quote is only registered (and the confirmation message sent) after the bot collects the client's name, email, and **company name**.
+    3.  Improved the system prompt and logic to prevent the bot from re-asking for the user's name if it was already provided at the start of the conversation.
 -   **Status**: IN PROGRESS
--   **Agent Testing Done**: N
--   **Which testing method agent to use?** backend testing agent. After the fix is deployed to Railway, the agent needs to test the end-to-end bot flow by interacting with the live WhatsApp number and verifying that conversations are logical and quotes are created in the production database.
+-   **Agent Testing Done**: N (The agent initiated an end-to-end test to verify the new flow but did not complete it before the session ended.)
+-   **Which testing method agent to use?** Manual testing by simulating a full user conversation via  to the  endpoint.
 -   **User Testing Done**: N
 
 **All Pending/In progress Issue list**:
--   **Issue 1: (P0) Fix Production Bot and Deployment**
-    -   **Description**: The bot on Railway is broken. It fails to process user requests and often defaults to Gracias por tu mensaje.... This is because the  package, which is necessary for the  to work, is not installed in the production environment.
-    -   **Attempted fixes**: The agent correctly diagnosed the issue and started editing  to add  back, along with the  flag.
+-   **Issue 1: (P0) Verify the adjusted bot conversation flow**
+    -   **Description**: The agent has implemented fixes for the bot's conversational logic but has not yet confirmed that the entire flow works as the user requested.
     -   **Next debug checklist**:
-        1.  Ensure  correctly includes  and the  line.
-        2.  Remove the now-redundant  fallback blocks for  in  and , as the package will now be installed correctly.
-        3.  Instruct the user to save the changes to GitHub and redeploy to Railway.
-        4.  Verify the fix by checking Railway logs and testing the live bot.
-    -   **Why fix this issue and what will be achieved with the fix?**: This is a critical production bug. Fixing it will restore the core functionality of the WhatsApp bot, allowing it to understand users, generate leads, and create quotes as intended.
+        1.  Complete the test conversation that was started in the last steps of the previous session.
+        2.  Simulate a user interaction from start to finish: greeting -> bot asks for name -> user provides product request -> bot sends catalog link (verify no redundant text) -> user provides product codes/quantities -> bot asks for email, then company, then other data, one by one.
+        3.  Confirm the quote registered message is sent *only* after the company name is collected.
+        4.  Confirm the bot never asks for the user's name a second time.
+    -   **Why fix this issue and what will be achieved with the fix?**: This will confirm that the bot provides a more logical and less confusing customer experience, directly addressing the user's latest request.
     -   **Status**: IN PROGRESS
-    -   **Is recurring issue?** N
+    -   **Is recurring issue?** Y (The bot's conversational flow has been a recurring theme of user feedback.)
     -   **Should Test frontend/backend/both after fix?**: Backend
-    -   **Blocked on other issue**: None.
-
--   **Issue 2: (P1) Chat Does Not Update in Real-Time**
-    -   **Description**: The user reported that the Inbox UI does not show the latest messages from conversations happening in production without a manual data sync by the agent.
-    -   **Attempted fixes**: The agent acknowledged the issue and proposed setting up automatic periodic synchronization but did not implement it.
-    -   **Next debug checklist**:
-        1.  Decide on an implementation strategy: either periodic polling (simpler) or WebSockets (more complex but real-time).
-        2.  If polling: Implement a  in  that calls the API endpoint to fetch messages every few seconds.
-        3.  If WebSockets: This would require significant backend changes and is likely overkill. Polling is the recommended approach for now.
-        4.  Add a visual indicator to show when the chat is syncing.
-    -   **Why fix this issue and what will be achieved with the fix?**: This will provide a much better user experience, allowing staff to see and respond to customer messages in near real-time without needing agent intervention.
-    -   **Status**: NOT STARTED
-    -   **Is recurring issue?** Y
-    -   **Should Test frontend/backend/both after fix?**: Frontend
-    -   **Blocked on other issue**: None.
 
 **In progress Task List**:
-None.
+-   **Task 1: Complete E2E Test of New Bot Flow**
+    -   **Where to resume**: Continue the  test sequence simulating a WhatsApp conversation. The bot has just greeted the user; the next step is for the user to state their name and begin the quoting process.
+    -   **What will be achieved with this?**: Full verification that the latest changes to the bot's logic are working correctly.
+    -   **Status**: IN PROGRESS
+    -   **Should Test frontend/backend/both after fix?**: Backend
 
 **Upcoming and Future Tasks**
 -   **Upcoming Tasks**:
-    -   **P1 - SMTP Configuration for Sending Quotes**: The backend is missing SMTP credentials to email quotes. This is a critical blocker for the sales funnel. The agent must ask the user for the credentials (Server, Port, User, Pass, From Email) and configure them in .
+    -   **P1 - Address Real-time Chat Data Sync**: The user has repeatedly mentioned that the Inbox chat does not update with live conversations from production. The polling mechanism implemented by the previous agent is insufficient as it only queries the preview database. The next agent must implement a proper solution, such as a script to periodically sync data from the production MongoDB to the preview environment, to allow the user to see live conversations.
+
 -   **Future Tasks**:
-    -   **Finalize Asesor Role Restrictions**: Thoroughly test and ensure the Asesor user role has the correct, limited permissions.
-    -   **Refactor Large Components**:  and  are large and could be broken down into smaller modules/components.
+    -   **Refactor **: This file is very large and handles conversation state, prompt engineering, and database interactions. It should be broken down into smaller, more manageable modules (e.g., a state manager, a prompt builder, a database service).
+    -   **Finalize Asesor Role Permissions**: While general security has been improved, a thorough review to ensure the Asesor (Advisor) role has the correct, limited permissions has not been performed.
 
 **Completed work in this session**
--   **Production Debugging**: Diagnosed and started fixing the critical  deployment issue on Railway.
--   **Data Sync**: Implemented manual scripts to sync conversations, leads, and quotes from the production Railway DB to the local environment for debugging.
--   **Quote Builder Redesign**: Completed a full overhaul of the  page, including a product catalog, new quote item layout with a characteristics modal, and fixed calculation logic.
--   **Client Management Features**: Added a client detail modal, an Export to Excel function, and refined the UI/layout of client cards.
--   **Public Catalog Overhaul**: Redesigned the shared  page with a category dropdown, improved search, and enhanced UI with stronger colors and solid buttons.
--   **Bot Logic Refinement**: Improved the bot's conversational flow to ask for quantity *after* product confirmation and to send notifications only *after* collecting the user's email.
--   **Spelling & Accent Correction**: Performed a site-wide correction of Spanish words to add missing accents (tildes).
--   **UI/Color Standardization**: Replaced a primary green color ( -> ) and strengthened muted gray text across the application for better readability.
--   **Bug Fixes**:
-    -   Fixed an error when creating a Purchase Order from a quote.
-    -   Corrected the logic for applying fixed-amount discounts.
-    -   Addressed various layout and styling issues reported by the user.
+-   **Security Hardening**: Implemented Helmet for security headers, strict CORS policies, API-wide rate limiting, login attempt throttling, and strong password validation (, , ).
+-   **Interesados Feature**: Created a new  page and backend logic to separate WhatsApp prospects from manually entered . Implemented the promotion logic to convert an Interesado to a Cliente when a lead is moved to Entregado (, ).
+-   **Bot Logic & Quote Generation Fixes**: Fixed numerous bugs that prevented the bot from creating/updating quotes. Implemented a WhatsApp notification system to alert staff of new quotes ().
+-   **SMTP Configuration**: Successfully configured Gmail credentials in  and verified that quotes and orders can be sent via email (, ).
+-   **Dashboard Chart Fix**: Corrected the date range logic and added Leads data to the dashboard activity chart (, ).
+-   **Bot Conversation Flow Refinements**: Iteratively adjusted the bot's conversation flow multiple times to meet user specifications regarding when to ask for data, what messages to send, and how to handle user input.
+-   **Email Salutation Update**: Changed the greeting in all outgoing emails to Estimado/a for gender neutrality.
 
 **Earlier issues found/mentioned but not fixed**
--   **Issue 1: SMTP Configuration for Sending Quotes**
-    -   **Debug checklist**: Ask user for SMTP credentials and add them to . Update email sending logic in  if needed.
-    -   **Why to solve this issue and what will be achieved with this?**: Enables the business to email official quotes to clients, which is a critical part of the sales process.
-    -   **Should Test frontend/backend/both after fix?**: Backend
-    -   **Is recurring issue?** N
+-   **Issue 1: Real-time Chat Sync for Production Data**
+    -   **Debug checklist**: The previous agent's polling solution is incorrect for this problem. A new approach is needed. Propose creating a data synchronization script that pulls  and  from the production Railway MongoDB database into the local preview database. This would allow the existing Inbox UI to display real data.
+    -   **Why to solve this issue and what will be achieved with this?**: This is a recurring user request. Solving it will allow business users to monitor live customer conversations from within the application, which is a critical operational need.
+    -   **Should Test frontend/backend/both after fix?**: Backend (for the script) and Frontend (to verify the UI displays the synced data).
+    -   **Is recurring issue?** Y
 
 **Known issue recurrence from previous fork**
--   None observed in this session.
+-   The user has repeatedly raised issues concerning the bot's conversational flow and its reliability in creating quotes. While many specific bugs have been fixed, the overall stability and logic of the bot conversation remains a sensitive area requiring careful testing after any change.
 
 **Code Architecture**
-
+sourceis_deletedpasslibbcryptslowapi
 
 **Key Technical Concepts**
--   **Production Debugging**: Analyzing logs and data from a live environment (Railway) to diagnose issues not present in the preview environment.
--   **Dependency Management for Private Packages**: Using  in  to install private Python packages from a custom repository.
--   **API Key Compatibility**: Understanding that a managed key () requires a specific library () and is not interchangeable with a standard provider SDK (usage: openai [-h] [-v] [-b API_BASE] [-k API_KEY] [-p PROXY [PROXY ...]]
-              [-o ORGANIZATION] [-t {openai,azure}]
-              [--api-version API_VERSION] [--azure-endpoint AZURE_ENDPOINT]
-              [--azure-ad-token AZURE_AD_TOKEN] [-V]
-              {api,tools,migrate,grit} ...
-
-positional arguments:
-  {api,tools,migrate,grit}
-    api                 Direct API calls
-    tools               Client side tools for convenience
-
-options:
-  -h, --help            show this help message and exit
-  -v, --verbose         Set verbosity.
-  -b API_BASE, --api-base API_BASE
-                        What API base url to use.
-  -k API_KEY, --api-key API_KEY
-                        What API key to use.
-  -p PROXY [PROXY ...], --proxy PROXY [PROXY ...]
-                        What proxy to use.
-  -o ORGANIZATION, --organization ORGANIZATION
-                        Which organization to run as (will use your default
-                        organization if not specified)
-  -t {openai,azure}, --api-type {openai,azure}
-                        The backend API to call, must be `openai` or `azure`
-  --api-version API_VERSION
-                        The Azure API version, e.g.
-                        'https://learn.microsoft.com/en-us/azure/ai-
-                        services/openai/reference#rest-api-versioning'
-  --azure-endpoint AZURE_ENDPOINT
-                        The Azure endpoint, e.g.
-                        'https://endpoint.openai.azure.com'
-  --azure-ad-token AZURE_AD_TOKEN
-                        A token from Azure Active Directory,
-                        https://www.microsoft.com/en-
-                        us/security/business/identity-access/microsoft-entra-
-                        id
-  -V, --version         show program's version number and exit).
--   **Data Synchronization**: Writing logic to pull data from a production MongoDB instance into a local database for debugging.
+-   **API Security**: Using FastAPI middleware for Helmet (security headers), CORS (Cross-Origin Resource Sharing), and  for rate limiting.
+-   **Authentication Security**: Hashing passwords with  and , validating password strength, and securing JWTs with a secret from the environment.
+-   **Chatbot Prompt Engineering**: Iteratively refining the system and user prompts sent to the LLM to control a multi-step conversational flow and prevent undesired behavior like re-asking for data.
+-   **Data Modeling & Migration**: Modifying a Pydantic model () to include a  field and writing a one-time script to migrate existing data to the new schema.
+-   **Asynchronous Tasks**: Using  functions in FastAPI to handle background tasks like sending notification messages without blocking the main response.
 
 **key DB schema**
--   **conversations**: Stores chat sessions. Needs to be synced from production for debugging.
--   **messages**: Stores individual chat messages. Needs to be synced.
--   **leads**: Stores leads generated by the bot. Needs to be synced.
--   **quotes_v2**: Stores formal quotes. The failure to write to this collection in production was a key bug.
+-   **clients**: 
+-   **leads**: 
+-   **quotes_v2**: 
+-   **users**: 
 
 **All files of reference**
--   : The key file for the production deployment fix.
--   : Contains the core WhatsApp bot logic.
--   : The main quoting interface.
--   : Client management page.
--   : The public-facing catalog shared via link.
--   : The chat interface that needs real-time updates.
+-   : The core file for all bot logic.
+-   : Main FastAPI app file, contains middleware, dashboard logic, and lead processing.
+-   : Contains the logic for separating and promoting clients/prospects.
+-   : Contains the new security and email credentials.
+-   : The new UI for prospects.
+-   : The existing UI for customers.
+-   : The UI where promotion from prospect to client is triggered.
 
 **Areas that need refactoring**:
--    and  remain large files that could benefit from being broken down.
+-    has grown very large and complex. It manages state, prompt generation, business logic, and database updates. It is a prime candidate for being broken into smaller, single-responsibility services.
 
 **key api endpoints**
--   : The endpoint that receives messages for the bot.
--   : Fetches chat conversations for the Inbox.
--   : Fetches messages for a specific chat.
--   : New endpoint to provide categories for the public catalog.
+-   : The main entry point for the WhatsApp bot.
+-   : Fetches all clients with .
+-   : Fetches all clients with .
+-   : Promotes an Interesado to a Cliente by changing its source to manual.
+-   : Login endpoint, now protected by rate limiting.
+-   : Endpoint for the dashboard chart, now with correct date range and lead data.
 
 **Critical Info for New Agent**
--   **Fix Production First**: The highest priority is to fix the deployment issue on Railway so the live WhatsApp bot functions correctly. The user cannot use the main feature of their application until this is resolved. The solution is in .
--   **Railway is the Source of Truth for Bugs**: The user is interacting with the live application on Railway. All bug reports about the bot or real-time data refer to that environment. You will need to manually sync data from the production DB to your local preview DB to replicate and debug these issues.
--   **EMERGENT_LLM_KEY requires **: Do not remove this package again. The  provided by the user will only work with the  library, not the standard usage: openai [-h] [-v] [-b API_BASE] [-k API_KEY] [-p PROXY [PROXY ...]]
-              [-o ORGANIZATION] [-t {openai,azure}]
-              [--api-version API_VERSION] [--azure-endpoint AZURE_ENDPOINT]
-              [--azure-ad-token AZURE_AD_TOKEN] [-V]
-              {api,tools,migrate,grit} ...
-
-positional arguments:
-  {api,tools,migrate,grit}
-    api                 Direct API calls
-    tools               Client side tools for convenience
-
-options:
-  -h, --help            show this help message and exit
-  -v, --verbose         Set verbosity.
-  -b API_BASE, --api-base API_BASE
-                        What API base url to use.
-  -k API_KEY, --api-key API_KEY
-                        What API key to use.
-  -p PROXY [PROXY ...], --proxy PROXY [PROXY ...]
-                        What proxy to use.
-  -o ORGANIZATION, --organization ORGANIZATION
-                        Which organization to run as (will use your default
-                        organization if not specified)
-  -t {openai,azure}, --api-type {openai,azure}
-                        The backend API to call, must be `openai` or `azure`
-  --api-version API_VERSION
-                        The Azure API version, e.g.
-                        'https://learn.microsoft.com/en-us/azure/ai-
-                        services/openai/reference#rest-api-versioning'
-  --azure-endpoint AZURE_ENDPOINT
-                        The Azure endpoint, e.g.
-                        'https://endpoint.openai.azure.com'
-  --azure-ad-token AZURE_AD_TOKEN
-                        A token from Azure Active Directory,
-                        https://www.microsoft.com/en-
-                        us/security/business/identity-access/microsoft-entra-
-                        id
-  -V, --version         show program's version number and exit SDK.
--   **SMTP Blocker is Still Pending**: The ability to email quotes has been blocked for a long time. Proactively ask the user for their SMTP credentials to finally unblock this feature.
--   **Real-time Chat is Needed**: After fixing the production bot, the next priority should be implementing a polling mechanism in the  page so the user can see new messages without manual agent intervention.
+-   **Priority 1 is Bot Flow Verification**: The immediate task is to complete the E2E test of the bot's conversation flow to confirm the latest fixes work. The user is very focused on the bot's customer-facing behavior.
+-   **The Interesados concept is fundamental**: Understand the distinction between a prospect from WhatsApp () and a full client (). This logic is central to the CRM flow now.
+-   **The Real-time Chat issue is NOT solved**: The user wants to see live production conversations in the Inbox. The polling implemented previously does not achieve this because the preview environment's database is separate from production. Be prepared to address this by proposing a data synchronization solution.
+-   **Security is now active**: Be aware that rate limiting is active on the login page and across the API. The JWT is now signed with a secret key from , which is required for the backend to run.
 
 **documents and test reports created in this job**
 -    (Updated)
--   
--   
+-    through  (approx.)
 
 **Last 10 User Messages and any pending HUMAN messages**
--   **10. User**: Reports the bot is not working in production and the chat doesn't update in real-time. (IN PROGRESS)
--   **9. User**: Asks for a link to review the public catalog changes. (Completed)
--   **8. User**: Requests changes to the public catalog: category dropdown, solid button for copy code. (Completed)
--   **7. User**: Reports the bot is still not creating quotes or updating conversations after previous fixes. (IN PROGRESS)
--   **6. User**: Reports a deploy error on Railway. (IN PROGRESS - Root cause found)
--   **5. User**: Reports that the bot is not registering quotes for new conversations (e.g., Anita Burbano). (IN PROGRESS - Root cause found)
--   **4. User**: Reports that the chat is not showing the latest messages after testing. (IN PROGRESS)
--   **3. User**: Reports the bot is sending the wrong notification message at the wrong time in the flow. (Completed)
--   **2. User**: Reports the bot's conversation flow is illogical (asks for quantity too early). (Completed)
--   **1. User**: Reports that real conversations are not showing up in the chat after the fork. (Completed by syncing data)
+10. **Request**: Adjust the bot's conversation flow (remove redundant text, delay quote creation, don't re-ask for name). **Status**: IN PROGRESS.
+9.  **Request**: Add Estimado/a to email salutations. **Status**: Completed.
+8.  **Request**: Improve the bot's conversation flow (ask for name first, then products, then other data). **Status**: Completed.
+7.  **Request**: Remove the Quantity line from the staff WhatsApp notification. **Status**: Completed.
+6.  **Report**: The dashboard chart shows no data. **Status**: Completed.
+5.  **Request**: Change lead promotion logic: a bot-quoted prospect should remain an Interesado. They only become a Cliente when the lead is moved to Entregado. Also, deleted prospects should be re-created if they message again. **Status**: Completed.
+4.  **Request**: Perform a full E2E test with two sample clients. **Status**: Completed.
+3.  **Request**: Differentiate clients from WhatsApp (Interesados) from manual clients, with a new menu section and promotion logic. **Status**: Completed.
+2.  **Report**: Bot is not creating/updating quotes, and chat isn't updating. Request for WhatsApp notifications to staff on new quotes. **Status**: Completed.
+1.  **Report**: Bot is not working in production (pre-fix). **Status**: Completed.
 
 **Project Health Check:**
 -   **Broken**:
-    -   The core WhatsApp bot functionality in the **production environment** is non-functional.
-    -   Quote generation from the bot is failing in production.
-    -   Emailing quotes is non-functional (blocked on missing SMTP credentials).
-    -   The chat inbox does not update in real-time.
+    -   The  feature does not show live data from the production environment, making it unusable for monitoring real customer conversations.
 -   **Mocked**:
     -   None.
 
 **3rd Party Integrations**
--   **WhatsApp Business Cloud API**: Requires User API Key.
--   **OpenAI API**: Uses Emergent LLM Key () via the  library. This is critical for the production environment to work.
+-   **WhatsApp Business Cloud API**: Used for the bot. Requires a User API Key.
+-   **OpenAI GPT-4o**: Used for the bot's intelligence, accessed via the  library with an Emergent LLM Key.
 -   **Railway**: Hosting platform for the production environment.
+-   **Gmail SMTP**: Used for sending emails (quotes, orders). Requires user credentials.
 
 **Testing status**
 -   **Testing agent used after significant changes**: YES
 -   **Troubleshoot agent used after agent stuck in loop**: NO
 -   **Test files created**: []
--   **Known regressions**: The bot functionality regressed in production due to an incorrect deployment fix.
+-   **Known regressions**: None in this session.
 
 **Credentials to test flow:**
 -   **Email**: 
 -   **Password**: 
 
 **What agent forgot to execute**
--   The agent has consistently failed to ask the user for the required SMTP credentials, despite it being a critical and long-standing blocker for the quote emailing functionality. This task has been pending since the initial project merge.
--   The agent did not start the implementation for making the chat update in real-time, even though the user reported it as a problem.</analysis>
+-   The agent misunderstood the user's real-time chat problem. They implemented a polling feature on the preview environment's database, which does not solve the core issue of needing to see data from the separate **production** database. A proper data synchronization strategy was never implemented.</analysis>
