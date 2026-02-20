@@ -982,18 +982,16 @@ MENSAJE ACTUAL DEL CLIENTE: {message_text}"""
             # No catalog - just send AI response
             await send_message_fn(phone_number, conversation_id, response_text)
 
-        # Handle quote - only create and notify AFTER email is collected
-        # Detect explicit quote request from user message even if LLM didn't set needs_quote
-        quote_keywords = ["cotiza", "cotización", "cotizacion", "generar", "genera", "actualiza", "actualizar", "registra", "registrar", "nuevo pedido", "nueva cotización"]
-        user_wants_quote = any(kw in message_text.lower() for kw in quote_keywords)
-        if user_wants_quote and not needs_quote:
+        # Handle quote - only create and notify AFTER all minimum required data is collected
+        # Force quote creation when all required data is present (codes + qty + email + empresa)
+        if not needs_quote and not state.get("quote_generated", False):
             has_codes = bool(collected_data.get("codigos_producto") or collected_data.get("producto"))
             has_qty = bool(collected_data.get("cantidad") or collected_data.get("cantidades_por_producto"))
             has_email = bool(collected_data.get("correo"))
             has_empresa = bool(collected_data.get("empresa"))
             if has_codes and has_qty and has_email and has_empresa:
                 needs_quote = True
-                logger.info(f"Force needs_quote=True for {phone_number} (user keyword match)")
+                logger.info(f"Force needs_quote=True for {phone_number} (all required data collected)")
 
         if needs_quote:
             has_products = bool(collected_data.get("codigos_producto") or collected_data.get("producto"))
