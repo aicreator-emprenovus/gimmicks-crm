@@ -405,8 +405,13 @@ async def send_whatsapp_message(to_phone: str, message_text: str) -> str:
 
 @api_router.post("/auth/register", response_model=TokenResponse)
 async def register(user_data: UserCreate):
+    # Validate password strength
+    pwd_error = validate_password_strength(user_data.password)
+    if pwd_error:
+        raise HTTPException(status_code=400, detail=pwd_error)
+
     # Check if user exists
-    existing = await db.users.find_one({"email": user_data.email})
+    existing = await db.users.find_one({"email": sanitize_input(user_data.email)})
     if existing:
         raise HTTPException(status_code=400, detail="El email ya está registrado")
     
