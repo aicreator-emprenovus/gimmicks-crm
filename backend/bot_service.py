@@ -792,16 +792,19 @@ async def process_ai_conversation(
                 ("cantidad", "cantidad exacta de unidades para cada producto"),
                 ("personalizacion", "tipo de personalización"),
                 ("correo", "correo electrónico"),
-                ("nombre", "nombre"),
-                ("empresa", "empresa"),
+                ("empresa", "nombre de empresa"),
                 ("ciudad", "ciudad de entrega"),
-                ("fecha_entrega", "fecha de entrega"),
+                ("fecha_entrega", "fecha de entrega deseada"),
             ]
+            # Also check cantidades_por_producto as valid quantity
             for field_key, field_label in ordered_fields:
-                if not collected_data.get(field_key):
+                val = collected_data.get(field_key)
+                if field_key == "cantidad":
+                    val = val or collected_data.get("cantidades_por_producto")
+                if not val:
                     missing_fields.append(field_label)
 
-            has_min = collected_data.get("cantidad") and collected_data.get("correo")
+            has_min = (collected_data.get("cantidad") or collected_data.get("cantidades_por_producto")) and collected_data.get("correo") and collected_data.get("empresa")
             if has_min and not missing_fields:
                 all_required_done = True
                 next_to_ask = "Ya tienes todos los datos necesarios. Marca needs_quote=true."
