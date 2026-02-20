@@ -854,10 +854,12 @@ async def process_ai_conversation(
         if has_existing_quote:
             quote_context = "NOTA: Ya existe una cotización pendiente. Si el cliente agrega, quita o cambia productos/cantidades, marca needs_quote=true para ACTUALIZAR la cotización."
 
-        user_prompt = f"""INSTRUCCIÓN: Revisa TODO el historial y los datos recopilados. NO pidas nada que ya se haya proporcionado. Haz UNA sola pregunta. Tu respuesta debe ser UN solo mensaje coherente y DIFERENTE a cualquier mensaje anterior.
+        user_prompt = f"""INSTRUCCIÓN: Revisa TODO el historial y los datos recopilados. NO pidas nada que ya se haya proporcionado. Haz UNA sola pregunta por mensaje. Tu respuesta debe ser UN solo mensaje coherente.
 IMPORTANTE: En extracted_data.codigos_producto siempre devuelve la lista COMPLETA ACUMULADA de códigos (no solo los nuevos).
-Si vas a enviar un catálogo (catalog_search), NO hagas otra pregunta en el mismo mensaje. Solo presenta el catálogo.
+Si vas a enviar un catálogo (catalog_search), NO hagas otra pregunta en el mismo mensaje. Solo presenta opciones y el catálogo.
 PROHIBIDO repetir o parafrasear tu mensaje anterior. Si ya confirmaste algo, avanza directamente al siguiente paso.
+PROHIBIDO pedir el nombre si ya lo tienes en los datos recopilados. Dirígete al cliente por su nombre.
+Pide UN SOLO dato por mensaje. No combines preguntas.
 
 {catalog_info}
 {catalog_availability}
