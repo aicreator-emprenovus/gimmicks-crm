@@ -959,12 +959,9 @@ MENSAJE ACTUAL DEL CLIENTE: {message_text}"""
             catalog_url = build_catalog_url(catalog_search)
             products = await search_products_by_keyword(db, catalog_search, limit=5)
             if products:
-                preview_names = ", ".join([p.get("name", "") for p in products[:5]])
                 catalog_msg = (
                     f"{response_text}\n\n"
-                    f"Revisa nuestro catálogo aquí: {catalog_url}\n\n"
-                    f"Encontrarás opciones como: {preview_names}. "
-                    f"Revisa las fotos y compárteme los códigos de los que te gusten para cotizarlos."
+                    f"Revisa nuestro catálogo aquí: {catalog_url}"
                 )
             else:
                 # No products found - don't send catalog link, just the AI response
