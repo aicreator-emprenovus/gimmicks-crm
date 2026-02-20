@@ -3351,6 +3351,13 @@ async def followup_background_task():
 async def start_followup_task():
     asyncio.create_task(followup_background_task())
     await seed_system_automation_rules()
+    # Start background sync from production
+    from services.sync_service import BackgroundSyncTask
+    global _bg_sync
+    _bg_sync = BackgroundSyncTask(db, interval_seconds=120)
+    _bg_sync.start()
+
+_bg_sync = None
 
 
 async def seed_system_automation_rules():
