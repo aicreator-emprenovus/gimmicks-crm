@@ -9,42 +9,28 @@ CRM para ventas comerciales con WhatsApp Business que integra bot IA (GPT-4o), g
 - **Email**: Gmail SMTP (aicreator@emprenovus.com)
 - **WhatsApp Notifications**: Alertas al 593963266566
 
+## Security Implementation (Feb 20, 2026)
+- JWT secret fuerte (64 chars hex, auto-generado si no existe)
+- Token expiration reducido de 24h a 8h
+- Rate limiting en login: 5 intentos fallidos = bloqueo 5 minutos por IP
+- Security headers: X-Content-Type-Options, X-Frame-Options (DENY), X-XSS-Protection, Referrer-Policy, Permissions-Policy, Cache-Control
+- Validación de contraseñas: mín 8 chars, letras + números obligatorios
+- Sanitización de inputs contra NoSQL injection
+- Request size limit: 10MB máximo
+- CORS restringido a métodos específicos
+
 ## Completed Tasks
-
-### Core System (Feb 18, 2026)
-- Fusión Proyecto A + B, Inventory V2, Quotes V2, Clientes, Dashboard, Bot WhatsApp
-
-### UI/UX (Feb 18-19, 2026)
-- Imágenes, QuoteBuilder, Catálogo público, tildes/colores
-
-### Fix Bot + Chat + SMTP (Feb 19, 2026)
-- emergentintegrations limpio, Inbox polling 5s, Gmail SMTP
-
-### Cotizaciones Bot + Notificaciones (Feb 19, 2026)
-- Field aliases, match_qty(), Notificaciones WhatsApp al staff
-
-### Sección "Interesados" (Feb 19, 2026)
-- Campo `source` ("manual" | "whatsapp"), Interesados.jsx, botón promover
-
-### Flujo Interesado → Cliente (Feb 19, 2026)
-- **Bot cotiza → Interesado**: Al crear cotización desde WhatsApp, el registro queda como `source: "whatsapp"` (interesado). NO se promueve automáticamente
-- **Lead "Entregado" → Cliente**: Solo cuando el lead se mueve manualmente a "Entregado" en el Kanban, el interesado se promueve a `source: "manual"` (cliente)
-- **Papelera → Re-registro**: Si un interesado/cliente se envía a papelera (`is_deleted: True`), al escribir de nuevo por WhatsApp se re-registra como nuevo interesado desde cero
-- `_create_client_from_lead` busca interesado existente y lo promueve en vez de crear duplicado
-- Test E2E verificado: cotización → interesado → entregado → cliente → papelera → re-registro
+- Core System, UI/UX, Bot WhatsApp, SMTP, Interesados/Clientes flow, Dashboard fix, Security
 
 ## Key Files
-- `backend/bot_service.py` - Bot AI, auto_create_client (source=whatsapp)
-- `backend/server.py` - _create_client_from_lead (promote on entregado)
-- `backend/routes/clients_routes.py` - CRUD + promote + source filter
+- `backend/server.py` - SecurityHeadersMiddleware, RequestSizeLimitMiddleware, check_login_attempts, validate_password_strength, sanitize_input
+- `backend/bot_service.py` - Bot AI
+- `backend/routes/clients_routes.py` - CRUD + promote
 - `frontend/src/pages/Interesados.jsx` - WhatsApp prospects
-- `frontend/src/pages/Clients.jsx` - Manual clients
-- `frontend/src/components/Layout.jsx` - Nav con Interesados
 
 ## Credentials
 - Admin: admin@gimmicks.com / admin123456
 - SMTP: aicreator@emprenovus.com
-- Staff: 593963266566
 
 ## Remaining Tasks
 1. **P0 - Deploy to Railway**: Guardar en GitHub y redesplegar
