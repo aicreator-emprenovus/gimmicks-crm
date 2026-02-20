@@ -436,9 +436,18 @@ async def register(user_data: UserCreate):
     )
 
 @api_router.post("/auth/login", response_model=TokenResponse)
-async def login(credentials: UserLogin):
-    user = await db.users.find_one({"email": credentials.email})
+async def login(credentials: UserLogin, request: Request):
+    client_ip = request.client.host if request.client else "unknown"
+
+    if not check_login_attempts(client_ip):
+        raise HTTPException(
+            status_code=429,
+            detail=f"Demasiados intentos de login. Intenta de nuevo en {LOGIN_WINDOW_SECONDS // 60} minutos"
+        )
+
+    user = await db.users.find_one({"email": sanitize_input(credentials.email)})
     if not user or not verify_password(credentials.password, user["password"]):
+        record_login_attempt(client_ip)
         raise HTTPException(status_code=401, detail="Credenciales inválidas")
     
     token = create_token(user["id"], user["email"])
