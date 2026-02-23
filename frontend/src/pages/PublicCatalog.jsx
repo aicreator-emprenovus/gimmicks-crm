@@ -196,6 +196,11 @@ export default function PublicCatalog() {
                   {product.description && (
                     <p className="text-xs text-gray-500 mt-1 line-clamp-2">{product.description}</p>
                   )}
+                  {product.price > 0 && (
+                    <p className="text-base font-bold text-[#1a2332] mt-1.5" data-testid={`product-price-${product.code}`}>
+                      ${Number(product.price).toFixed(2)}
+                    </p>
+                  )}
                   <div className="mt-2 flex items-center justify-between gap-2 flex-wrap">
                     <span className="inline-block bg-[#63AC9A]/15 text-[#63AC9A] px-2 py-1 rounded-md text-xs font-bold font-mono" data-testid={`product-code-${product.code}`}>
                       {product.code}
