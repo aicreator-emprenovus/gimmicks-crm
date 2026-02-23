@@ -127,6 +127,14 @@ export default function Clients() {
             </Button>
           )}
           {isAdmin && (
+            <>
+              <input type="file" accept=".xlsx" onChange={handleImport} className="hidden" id="import-clients-file" />
+              <Button variant="outline" size="sm" disabled={importing} onClick={() => document.getElementById("import-clients-file").click()} data-testid="import-clients-btn">
+                {importing ? <Loader2 size={16} className="mr-1 animate-spin" /> : <Upload size={16} className="mr-1" />} Importar
+              </Button>
+            </>
+          )}
+          {isAdmin && (
             <Button variant={showTrash ? "default" : "outline"} size="sm" onClick={() => setShowTrash(!showTrash)} data-testid="toggle-trash-btn">
               <Archive size={16} className="mr-1" /> {showTrash ? "Ver activos" : "Papelera"}
             </Button>
