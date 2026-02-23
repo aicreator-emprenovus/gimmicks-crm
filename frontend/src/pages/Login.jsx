@@ -108,8 +108,13 @@ export default function Login() {
         </CardContent>
       </Card>
 
-      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 text-zinc-500 text-xs">
-        © 2026 Gimmicks Marketing Services. Todos los derechos reservados.
+      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-3 text-xs text-zinc-500">
+        <span>&copy; 2026 Gimmicks. Todos los derechos reservados.</span>
+        <span className="text-zinc-400">|</span>
+        <a href="https://www.emprenovus.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 hover:text-zinc-300 transition-colors">
+          <img src="/emprenovus-icon.png" alt="" className="w-4 h-4" />
+          AI powered by Emprenovus
+        </a>
       </div>
     </div>
   );
