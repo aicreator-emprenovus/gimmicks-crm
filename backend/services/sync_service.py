@@ -11,7 +11,7 @@ from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
 
 logger = logging.getLogger(__name__)
 
-COLLECTIONS_TO_SYNC = ["conversations", "messages", "leads", "conversation_states"]
+COLLECTIONS_TO_SYNC = ["leads"]
 
 
 async def sync_from_production(local_db: AsyncIOMotorDatabase) -> dict:
