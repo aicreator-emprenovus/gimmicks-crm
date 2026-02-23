@@ -3389,6 +3389,28 @@ async def start_followup_task():
     await seed_developer_user()
 
 
+async def seed_developer_user():
+    """Create the developer user if it doesn't exist"""
+    dev_email = "aicreator@emprenovus.com"
+    existing = await db.users.find_one({"email": dev_email})
+    if not existing:
+        from passlib.context import CryptContext
+        pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+        await db.users.insert_one({
+            "id": str(uuid.uuid4()),
+            "email": dev_email,
+            "hashed_password": pwd_context.hash("Jlsb*1082"),
+            "name": "Desarrollador",
+            "role": "desarrollador",
+            "is_active": True,
+            "is_protected": True,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        })
+        logger.info("Developer user seeded")
+    elif existing.get("role") != "desarrollador":
+        await db.users.update_one({"email": dev_email}, {"$set": {"role": "desarrollador", "is_protected": True}})
+
+
 async def seed_system_automation_rules():
     """Seed all system automation rules on startup if they don't exist"""
     system_rules = [
