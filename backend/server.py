@@ -583,6 +583,8 @@ async def update_user_by_admin(user_id: str, update_data: UserUpdateByAdmin, cur
     user = await db.users.find_one({"id": user_id}, {"_id": 0})
     if not user:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    if user.get("is_protected") or user.get("role") == "desarrollador":
+        raise HTTPException(status_code=403, detail="Este usuario no puede ser modificado")
     
     update_dict = {}
     if update_data.name:
