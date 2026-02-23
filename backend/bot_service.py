@@ -801,7 +801,7 @@ async def process_ai_conversation(
             # Client confirmed codes -> now ask quantity, then rest
             ordered_fields = [
                 ("cantidad", "cantidad exacta de unidades para cada producto"),
-                ("personalizacion", "tipo de personalización"),
+                ("color_logo", "color de logotipo (un color o full color)"),
                 ("correo", "correo electrónico"),
                 ("empresa", "nombre de empresa"),
                 ("ciudad", "ciudad de entrega"),
