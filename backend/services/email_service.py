@@ -25,7 +25,7 @@ async def send_via_gmail(to_email: str, subject: str, html_content: str, pdf_byt
         return {"id": "mock-gmail-id"}
     try:
         msg = MIMEMultipart()
-        msg['From'] = gmail_user
+        msg['From'] = f"Gimmicks <{gmail_user}>"
         msg['To'] = to_email
         msg['Subject'] = subject
         msg.attach(MIMEText(html_content, 'html'))
