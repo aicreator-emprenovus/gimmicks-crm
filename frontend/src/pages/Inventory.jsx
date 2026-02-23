@@ -286,7 +286,7 @@ function CategoryCell({ categories }) {
   );
 }
 
-function ProductModal({ product, onClose, onSave }) {
+function ProductModal({ product, onClose, onSave, allCategories = [] }) {
   const [form, setForm] = useState({
     code: product?.code || "",
     supplier_code: product?.supplier_code || "",
