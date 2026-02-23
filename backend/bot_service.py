@@ -908,6 +908,19 @@ MENSAJE ACTUAL DEL CLIENTE: {message_text}"""
             return
 
         response_text = ai_result.get("response", "Hola, gracias por contactarnos. ¿En qué te puedo ayudar?")
+        # Clean response: strip any JSON/code artifacts that the LLM might have leaked
+        if response_text:
+            # Remove markdown code blocks
+            response_text = re.sub(r'```json\s*', '', response_text)
+            response_text = re.sub(r'```\s*', '', response_text)
+            # If response still looks like JSON, extract just the text
+            if response_text.strip().startswith('{') and '"response"' in response_text:
+                try:
+                    parsed = json.loads(re.search(r'\{[\s\S]*\}', response_text).group())
+                    response_text = parsed.get("response", response_text)
+                except Exception:
+                    pass
+            response_text = response_text.strip()
         extracted = ai_result.get("extracted_data", {})
         catalog_search = ai_result.get("catalog_search")
         lead_quality = ai_result.get("lead_quality", state.get("lead_quality", "frio"))
