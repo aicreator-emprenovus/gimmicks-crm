@@ -3243,6 +3243,25 @@ async def root_page():
     return HTMLResponse(content=html_content)
 
 
+# ============== IMPORT ROUTES ==============
+
+@api_router.post("/import/clients")
+async def import_clients_endpoint(file: UploadFile = File(...), current_user: dict = Depends(require_admin)):
+    if not file.filename.endswith(".xlsx"):
+        raise HTTPException(status_code=400, detail="Solo se aceptan archivos .xlsx")
+    from services.import_service import import_clients
+    result = await import_clients(file, db)
+    return result
+
+@api_router.post("/import/quotes")
+async def import_quotes_endpoint(file: UploadFile = File(...), doc_type: str = "QUOTE", current_user: dict = Depends(require_admin)):
+    if not file.filename.endswith(".xlsx"):
+        raise HTTPException(status_code=400, detail="Solo se aceptan archivos .xlsx")
+    from services.import_service import import_quotes
+    result = await import_quotes(file, db, doc_type, current_user)
+    return result
+
+
 # ============== PRODUCTION SYNC ROUTES ==============
 
 @api_router.post("/sync/production")
