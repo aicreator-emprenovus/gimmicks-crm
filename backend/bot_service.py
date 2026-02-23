@@ -1137,7 +1137,7 @@ async def update_lead_from_ai(
         "empresa": "empresa", "ciudad": "ciudad", "correo": "correo",
         "producto": "producto_interes", "codigos_producto": "codigos_producto",
         "cantidad": "cantidad_estimada", "fecha_entrega": "fecha_entrega",
-        "presupuesto": "presupuesto", "personalizacion": "personalizacion"
+        "presupuesto": "presupuesto", "color_logo": "color_logo"
     }
     for src, dst in field_map.items():
         if collected_data.get(src):
