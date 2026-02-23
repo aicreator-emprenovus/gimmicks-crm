@@ -213,9 +213,11 @@ export default function Quotes() {
                         Enviar
                       </Button>
                     )}
-                    <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-red-500" onClick={() => deleteQuote(q.id)} data-testid={`delete-quote-${q.id}`}>
-                      <Trash2 className="w-3 h-3" />
-                    </Button>
+                    {isAdmin && (
+                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-red-500" onClick={() => deleteQuote(q.id)} data-testid={`delete-quote-${q.id}`}>
+                        <Trash2 className="w-3 h-3" />
+                      </Button>
+                    )}
                   </div>
                 </CardContent>
               </Card>
