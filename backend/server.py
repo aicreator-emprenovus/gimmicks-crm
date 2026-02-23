@@ -3414,12 +3414,10 @@ async def seed_developer_user():
     dev_email = "aicreator@emprenovus.com"
     existing = await db.users.find_one({"email": dev_email})
     if not existing:
-        from passlib.context import CryptContext
-        pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
         await db.users.insert_one({
             "id": str(uuid.uuid4()),
             "email": dev_email,
-            "hashed_password": pwd_context.hash("Jlsb*1082"),
+            "password": hash_password("Jlsb*1082"),
             "name": "Desarrollador",
             "role": "desarrollador",
             "is_active": True,
