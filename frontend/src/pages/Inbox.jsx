@@ -75,22 +75,8 @@ export default function Inbox() {
   const [filterStarred, setFilterStarred] = useState(false);
   const [filterStage, setFilterStage] = useState(null);
   const [syncIndicator, setSyncIndicator] = useState(false);
-  const [syncing, setSyncing] = useState(false);
   const messagesEndRef = useRef(null);
   const prevMessageCountRef = useRef(0);
-
-  const triggerSync = async () => {
-    setSyncing(true);
-    try {
-      await axios.post(`${API_URL}/api/sync/production`, {}, { headers: getAuthHeaders() });
-      await fetchConversations();
-      toast.success("Datos sincronizados con producción");
-    } catch {
-      toast.error("Error al sincronizar");
-    } finally {
-      setSyncing(false);
-    }
-  };
 
   const fetchConversations = async () => {
     try {
