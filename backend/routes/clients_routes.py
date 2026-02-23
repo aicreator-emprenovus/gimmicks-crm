@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Body
+from fastapi import APIRouter, HTTPException, Body, Header
 from typing import List, Any, Dict
 from models_b import Client, ClientActivity
 from datetime import datetime, timezone
@@ -6,10 +6,15 @@ import uuid
 
 router = APIRouter()
 db = None
+get_user_from_token = None
 
 def set_db(database):
     global db
     db = database
+
+def set_auth_helper(fn):
+    global get_user_from_token
+    get_user_from_token = fn
 
 async def log_client_activity(client_id: str, action: str, details: str):
     activity = ClientActivity(
