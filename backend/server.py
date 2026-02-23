@@ -523,6 +523,9 @@ async def get_users(current_user: dict = Depends(require_admin)):
     
     result = []
     for user in users:
+        # Hide developer from admin listing
+        if user.get("role") == "desarrollador":
+            continue
         created_at = user.get("created_at")
         if isinstance(created_at, str):
             created_at = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
