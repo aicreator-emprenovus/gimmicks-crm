@@ -54,7 +54,11 @@ async def update_client(id: str, client: Client):
     return client
 
 @router.delete("/{id}")
-async def delete_client(id: str, permanent: bool = False):
+async def delete_client(id: str, permanent: bool = False, authorization: str = Header(None)):
+    if get_user_from_token:
+        user = await get_user_from_token(authorization)
+        if user.get("role") not in ("admin", "desarrollador"):
+            raise HTTPException(status_code=403, detail="Solo administradores pueden eliminar")
     query = {"id": id}
     existing = await db.clients.find_one(query)
     if not existing:
