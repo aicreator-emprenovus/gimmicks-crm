@@ -19,6 +19,8 @@ const SECTORS = [
 ];
 
 export default function Clients() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
