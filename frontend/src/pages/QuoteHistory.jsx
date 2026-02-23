@@ -229,9 +229,6 @@ export default function QuoteHistory() {
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1">
                   <span className="font-bold text-gray-900">#{q.quote_number || "---"}</span>
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${STATUS_MAP[q.status]?.color || "bg-gray-100 text-gray-600"}`}>
-                    {STATUS_MAP[q.status]?.label || q.status}
-                  </span>
                 </div>
                 <p className="text-sm text-gray-700 font-medium">{q.client_name || "Sin cliente"}</p>
                 <div className="flex items-center gap-4 text-xs text-gray-400 mt-1">
