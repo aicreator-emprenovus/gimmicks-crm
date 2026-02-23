@@ -891,6 +891,8 @@ async def delete_conversation(
     conversation_id: str,
     current_user: dict = Depends(get_current_user)
 ):
+    if current_user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Solo administradores pueden eliminar conversaciones")
     # Delete conversation
     result = await db.conversations.delete_one({"id": conversation_id})
     if result.deleted_count == 0:
