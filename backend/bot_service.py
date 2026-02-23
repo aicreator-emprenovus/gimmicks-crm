@@ -956,8 +956,10 @@ MENSAJE ACTUAL DEL CLIENTE: {message_text}"""
 
         # Merge extracted data - normalize field names
         field_aliases = {
-            "tipo_de_personalizacion": "personalizacion",
-            "tipo_personalizacion": "personalizacion",
+            "tipo_de_personalizacion": "color_logo",
+            "tipo_personalizacion": "color_logo",
+            "color_logo": "color_logo",
+            "color_logotipo": "color_logo",
             "email": "correo",
             "mail": "correo",
             "correo_electronico": "correo",
