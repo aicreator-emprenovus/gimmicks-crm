@@ -37,9 +37,61 @@ export default function QuoteHistory() {
   const [sendModal, setSendModal] = useState(null);
   const [activities, setActivities] = useState([]);
   const [showActivities, setShowActivities] = useState(false);
+  const [importing, setImporting] = useState(false);
   const token = localStorage.getItem("token");
   const headers = { Authorization: `Bearer ${token}` };
   const newPath = isPO ? "/purchase-orders/new" : "/quotes/new";
+
+  const handleExportExcel = () => {
+    import("xlsx").then(XLSX => {
+      const data = [];
+      quotes.forEach(q => {
+        (q.items || []).forEach(item => {
+          data.push({
+            "Número": q.quote_number,
+            "Cliente": q.client_name,
+            "Contacto": q.client_contact,
+            "Email Cliente": q.client_email,
+            "Código": item.code,
+            "Producto": item.name,
+            "Descripción": item.description,
+            "Cantidad": item.quantity,
+            "Precio Unitario": item.unit_price,
+            "Total": item.total_price,
+            "Estado": q.status,
+            "Condiciones de Pago": q.payment_terms,
+            "Validez": q.validity,
+            "Tiempo de Entrega": q.delivery_time,
+            "Creado": q.created_at ? new Date(q.created_at).toLocaleDateString("es-EC") : ""
+          });
+        });
+      });
+      const ws = XLSX.utils.json_to_sheet(data);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, isPO ? "Ordenes" : "Cotizaciones");
+      XLSX.writeFile(wb, isPO ? "ordenes_gimmicks.xlsx" : "cotizaciones_gimmicks.xlsx");
+    });
+  };
+
+  const handleImport = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+    setImporting(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await axios.post(`${API_URL}/api/import/quotes?doc_type=${docType}`, formData, {
+        headers: { ...headers, "Content-Type": "multipart/form-data" }
+      });
+      toast.success(`Importados: ${res.data.inserted} nuevos, ${res.data.skipped} duplicados omitidos`);
+      fetchQuotes();
+    } catch (err) {
+      toast.error(err.response?.data?.detail || "Error al importar");
+    } finally {
+      setImporting(false);
+    }
+  };
 
   const fetchQuotes = useCallback(async () => {
     setLoading(true);
