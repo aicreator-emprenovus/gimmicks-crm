@@ -851,6 +851,7 @@ async def get_conversations(
             status=conv.get("status", "active"),
             unread_count=conv.get("unread_count", 0),
             lead_id=conv.get("lead_id"),
+            is_starred=conv.get("is_starred", False),
             funnel_stage=conv_stage,
             created_at=created_at
         ))
