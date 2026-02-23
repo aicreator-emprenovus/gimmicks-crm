@@ -178,9 +178,17 @@ export default function Layout() {
 
       {/* Main content */}
       <main className="flex-1 overflow-auto bg-[#f5f6f8]">
-        <div className="min-h-screen">
+        <div className="min-h-[calc(100vh-40px)]">
           <Outlet />
         </div>
+        <footer className="flex items-center justify-center gap-3 py-2.5 text-xs text-gray-400 border-t border-gray-200 bg-white">
+          <span>&copy; 2026 Gimmicks. Todos los derechos reservados.</span>
+          <span className="text-gray-300">|</span>
+          <a href="https://www.emprenovus.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 hover:text-gray-600 transition-colors">
+            <img src="/emprenovus-icon.png" alt="" className="w-4 h-4" />
+            AI powered by Emprenovus
+          </a>
+        </footer>
       </main>
     </div>
   );
