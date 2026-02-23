@@ -141,14 +141,16 @@ export default function Interesados() {
               >
                 <ArrowRightCircle size={16} />
               </button>
-              <button
-                onClick={() => handleDelete(client.id)}
-                className="p-2 rounded-lg hover:bg-red-50 text-red-500 transition-colors"
-                title="Eliminar"
-                data-testid={`delete-interesado-${client.id}`}
-              >
-                <Trash2 size={16} />
-              </button>
+              {isAdmin && (
+                <button
+                  onClick={() => handleDelete(client.id)}
+                  className="p-2 rounded-lg hover:bg-red-50 text-red-500 transition-colors"
+                  title="Eliminar"
+                  data-testid={`delete-interesado-${client.id}`}
+                >
+                  <Trash2 size={16} />
+                </button>
+              )}
             </div>
           </div>
         ))}
