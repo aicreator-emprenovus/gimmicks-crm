@@ -613,14 +613,16 @@ async def update_user_by_admin(user_id: str, update_data: UserUpdateByAdmin, cur
 
 @api_router.delete("/users/{user_id}")
 async def delete_user_by_admin(user_id: str, current_user: dict = Depends(require_admin)):
-    # Prevent self-deletion
     if user_id == current_user["id"]:
         raise HTTPException(status_code=400, detail="No puedes eliminar tu propia cuenta")
-    
+    target = await db.users.find_one({"id": user_id}, {"_id": 0})
+    if not target:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    if target.get("is_protected") or target.get("role") == "desarrollador":
+        raise HTTPException(status_code=403, detail="Este usuario no puede ser eliminado")
     result = await db.users.delete_one({"id": user_id})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
-    
     return {"message": "Usuario eliminado exitosamente"}
 
 def build_lead_response(lead: dict) -> LeadResponse:
