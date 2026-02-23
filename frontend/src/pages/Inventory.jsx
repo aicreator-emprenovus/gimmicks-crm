@@ -255,6 +255,7 @@ export default function Inventory() {
       {showAddModal && (
         <ProductModal
           product={editProduct}
+          allCategories={categories}
           onClose={() => { setShowAddModal(false); setEditProduct(null); }}
           onSave={() => { setShowAddModal(false); setEditProduct(null); fetchProducts(); fetchCategories(); }}
         />
