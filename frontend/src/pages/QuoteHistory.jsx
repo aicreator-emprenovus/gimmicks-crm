@@ -5,7 +5,7 @@ import { formatCurrency } from "@/utils/currency";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   FileText, Plus, Trash2, Search, Eye, Send, RotateCcw, Archive,
-  Download, Loader2, ShoppingBag, Clock, Filter, X, ChevronDown
+  Download, Upload, Loader2, ShoppingBag, Clock, Filter, X, ChevronDown
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
