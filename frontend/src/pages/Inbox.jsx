@@ -482,23 +482,27 @@ export default function Inbox() {
                       <Star className={`w-4 h-4 mr-2 ${selectedConv.is_starred ? "fill-amber-500 text-amber-500" : "text-gray-500"}`} />
                       <span className="text-gray-700">{selectedConv.is_starred ? "Quitar de guardados" : "Guardar conversación"}</span>
                     </DropdownMenuItem>
-                    <DropdownMenuSeparator className="bg-gray-100" />
-                    <DropdownMenuItem 
-                      onClick={() => setShowClearDialog(true)}
-                      className="cursor-pointer hover:bg-orange-50"
-                      data-testid="clear-messages-btn"
-                    >
-                      <Eraser className="w-4 h-4 mr-2 text-orange-600" />
-                      <span className="text-orange-600 font-medium">Limpiar mensajes</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem 
-                      onClick={() => setShowDeleteDialog(true)}
-                      className="cursor-pointer hover:bg-red-50"
-                      data-testid="delete-conversation-btn"
-                    >
-                      <Trash2 className="w-4 h-4 mr-2 text-red-600" />
-                      <span className="text-red-600 font-medium">Eliminar conversación</span>
-                    </DropdownMenuItem>
+                    {user?.role === "admin" && (
+                      <>
+                        <DropdownMenuSeparator className="bg-gray-100" />
+                        <DropdownMenuItem 
+                          onClick={() => setShowClearDialog(true)}
+                          className="cursor-pointer hover:bg-orange-50"
+                          data-testid="clear-messages-btn"
+                        >
+                          <Eraser className="w-4 h-4 mr-2 text-orange-600" />
+                          <span className="text-orange-600 font-medium">Limpiar mensajes</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          onClick={() => setShowDeleteDialog(true)}
+                          className="cursor-pointer hover:bg-red-50"
+                          data-testid="delete-conversation-btn"
+                        >
+                          <Trash2 className="w-4 h-4 mr-2 text-red-600" />
+                          <span className="text-red-600 font-medium">Eliminar conversación</span>
+                        </DropdownMenuItem>
+                      </>
+                    )}
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
