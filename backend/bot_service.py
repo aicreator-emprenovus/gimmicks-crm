@@ -431,7 +431,7 @@ async def upsert_quote(db: AsyncIOMotorDatabase, phone_number: str, collected_da
                 "discount_type": "$",
                 "additional_amount": 0,
                 "additional_type": "$",
-                "otros": collected_data.get("personalizacion", "")
+                "otros": collected_data.get("color_logo", "")
             })
 
     # Fallback: search by product keyword
@@ -457,7 +457,7 @@ async def upsert_quote(db: AsyncIOMotorDatabase, phone_number: str, collected_da
                 "discount_type": "$",
                 "additional_amount": 0,
                 "additional_type": "$",
-                "otros": collected_data.get("personalizacion", "")
+                "otros": collected_data.get("color_logo", "")
             })
 
     # Get client name
