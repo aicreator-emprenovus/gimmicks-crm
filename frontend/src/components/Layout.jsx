@@ -150,7 +150,7 @@ export default function Layout() {
                     {user?.name || "Admin Demo"}
                   </p>
                   <p className="text-[#63AC9A] text-[10px] font-medium">
-                    {isAdmin ? "Administrador" : "Asesor"}
+                    {user?.role === "admin" ? "Administrador" : user?.role === "desarrollador" ? "Desarrollador" : "Asesor"}
                   </p>
                 </div>
                 <Button
