@@ -161,9 +161,11 @@ export default function Clients() {
                   <button onClick={() => { setEditClient(client); setShowModal(true); }} className="p-2 rounded-lg hover:bg-blue-50 text-blue-600 transition-colors" title="Editar" data-testid={`edit-client-btn-${client.id}`}>
                     <Edit size={16} />
                   </button>
-                  <button onClick={() => handleDelete(client.id)} className="p-2 rounded-lg hover:bg-red-50 text-red-500 transition-colors" title="Eliminar">
-                    <Trash2 size={16} />
-                  </button>
+                  {isAdmin && (
+                    <button onClick={() => handleDelete(client.id)} className="p-2 rounded-lg hover:bg-red-50 text-red-500 transition-colors" title="Eliminar">
+                      <Trash2 size={16} />
+                    </button>
+                  )}
                 </>
               )}
             </div>
