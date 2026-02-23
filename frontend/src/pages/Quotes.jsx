@@ -47,7 +47,8 @@ const STATUS_MAP = {
 };
 
 export default function Quotes() {
-  const { getAuthHeaders } = useAuth();
+  const { getAuthHeaders, user } = useAuth();
+  const isAdmin = user?.role === "admin";
   const [quotes, setQuotes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState("all");
