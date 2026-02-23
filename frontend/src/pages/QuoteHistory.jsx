@@ -204,9 +204,11 @@ export default function QuoteHistory() {
                         <ShoppingBag size={14} className="mr-1" /> Crear Orden
                       </Button>
                     )}
-                    <Button variant="ghost" size="sm" onClick={() => handleDelete(q.id)} className="text-xs text-red-500">
-                      <Trash2 size={14} />
-                    </Button>
+                    {isAdmin && (
+                      <Button variant="ghost" size="sm" onClick={() => handleDelete(q.id)} className="text-xs text-red-500">
+                        <Trash2 size={14} />
+                      </Button>
+                    )}
                   </>
                 )}
               </div>
