@@ -97,7 +97,7 @@ api_router = APIRouter(prefix="/api")
 # --- Import and configure new modular routes (Proyecto B) ---
 from routes.inventory_routes import router as inventory_router, set_db as set_inv_db
 from routes.quotes_routes import router as quotes_v2_router, set_db as set_quotes_db, set_jwt_secret as set_quotes_jwt
-from routes.clients_routes import router as clients_router, set_db as set_clients_db
+from routes.clients_routes import router as clients_router, set_db as set_clients_db, set_auth_helper as set_clients_auth
 from routes.dashboard_routes import router as dashboard_v2_router, set_db as set_dash_db, set_jwt_secret as set_dash_jwt
 
 # Inject DB and JWT into B routers
