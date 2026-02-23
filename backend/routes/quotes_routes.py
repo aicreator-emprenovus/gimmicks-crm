@@ -49,7 +49,8 @@ async def get_user_from_token(authorization: str = None):
                 return {
                     "id": user.get("id", user.get("_id")),
                     "name": name,
-                    "email": user.get("email", "")
+                    "email": user.get("email", ""),
+                    "role": user.get("role", "asesor")
                 }
     except Exception:
         pass
