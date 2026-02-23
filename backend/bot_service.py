@@ -990,42 +990,9 @@ MENSAJE ACTUAL DEL CLIENTE: {message_text}"""
                 normalized_key = field_aliases.get(key, key)
                 collected_data[normalized_key] = str(value).strip()
 
-        # Handle catalog search - COMBINE with AI response in ONE message
-        # Priority: 1) Public catalog link (if products found), 2) External PDF (fallback)
-        catalog_full_keywords = ["catálogo completo", "catalogo completo", "catálogo general", "catalogo general", "todo el catálogo", "todo el catalogo", "catálogo pdf", "catalogo pdf"]
-        is_full_catalog_request = any(kw in message_text.lower() for kw in catalog_full_keywords)
-
-        if is_full_catalog_request:
-            # Client asked for the full catalog -> send PDF directly
-            catalog_msg = (
-                f"{response_text}\n\n"
-                f"Aquí puedes revisar nuestro catálogo completo con precios: {EXTERNAL_CATALOG_PDF}"
-            )
-            await send_message_fn(phone_number, conversation_id, catalog_msg)
-            catalogs_sent.append("catalogo_completo")
-        elif catalog_search and catalog_search not in catalogs_sent:
-            catalog_url = build_catalog_url(catalog_search)
-            products = await search_products_by_keyword(db, catalog_search, limit=5)
-            if products:
-                # Products found in system -> send public catalog link
-                catalog_msg = (
-                    f"{response_text}\n\n"
-                    f"Revisa nuestro catálogo aquí: {catalog_url}"
-                )
-            else:
-                # No products in system -> send external PDF as fallback
-                catalog_msg = (
-                    f"{response_text}\n\n"
-                    f"Puedes revisar nuestro catálogo completo con precios aquí: {EXTERNAL_CATALOG_PDF}"
-                )
-            await send_message_fn(phone_number, conversation_id, catalog_msg)
-            catalogs_sent.append(catalog_search)
-        else:
-            # No catalog - just send AI response
-            await send_message_fn(phone_number, conversation_id, response_text)
-
-        # Handle quote - only create and notify AFTER all minimum required data is collected
+        # Check if quote will be generated BEFORE sending AI response
         # Force quote creation when all required data is present (codes + qty + email + empresa)
+        will_generate_quote = False
         if not needs_quote and not state.get("quote_generated", False):
             has_codes = bool(collected_data.get("codigos_producto") or collected_data.get("producto"))
             has_qty = bool(collected_data.get("cantidad") or collected_data.get("cantidades_por_producto"))
@@ -1033,31 +1000,63 @@ MENSAJE ACTUAL DEL CLIENTE: {message_text}"""
             has_empresa = bool(collected_data.get("empresa"))
             if has_codes and has_qty and has_email and has_empresa:
                 needs_quote = True
+                will_generate_quote = True
                 logger.info(f"Force needs_quote=True for {phone_number} (all required data collected)")
-
         if needs_quote:
             has_products = bool(collected_data.get("codigos_producto") or collected_data.get("producto"))
             has_qty = bool(collected_data.get("cantidad") or collected_data.get("cantidades_por_producto"))
             has_email = bool(collected_data.get("correo"))
             has_empresa = bool(collected_data.get("empresa"))
-            has_full_data = has_products and has_qty and has_email and has_empresa
-            if has_full_data:
-                existing_quote = await db.quotes_v2.find_one(
-                    {"phone_number": phone_number, "status": "pending", "is_deleted": False},
-                    {"_id": 0, "items": 1, "client_name": 1}
+            will_generate_quote = has_products and has_qty and has_email and has_empresa
+
+        # Handle catalog search - COMBINE with AI response in ONE message
+        # Priority: 1) Public catalog link (if products found), 2) External PDF (fallback)
+        catalog_full_keywords = ["catálogo completo", "catalogo completo", "catálogo general", "catalogo general", "todo el catálogo", "todo el catalogo", "catálogo pdf", "catalogo pdf"]
+        is_full_catalog_request = any(kw in message_text.lower() for kw in catalog_full_keywords)
+
+        # Only send AI response if we are NOT about to generate a quote
+        if not will_generate_quote:
+            if is_full_catalog_request:
+                catalog_msg = (
+                    f"{response_text}\n\n"
+                    f"Aquí puedes revisar nuestro catálogo completo con precios: {EXTERNAL_CATALOG_PDF}"
                 )
-                quote_msg = await upsert_quote(db, phone_number, collected_data, conversation_id)
-                state_quote = True
-
-                # Notify staff via WhatsApp
-                await notify_staff_new_quote(db, phone_number, collected_data, existing_quote is not None, send_message_fn)
-
-                if not existing_quote:
-                    correo = collected_data.get("correo", "tu correo")
-                    quote_notify = f"Tu cotización ha sido registrada y será enviada a {correo}. Nuestro equipo la revisará pronto."
-                    await send_message_fn(phone_number, conversation_id, quote_notify)
+                await send_message_fn(phone_number, conversation_id, catalog_msg)
+                catalogs_sent.append("catalogo_completo")
+            elif catalog_search and catalog_search not in catalogs_sent:
+                catalog_url = build_catalog_url(catalog_search)
+                products = await search_products_by_keyword(db, catalog_search, limit=5)
+                if products:
+                    catalog_msg = (
+                        f"{response_text}\n\n"
+                        f"Revisa nuestro catálogo aquí: {catalog_url}"
+                    )
+                else:
+                    catalog_msg = (
+                        f"{response_text}\n\n"
+                        f"Puedes revisar nuestro catálogo completo con precios aquí: {EXTERNAL_CATALOG_PDF}"
+                    )
+                await send_message_fn(phone_number, conversation_id, catalog_msg)
+                catalogs_sent.append(catalog_search)
             else:
-                state_quote = state.get("quote_generated", False)
+                await send_message_fn(phone_number, conversation_id, response_text)
+
+        # Handle quote creation
+        if will_generate_quote:
+            existing_quote = await db.quotes_v2.find_one(
+                {"phone_number": phone_number, "status": "pending", "is_deleted": False},
+                {"_id": 0, "items": 1, "client_name": 1}
+            )
+            quote_msg = await upsert_quote(db, phone_number, collected_data, conversation_id)
+            state_quote = True
+
+            # Notify staff via WhatsApp
+            await notify_staff_new_quote(db, phone_number, collected_data, existing_quote is not None, send_message_fn)
+
+            if not existing_quote:
+                correo = collected_data.get("correo", "tu correo")
+                quote_notify = f"Tu cotización ha sido registrada y será enviada a {correo}. Nuestro equipo la revisará pronto."
+                await send_message_fn(phone_number, conversation_id, quote_notify)
         else:
             state_quote = state.get("quote_generated", False)
 
