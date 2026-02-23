@@ -36,7 +36,9 @@ import {
   Trash2,
   Loader2,
   Shield,
-  UserCog
+  UserCog,
+  Eye,
+  EyeOff
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
