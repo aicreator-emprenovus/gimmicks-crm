@@ -22,8 +22,7 @@ import {
   AlertCircle,
   CheckCircle2,
   ArrowRight,
-  X,
-  RefreshCw
+  X
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
