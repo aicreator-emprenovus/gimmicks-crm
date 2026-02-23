@@ -68,7 +68,7 @@ export default function Layout() {
       {/* Sidebar */}
       <aside
         style={{ width: collapsed ? 72 : 200 }}
-        className={`fixed lg:static inset-y-0 left-0 z-40 bg-[#1a1a1d] border-r border-[#2d2d30] transition-all duration-200 ease-in-out ${
+        className={`fixed lg:sticky lg:top-0 inset-y-0 left-0 z-40 h-screen bg-[#1a1a1d] border-r border-[#2d2d30] transition-all duration-200 ease-in-out flex-shrink-0 ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         }`}
       >
