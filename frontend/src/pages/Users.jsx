@@ -142,6 +142,7 @@ export default function Users() {
       name: "",
       role: "asesor"
     });
+    setShowPassword(false);
   };
 
   const openEditDialog = (user) => {
@@ -152,6 +153,7 @@ export default function Users() {
       name: user.name,
       role: user.role
     });
+    setShowPassword(false);
   };
 
   useEffect(() => {
