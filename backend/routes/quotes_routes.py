@@ -158,6 +158,9 @@ async def update_quote(id: str, quote: Quote, authorization: str = Header(None))
 
 @router.delete("/{id}")
 async def delete_quote(id: str, permanent: bool = False, authorization: str = Header(None)):
+    user = await get_user_from_token(authorization)
+    if user.get("role") not in ("admin", "desarrollador"):
+        raise HTTPException(status_code=403, detail="Solo administradores pueden eliminar")
     query = {"id": id}
     existing = await db.quotes_v2.find_one(query)
     if not existing:
