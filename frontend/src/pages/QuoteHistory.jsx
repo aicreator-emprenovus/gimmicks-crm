@@ -23,6 +23,8 @@ const STATUS_MAP = {
 };
 
 export default function QuoteHistory() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
   const navigate = useNavigate();
   const location = useLocation();
   const isPO = location.pathname.startsWith("/purchase-orders");
