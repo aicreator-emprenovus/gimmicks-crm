@@ -112,7 +112,7 @@ export default function PublicCatalog() {
       <div className="max-w-6xl mx-auto px-4 py-6">
         {/* Search + Category Filters */}
         <div className="bg-white rounded-xl shadow-sm border p-4 mb-5">
-          <form onSubmit={handleSearch} className="flex gap-2 mb-3">
+          <form onSubmit={handleSearch} className="flex gap-2">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
               <input
@@ -124,30 +124,26 @@ export default function PublicCatalog() {
                 data-testid="catalog-search"
               />
             </div>
-            <button type="submit" className="px-5 py-2.5 bg-[#63AC9A] hover:bg-[#4F9A87] text-white rounded-lg text-sm font-semibold transition-colors">
-              Buscar
-            </button>
-          </form>
-          {/* Category dropdown */}
-          <div className="flex items-center gap-3">
-            <span className="text-sm font-semibold text-gray-600 flex-shrink-0">Categorías:</span>
             <select
               value={selectedCategory}
               onChange={(e) => handleCategoryChange(e.target.value)}
-              className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#63AC9A] focus:border-transparent"
+              className="border border-gray-300 rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#63AC9A] focus:border-transparent min-w-[160px]"
               data-testid="catalog-category-select"
             >
-              <option value="">Todas las categorías</option>
+              <option value="">Categorías</option>
               {categories.filter(c => c && !c.includes("(") && c.length < 40).map(cat => (
                 <option key={cat} value={cat}>{cat}</option>
               ))}
             </select>
+            <button type="submit" className="px-5 py-2.5 bg-[#63AC9A] hover:bg-[#4F9A87] text-white rounded-lg text-sm font-semibold transition-colors">
+              Buscar
+            </button>
             {hasFilters && (
-              <button onClick={clearFilters} className="flex items-center gap-1 text-sm text-gray-500 hover:text-red-500 flex-shrink-0">
-                <FilterX size={14} /> Limpiar
+              <button type="button" onClick={clearFilters} className="flex items-center gap-1 px-3 py-2.5 text-sm text-gray-500 hover:text-red-500 border border-gray-300 rounded-lg">
+                <FilterX size={14} />
               </button>
             )}
-          </div>
+          </form>
         </div>
 
         {hasFilters && (
