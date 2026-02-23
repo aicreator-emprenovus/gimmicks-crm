@@ -250,7 +250,7 @@ async def load_known_client_data(db: AsyncIOMotorDatabase, phone_number: str) ->
         "codigos_producto": "codigos_producto",
         "cantidad_estimada": "cantidad",
         "fecha_entrega": "fecha_entrega",
-        "personalizacion": "personalizacion",
+        "personalizacion": "color_logo",
     }
     for src, dst in field_map.items():
         val = lead.get(src)
