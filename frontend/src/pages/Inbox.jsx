@@ -290,28 +290,15 @@ export default function Inbox() {
             <h2 className="text-lg font-semibold text-gray-800 font-['Manrope']">
               Inbox
             </h2>
-            <div className="flex items-center gap-1">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={triggerSync}
-                disabled={syncing}
-                className="text-gray-400 hover:text-gray-600 hover:bg-gray-100"
-                data-testid="sync-production-btn"
-                title="Sincronizar con producción"
-              >
-                <RefreshCw className={`w-4 h-4 ${syncing ? "animate-spin" : ""}`} />
-              </Button>
-              <Button
-                variant={filterStarred ? "default" : "ghost"}
-                size="sm"
-                onClick={() => setFilterStarred(!filterStarred)}
-                className={filterStarred ? "bg-amber-500 hover:bg-amber-600" : "text-gray-400 hover:text-gray-600 hover:bg-gray-100"}
-                data-testid="filter-starred-btn"
-              >
-                <Star className={`w-4 h-4 ${filterStarred ? "fill-white" : ""}`} />
-              </Button>
-            </div>
+            <Button
+              variant={filterStarred ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setFilterStarred(!filterStarred)}
+              className={filterStarred ? "bg-amber-500 hover:bg-amber-600" : "text-gray-400 hover:text-gray-600 hover:bg-gray-100"}
+              data-testid="filter-starred-btn"
+            >
+              <Star className={`w-4 h-4 ${filterStarred ? "fill-white" : ""}`} />
+            </Button>
           </div>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
