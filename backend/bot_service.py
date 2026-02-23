@@ -118,6 +118,9 @@ Responde SIEMPRE en JSON válido:
 }"""
 
 
+EXTERNAL_CATALOG_PDF = "https://gimmicks.com.ec/wp-content/uploads/2026/01/CATALOGO-2026-CON-PRECIOS-2.pdf"
+
+
 def build_catalog_url(keyword: str) -> str:
     """Build public catalog URL for the given product keyword"""
     from urllib.parse import quote
