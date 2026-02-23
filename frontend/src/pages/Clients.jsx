@@ -29,8 +29,29 @@ export default function Clients() {
   const [editClient, setEditClient] = useState(null);
   const [selectedClient, setSelectedClient] = useState(null);
   const [detailClient, setDetailClient] = useState(null);
+  const [importing, setImporting] = useState(false);
   const token = localStorage.getItem("token");
   const headers = { Authorization: `Bearer ${token}` };
+
+  const handleImport = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+    setImporting(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await axios.post(`${API_URL}/api/import/clients`, formData, {
+        headers: { ...headers, "Content-Type": "multipart/form-data" }
+      });
+      toast.success(`Importados: ${res.data.inserted} nuevos, ${res.data.skipped} duplicados omitidos`);
+      fetchClients();
+    } catch (err) {
+      toast.error(err.response?.data?.detail || "Error al importar");
+    } finally {
+      setImporting(false);
+    }
+  };
 
   const fetchClients = useCallback(async () => {
     setLoading(true);
