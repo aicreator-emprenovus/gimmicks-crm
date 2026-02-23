@@ -909,6 +909,8 @@ async def clear_conversation_messages(
     conversation_id: str,
     current_user: dict = Depends(get_current_user)
 ):
+    if current_user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Solo administradores pueden limpiar mensajes")
     # Verify conversation exists
     conv = await db.conversations.find_one({"id": conversation_id})
     if not conv:
