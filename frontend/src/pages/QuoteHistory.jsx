@@ -178,6 +178,19 @@ export default function QuoteHistory() {
           <p className="text-sm text-gray-500 mt-1">{filtered.length} documentos</p>
         </div>
         <div className="flex gap-2 flex-wrap">
+          {isAdmin && (
+            <Button variant="outline" size="sm" onClick={handleExportExcel} data-testid="export-quotes-btn">
+              <Download size={16} className="mr-1" /> Exportar
+            </Button>
+          )}
+          {isAdmin && (
+            <>
+              <input type="file" accept=".xlsx" onChange={handleImport} className="hidden" id="import-quotes-file" />
+              <Button variant="outline" size="sm" disabled={importing} onClick={() => document.getElementById("import-quotes-file").click()} data-testid="import-quotes-btn">
+                {importing ? <Loader2 size={16} className="mr-1 animate-spin" /> : <Upload size={16} className="mr-1" />} Importar
+              </Button>
+            </>
+          )}
           <Button variant="outline" size="sm" onClick={fetchActivities} data-testid="activities-btn">
             <Clock size={16} className="mr-1" /> Actividad
           </Button>
