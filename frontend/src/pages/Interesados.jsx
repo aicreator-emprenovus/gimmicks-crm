@@ -8,10 +8,13 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useAuth } from "@/context/AuthContext";
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
 export default function Interesados() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
   const [interesados, setInteresados] = useState([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
