@@ -23,18 +23,18 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 
 const navItems = [
-  { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard", roles: ["admin", "asesor"] },
+  { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard", roles: ["admin"] },
   { to: "/inbox", icon: MessageSquare, label: "Inbox", roles: ["admin", "asesor"] },
   { to: "/users", icon: Users, label: "Usuarios", roles: ["admin"] },
   { to: "/inventory", icon: Package, label: "Inventario", roles: ["admin", "asesor"] },
   { to: "/clients", icon: Building2, label: "Clientes", roles: ["admin", "asesor"] },
   { to: "/interesados", icon: MessageCircle, label: "Interesados", roles: ["admin", "asesor"] },
-  { to: "/leads", icon: Users2, label: "Leads", roles: ["admin", "asesor"] },
+  { to: "/leads", icon: Users2, label: "Leads", roles: ["admin"] },
   { to: "/quotes", icon: FileText, label: "Cotizaciones", roles: ["admin", "asesor"] },
   { to: "/purchase-orders", icon: ClipboardList, label: "Órdenes de Compra", roles: ["admin", "asesor"] },
   { to: "/quotes/new", icon: FilePlus, label: "Nueva Cotización", roles: ["admin", "asesor"], accent: true },
   { to: "/purchase-orders/new", icon: PackagePlus, label: "Nueva Orden", roles: ["admin", "asesor"], accent: true },
-  { to: "/settings", icon: Settings, label: "Configuración", roles: ["admin"] },
+  { to: "/settings", icon: Settings, label: "Configuración", roles: ["desarrollador"] },
 ];
 
 export default function Layout() {
