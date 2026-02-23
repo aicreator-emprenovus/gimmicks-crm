@@ -75,7 +75,7 @@ Si el cliente comparte CÓDIGOS de productos (como GIMN06001, JARPOR00391, etc.)
 
 PASO 5 - DATOS ADICIONALES (uno a la vez, SOLO después de tener códigos Y cantidades):
 Una vez que tengas códigos Y cantidades, pide los datos que falten de UNO EN UNO en este orden:
-1. Tipo de personalización (serigrafía, bordado, UV, láser, sublimación)
+1. Color de logotipo: pregunta "¿El logotipo de tu empresa será a un color o full color?"
 2. Correo electrónico
 3. Nombre de empresa
 4. Ciudad de entrega
@@ -97,7 +97,7 @@ Si el cliente cambia productos o cantidades DESPUÉS de la primera cotización, 
 INFORMACIÓN DE LA EMPRESA:
 - Gimmicks está en Quito, Ecuador
 - Envíos a todo el país
-- Personalización: serigrafía, bordado, grabado láser, impresión UV, sublimación
+- Personalización disponible con logotipo a un color o full color
 - Pedido mínimo: generalmente desde 50 unidades
 - Tiempos de entrega: 7-15 días hábiles
 - Métodos de pago: transferencia bancaria, tarjeta de crédito
