@@ -968,17 +968,33 @@ MENSAJE ACTUAL DEL CLIENTE: {message_text}"""
                 collected_data[normalized_key] = str(value).strip()
 
         # Handle catalog search - COMBINE with AI response in ONE message
-        if catalog_search and catalog_search not in catalogs_sent:
+        # Priority: 1) Public catalog link (if products found), 2) External PDF (fallback)
+        catalog_full_keywords = ["catálogo completo", "catalogo completo", "catálogo general", "catalogo general", "todo el catálogo", "todo el catalogo", "catálogo pdf", "catalogo pdf"]
+        is_full_catalog_request = any(kw in message_text.lower() for kw in catalog_full_keywords)
+
+        if is_full_catalog_request:
+            # Client asked for the full catalog -> send PDF directly
+            catalog_msg = (
+                f"{response_text}\n\n"
+                f"Aquí puedes revisar nuestro catálogo completo con precios: {EXTERNAL_CATALOG_PDF}"
+            )
+            await send_message_fn(phone_number, conversation_id, catalog_msg)
+            catalogs_sent.append("catalogo_completo")
+        elif catalog_search and catalog_search not in catalogs_sent:
             catalog_url = build_catalog_url(catalog_search)
             products = await search_products_by_keyword(db, catalog_search, limit=5)
             if products:
+                # Products found in system -> send public catalog link
                 catalog_msg = (
                     f"{response_text}\n\n"
                     f"Revisa nuestro catálogo aquí: {catalog_url}"
                 )
             else:
-                # No products found - don't send catalog link, just the AI response
-                catalog_msg = response_text
+                # No products in system -> send external PDF as fallback
+                catalog_msg = (
+                    f"{response_text}\n\n"
+                    f"Puedes revisar nuestro catálogo completo con precios aquí: {EXTERNAL_CATALOG_PDF}"
+                )
             await send_message_fn(phone_number, conversation_id, catalog_msg)
             catalogs_sent.append(catalog_search)
         else:
