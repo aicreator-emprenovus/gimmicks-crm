@@ -272,7 +272,11 @@ async def call_llm(system_msg: str, user_msg: str, phone_number: str = "") -> Op
         chat.with_model("openai", "gpt-4o")
         response_text = await chat.send_message(UserMessage(text=user_msg))
 
-        json_match = re.search(r'\{[\s\S]*\}', response_text)
+        # Strip markdown code fences before parsing
+        cleaned = re.sub(r'```json\s*', '', response_text)
+        cleaned = re.sub(r'```\s*', '', cleaned).strip()
+
+        json_match = re.search(r'\{[\s\S]*\}', cleaned)
         if json_match:
             try:
                 return json.loads(json_match.group())
