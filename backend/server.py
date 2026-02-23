@@ -3385,6 +3385,8 @@ async def start_followup_task():
     global _bg_sync
     _bg_sync = BackgroundSyncTask(db, interval_seconds=120)
     _bg_sync.start()
+    # Seed developer user
+    await seed_developer_user()
 
 
 async def seed_system_automation_rules():
