@@ -440,6 +440,25 @@ function ProductModal({ product, onClose, onSave, allCategories = [] }) {
               <Input value={catInput} onChange={e => setCatInput(e.target.value)} onKeyDown={e => e.key === "Enter" && (e.preventDefault(), addCategory())} placeholder="Agregar categoría..." />
               <Button variant="outline" size="sm" onClick={addCategory}>+</Button>
             </div>
+            {/* Etiquetas existentes para seleccionar */}
+            {allCategories.filter(c => !form.categories.includes(c) && (!catInput || c.toLowerCase().includes(catInput.toLowerCase()))).length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-2">
+                {allCategories
+                  .filter(c => !form.categories.includes(c) && (!catInput || c.toLowerCase().includes(catInput.toLowerCase())))
+                  .slice(0, 20)
+                  .map(c => (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => setForm({ ...form, categories: [...form.categories, c] })}
+                      className="bg-gray-100 hover:bg-[#63AC9A]/20 text-gray-600 hover:text-[#63AC9A] text-xs px-2 py-0.5 rounded border border-gray-200 hover:border-[#63AC9A] transition-colors"
+                      data-testid={`suggest-cat-${c}`}
+                    >
+                      + {c}
+                    </button>
+                  ))}
+              </div>
+            )}
             <div className="flex flex-wrap gap-1 mt-2">
               {form.categories.map(c => (
                 <span key={c} className="bg-[#63AC9A] text-white text-xs px-2 py-0.5 rounded flex items-center gap-1">
