@@ -20,7 +20,7 @@ import Layout from "@/components/Layout";
 // Auth Context
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 
-function ProtectedRoute({ children, adminOnly = false }) {
+function ProtectedRoute({ children, adminOnly = false, allowedRoles = null }) {
   const { user, loading } = useAuth();
   
   if (loading) {
@@ -35,9 +35,14 @@ function ProtectedRoute({ children, adminOnly = false }) {
     return <Navigate to="/login" replace />;
   }
 
-  // Check admin-only routes
+  if (allowedRoles && !allowedRoles.includes(user.role)) {
+    const fallback = user.role === "desarrollador" ? "/settings" : user.role === "admin" ? "/dashboard" : "/inbox";
+    return <Navigate to={fallback} replace />;
+  }
+
   if (adminOnly && user.role !== "admin") {
-    return <Navigate to="/inbox" replace />;
+    const fallback = user.role === "desarrollador" ? "/settings" : "/inbox";
+    return <Navigate to={fallback} replace />;
   }
   
   return children;
@@ -46,8 +51,7 @@ function ProtectedRoute({ children, adminOnly = false }) {
 function AppRoutes() {
   const { user } = useAuth();
   
-  // Determine default route based on role
-  const defaultRoute = user?.role === "admin" ? "/dashboard" : "/inbox";
+  const defaultRoute = user?.role === "desarrollador" ? "/settings" : user?.role === "admin" ? "/dashboard" : "/inbox";
   
   return (
     <Routes>
@@ -67,26 +71,58 @@ function AppRoutes() {
             <Dashboard />
           </ProtectedRoute>
         } />
-        <Route path="inbox" element={<Inbox />} />
+        <Route path="inbox" element={
+          <ProtectedRoute allowedRoles={["admin", "asesor"]}>
+            <Inbox />
+          </ProtectedRoute>
+        } />
         <Route path="leads" element={
           <ProtectedRoute adminOnly>
             <Leads />
           </ProtectedRoute>
         } />
-        <Route path="inventory" element={<Inventory />} />
-        <Route path="clients" element={<Clients />} />
-        <Route path="interesados" element={<Interesados />} />
-        <Route path="quotes" element={<QuoteHistory />} />
-        <Route path="quotes/new" element={<QuoteBuilder />} />
-        <Route path="purchase-orders" element={<QuoteHistory />} />
-        <Route path="purchase-orders/new" element={<QuoteBuilder />} />
+        <Route path="inventory" element={
+          <ProtectedRoute allowedRoles={["admin", "asesor"]}>
+            <Inventory />
+          </ProtectedRoute>
+        } />
+        <Route path="clients" element={
+          <ProtectedRoute allowedRoles={["admin", "asesor"]}>
+            <Clients />
+          </ProtectedRoute>
+        } />
+        <Route path="interesados" element={
+          <ProtectedRoute allowedRoles={["admin", "asesor"]}>
+            <Interesados />
+          </ProtectedRoute>
+        } />
+        <Route path="quotes" element={
+          <ProtectedRoute allowedRoles={["admin", "asesor"]}>
+            <QuoteHistory />
+          </ProtectedRoute>
+        } />
+        <Route path="quotes/new" element={
+          <ProtectedRoute allowedRoles={["admin", "asesor"]}>
+            <QuoteBuilder />
+          </ProtectedRoute>
+        } />
+        <Route path="purchase-orders" element={
+          <ProtectedRoute allowedRoles={["admin", "asesor"]}>
+            <QuoteHistory />
+          </ProtectedRoute>
+        } />
+        <Route path="purchase-orders/new" element={
+          <ProtectedRoute allowedRoles={["admin", "asesor"]}>
+            <QuoteBuilder />
+          </ProtectedRoute>
+        } />
         <Route path="users" element={
           <ProtectedRoute adminOnly>
             <Users />
           </ProtectedRoute>
         } />
         <Route path="settings" element={
-          <ProtectedRoute adminOnly>
+          <ProtectedRoute allowedRoles={["desarrollador"]}>
             <Settings />
           </ProtectedRoute>
         } />
