@@ -55,8 +55,18 @@ export default function QuoteBuilder() {
   useEffect(() => {
     fetchClients();
     fetchCategories();
-    if (editId) loadExisting();
-  }, [editId]);
+    if (editId) {
+      loadExisting();
+    } else {
+      setCart([]);
+      setSelectedClient(null);
+      setClientContact("");
+      setClientEmail("");
+      setPaymentTerms("50% anticipo, 50% contra entrega");
+      setValidity("8 dias");
+      setDeliveryTime("Por confirmar");
+    }
+  }, [editId, location.pathname]);
 
   const fetchClients = async () => {
     try {
