@@ -129,6 +129,9 @@ export default function Inventory() {
           <p className="text-sm text-gray-500 mt-1">{total.toLocaleString()} productos</p>
         </div>
         <div className="flex gap-2 flex-wrap">
+          <Button variant="outline" size="sm" onClick={() => setShowCategoryModal(true)} data-testid="edit-categories-btn">
+            <Tags size={16} className="mr-1" /> Editar categorías
+          </Button>
           <Button variant="outline" size="sm" onClick={handleExport} data-testid="export-btn">
             <Download size={16} className="mr-1" /> Exportar
           </Button>
