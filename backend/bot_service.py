@@ -593,7 +593,7 @@ def _new_state(phone_number: str, now: datetime) -> dict:
     }
 
 
-STAFF_NOTIFICATION_PHONE = "593963266566"
+STAFF_NOTIFICATION_PHONE = "593999440910"
 
 
 async def notify_staff_new_quote(db: AsyncIOMotorDatabase, customer_phone: str, collected_data: Dict, is_update: bool, send_message_fn):
