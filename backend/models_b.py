@@ -43,6 +43,7 @@ class QuoteItem(BaseModel):
     total_price: float = 0.0
     image_url: str = ""
     categories: List[str] = []
+    selected_characteristics: List[str] = []
     discount_amount: float = 0.0
     discount_type: str = "$"
     additional_amount: float = 0.0
