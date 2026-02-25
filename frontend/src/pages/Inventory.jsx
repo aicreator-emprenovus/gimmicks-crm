@@ -264,6 +264,13 @@ export default function Inventory() {
           onSave={() => { setShowAddModal(false); setEditProduct(null); fetchProducts(); fetchCategories(); }}
         />
       )}
+
+      {/* Category Manager Modal */}
+      {showCategoryModal && (
+        <CategoryManagerModal
+          onClose={() => { setShowCategoryModal(false); fetchCategories(); fetchProducts(); }}
+        />
+      )}
     </div>
   );
 }
