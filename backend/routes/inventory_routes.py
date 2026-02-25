@@ -227,6 +227,35 @@ async def get_categories():
         print(f"Error fetching categories: {e}")
         return []
 
+from pydantic import BaseModel
+
+class CategoryRename(BaseModel):
+    old_name: str
+    new_name: str
+
+@router.put("/categories/rename")
+async def rename_category(data: CategoryRename):
+    old = data.old_name.strip()
+    new = data.new_name.strip()
+    if not old or not new:
+        raise HTTPException(status_code=400, detail="Nombres requeridos")
+    result = await db.products.update_many(
+        {"categories": old},
+        {"$set": {"categories.$[elem]": new}},
+        array_filters=[{"elem": old}]
+    )
+    return {"modified": result.modified_count}
+
+@router.delete("/categories/{category_name}")
+async def delete_category(category_name: str):
+    result = await db.products.update_many(
+        {"categories": category_name},
+        {"$pull": {"categories": category_name}}
+    )
+    return {"modified": result.modified_count}
+
+
+
 @router.get("/", response_model=None)
 async def get_products(
     search: Optional[str] = None,
