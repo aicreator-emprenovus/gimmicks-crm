@@ -293,11 +293,15 @@ function CategoryManagerModal({ onClose }) {
     setLoading(false);
   };
 
-  useState(() => { fetchCats(); });
+  useEffect(() => { fetchCats(); }, []);
 
   const handleRename = async (oldName) => {
     const trimmed = editValue.trim();
     if (!trimmed || trimmed === oldName) { setEditingCat(null); return; }
+    if (categories.some(c => c.toLowerCase() === trimmed.toLowerCase() && c !== oldName)) {
+      toast.error("Esa categoría ya existe, elige otro nombre");
+      return;
+    }
     try {
       await axios.put(`${API_URL}/api/inventory/categories/rename`, { old_name: oldName, new_name: trimmed }, { headers });
       toast.success(`"${oldName}" renombrada a "${trimmed}"`);
@@ -317,7 +321,11 @@ function CategoryManagerModal({ onClose }) {
 
   const handleCreate = async () => {
     const trimmed = newCat.trim();
-    if (!trimmed || categories.includes(trimmed)) { toast.error("Categoría vacía o ya existe"); return; }
+    if (!trimmed) { toast.error("Escribe un nombre para la categoría"); return; }
+    if (categories.some(c => c.toLowerCase() === trimmed.toLowerCase())) {
+      toast.error("Esa categoría ya existe, elige otro nombre");
+      return;
+    }
     setCategories([...categories, trimmed].sort());
     setNewCat("");
     toast.success(`"${trimmed}" creada. Se asignará al agregar productos.`);
@@ -364,10 +372,10 @@ function CategoryManagerModal({ onClose }) {
                   ) : (
                     <>
                       <span className="flex-1 text-sm text-gray-700 truncate">{cat}</span>
-                      <button onClick={() => { setEditingCat(cat); setEditValue(cat); }} className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-blue-50 rounded text-blue-500 transition-opacity" title="Editar" data-testid={`rename-cat-${cat}`}>
+                      <button onClick={() => { setEditingCat(cat); setEditValue(cat); }} className="p-1.5 rounded text-gray-300 hover:text-blue-500 hover:bg-blue-50 transition-colors" title="Editar" data-testid={`rename-cat-${cat}`}>
                         <Edit size={14} />
                       </button>
-                      <button onClick={() => handleDelete(cat)} className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-red-50 rounded text-red-500 transition-opacity" title="Eliminar" data-testid={`delete-cat-${cat}`}>
+                      <button onClick={() => handleDelete(cat)} className="p-1.5 rounded text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors" title="Eliminar" data-testid={`delete-cat-${cat}`}>
                         <Trash2 size={14} />
                       </button>
                     </>
