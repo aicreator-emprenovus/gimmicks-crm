@@ -315,18 +315,19 @@ function CategoryManagerModal({ onClose }) {
     try {
       await axios.delete(`${API_URL}/api/inventory/categories/${encodeURIComponent(name)}`, { headers });
       toast.success(`"${name}" eliminada`);
-      fetchCats();
+      await fetchCats();
     } catch { toast.error("Error al eliminar"); }
   };
 
   const handleCreate = async () => {
     const trimmed = newCat.trim();
     if (!trimmed) { toast.error("Escribe un nombre para la categoría"); return; }
-    if (categories.some(c => c.toLowerCase() === trimmed.toLowerCase())) {
+    const freshCats = (await axios.get(`${API_URL}/api/inventory/categories`, { headers })).data;
+    if (freshCats.some(c => c.toLowerCase() === trimmed.toLowerCase())) {
       toast.error("Esa categoría ya existe, elige otro nombre");
       return;
     }
-    setCategories([...categories, trimmed].sort());
+    setCategories([...freshCats, trimmed].sort());
     setNewCat("");
     toast.success(`"${trimmed}" creada. Se asignará al agregar productos.`);
   };
