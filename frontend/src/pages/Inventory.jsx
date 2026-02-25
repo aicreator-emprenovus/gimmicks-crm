@@ -275,6 +275,117 @@ export default function Inventory() {
   );
 }
 
+function CategoryManagerModal({ onClose }) {
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [editingCat, setEditingCat] = useState(null);
+  const [editValue, setEditValue] = useState("");
+  const [newCat, setNewCat] = useState("");
+  const [search, setSearch] = useState("");
+  const token = localStorage.getItem("token");
+  const headers = { Authorization: `Bearer ${token}` };
+
+  const fetchCats = async () => {
+    try {
+      const res = await axios.get(`${API_URL}/api/inventory/categories`, { headers });
+      setCategories(res.data);
+    } catch { /* ignore */ }
+    setLoading(false);
+  };
+
+  useState(() => { fetchCats(); });
+
+  const handleRename = async (oldName) => {
+    const trimmed = editValue.trim();
+    if (!trimmed || trimmed === oldName) { setEditingCat(null); return; }
+    try {
+      await axios.put(`${API_URL}/api/inventory/categories/rename`, { old_name: oldName, new_name: trimmed }, { headers });
+      toast.success(`"${oldName}" renombrada a "${trimmed}"`);
+      setEditingCat(null);
+      fetchCats();
+    } catch { toast.error("Error al renombrar"); }
+  };
+
+  const handleDelete = async (name) => {
+    if (!window.confirm(`¿Eliminar la categoría "${name}" de todos los productos?`)) return;
+    try {
+      await axios.delete(`${API_URL}/api/inventory/categories/${encodeURIComponent(name)}`, { headers });
+      toast.success(`"${name}" eliminada`);
+      fetchCats();
+    } catch { toast.error("Error al eliminar"); }
+  };
+
+  const handleCreate = async () => {
+    const trimmed = newCat.trim();
+    if (!trimmed || categories.includes(trimmed)) { toast.error("Categoría vacía o ya existe"); return; }
+    setCategories([...categories, trimmed].sort());
+    setNewCat("");
+    toast.success(`"${trimmed}" creada. Se asignará al agregar productos.`);
+  };
+
+  const filtered = categories.filter(c => !search || c.toLowerCase().includes(search.toLowerCase()));
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between p-4 border-b">
+          <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+            <Tags size={20} className="text-[#63AC9A]" /> Editar categorías
+          </h2>
+          <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded"><X size={18} /></button>
+        </div>
+
+        <div className="p-4 border-b">
+          <div className="flex gap-2">
+            <Input value={newCat} onChange={e => setNewCat(e.target.value)} onKeyDown={e => e.key === "Enter" && handleCreate()} placeholder="Nueva categoría..." className="flex-1" data-testid="new-category-input" />
+            <Button size="sm" onClick={handleCreate} data-testid="create-category-btn"><Plus size={16} /></Button>
+          </div>
+          <div className="relative mt-2">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar categorías..." className="pl-9" />
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-2">
+          {loading ? (
+            <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-gray-400" /></div>
+          ) : filtered.length === 0 ? (
+            <p className="text-center text-gray-400 py-8 text-sm">No se encontraron categorías</p>
+          ) : (
+            <div className="space-y-1">
+              {filtered.map(cat => (
+                <div key={cat} className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-50 group">
+                  {editingCat === cat ? (
+                    <>
+                      <Input value={editValue} onChange={e => setEditValue(e.target.value)} onKeyDown={e => { if (e.key === "Enter") handleRename(cat); if (e.key === "Escape") setEditingCat(null); }} autoFocus className="flex-1 h-8 text-sm" data-testid={`edit-cat-input-${cat}`} />
+                      <Button size="sm" variant="ghost" className="h-8 px-2 text-green-600" onClick={() => handleRename(cat)}>OK</Button>
+                      <Button size="sm" variant="ghost" className="h-8 px-2 text-gray-400" onClick={() => setEditingCat(null)}><X size={14} /></Button>
+                    </>
+                  ) : (
+                    <>
+                      <span className="flex-1 text-sm text-gray-700 truncate">{cat}</span>
+                      <button onClick={() => { setEditingCat(cat); setEditValue(cat); }} className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-blue-50 rounded text-blue-500 transition-opacity" title="Editar" data-testid={`rename-cat-${cat}`}>
+                        <Edit size={14} />
+                      </button>
+                      <button onClick={() => handleDelete(cat)} className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-red-50 rounded text-red-500 transition-opacity" title="Eliminar" data-testid={`delete-cat-${cat}`}>
+                        <Trash2 size={14} />
+                      </button>
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="p-3 border-t text-center text-xs text-gray-400">
+          {categories.length} categorías en total
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function CategoryCell({ categories }) {
   const [expanded, setExpanded] = useState(false);
   if (!categories.length) return <span className="text-gray-300 text-xs">-</span>;
