@@ -328,9 +328,6 @@ def _generate_pdf_bytes(quote: Quote, is_po: bool = False) -> bytes:
     for item in quote.items:
         p_img = fetch_image(item.image_url, width_cm=2.5*cm)
         desc_parts = [f"<b>{item.name}</b>", item.description]
-        if item.categories:
-            cats_text = ", ".join(item.categories)
-            desc_parts.append(f"<i>Características: {cats_text}</i>")
         if item.otros and item.additional_amount > 0:
             if item.additional_type == '%':
                 desc_parts.append(f"<font color='green'>Valor adicional ({item.otros}): {item.additional_amount}%</font>")
