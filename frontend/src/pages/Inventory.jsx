@@ -26,6 +26,7 @@ export default function Inventory() {
   const [limit] = useState(50);
   const [minCost, setMinCost] = useState("");
   const [maxCost, setMaxCost] = useState("");
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
   const fileInputRef = useRef(null);
   const token = localStorage.getItem("token");
   const headers = { Authorization: `Bearer ${token}` };
