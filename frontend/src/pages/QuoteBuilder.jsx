@@ -90,7 +90,8 @@ export default function QuoteBuilder() {
         discount_type: item.discount_type || "$",
         additional_amount: item.additional_amount || 0,
         additional_type: item.additional_type || "$",
-        otros: item.otros || ""
+        otros: item.otros || "",
+        selected_characteristics: item.selected_characteristics || []
       })));
     } catch { toast.error("Error al cargar cotización"); }
     setLoading(false);
