@@ -20,7 +20,7 @@ import uuid
 
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL')
 if not BASE_URL:
-    BASE_URL = "https://interesado-crm.preview.emergentagent.com"
+    BASE_URL = "https://ai-cotizador.preview.emergentagent.com"
 BASE_URL = BASE_URL.rstrip('/')
 
 TEST_PHONE = f"593999TEST{uuid.uuid4().hex[:4].upper()}"
