@@ -161,13 +161,15 @@ export default function QuoteBuilder() {
       if (i.item_id !== itemId) return i;
       const updated = { ...i, [field]: value };
       let base = updated.quantity * updated.unit_price;
-      if (updated.discount_amount > 0) {
-        if (updated.discount_type === "%") base -= base * (updated.discount_amount / 100);
-        else base -= updated.discount_amount;
-      }
+      // First: add additional value
       if (updated.additional_amount > 0) {
         if (updated.additional_type === "%") base += base * (updated.additional_amount / 100);
         else base += updated.additional_amount;
+      }
+      // Then: apply discount on the total
+      if (updated.discount_amount > 0) {
+        if (updated.discount_type === "%") base -= base * (updated.discount_amount / 100);
+        else base -= updated.discount_amount;
       }
       updated.total_price = Math.round(Math.max(0, base) * 100) / 100;
       return updated;
@@ -575,20 +577,21 @@ function CartItemCompact({ item, onUpdate, onRemove, onDuplicate, getImageUrl })
                 <span>Base ({item.quantity} x {formatCurrency(item.unit_price)})</span>
                 <span>{formatCurrency(item.quantity * item.unit_price)}</span>
               </div>
-              {item.discount_amount > 0 && (
-                <div className="flex justify-between text-red-500">
-                  <span>- Descuento {item.discount_type === "%" ? `${item.discount_amount}%` : formatCurrency(item.discount_amount)}</span>
-                  <span>-{formatCurrency(item.discount_type === "%" ? (item.quantity * item.unit_price * item.discount_amount / 100) : item.discount_amount)}</span>
+              {item.additional_amount > 0 && (
+                <div className="flex justify-between text-green-600">
+                  <span>+ Adicional {item.additional_type === "%" ? `${item.additional_amount}%` : formatCurrency(item.additional_amount)}</span>
+                  <span>+{formatCurrency(item.additional_type === "%" ? (item.quantity * item.unit_price * item.additional_amount / 100) : item.additional_amount)}</span>
                 </div>
               )}
-              {item.additional_amount > 0 && (() => {
-                const afterDiscount = item.discount_amount > 0
-                  ? (item.discount_type === "%" ? item.quantity * item.unit_price * (1 - item.discount_amount / 100) : Math.max(0, item.quantity * item.unit_price - item.discount_amount))
-                  : item.quantity * item.unit_price;
+              {item.discount_amount > 0 && (() => {
+                const base = item.quantity * item.unit_price;
+                const afterAdditional = item.additional_amount > 0
+                  ? (item.additional_type === "%" ? base + base * (item.additional_amount / 100) : base + item.additional_amount)
+                  : base;
                 return (
-                  <div className="flex justify-between text-green-600">
-                    <span>+ Adicional {item.additional_type === "%" ? `${item.additional_amount}%` : formatCurrency(item.additional_amount)}</span>
-                    <span>+{formatCurrency(item.additional_type === "%" ? afterDiscount * item.additional_amount / 100 : item.additional_amount)}</span>
+                  <div className="flex justify-between text-red-500">
+                    <span>- Descuento {item.discount_type === "%" ? `${item.discount_amount}%` : formatCurrency(item.discount_amount)}</span>
+                    <span>-{formatCurrency(item.discount_type === "%" ? (afterAdditional * item.discount_amount / 100) : item.discount_amount)}</span>
                   </div>
                 );
               })()}
