@@ -38,6 +38,10 @@ export default function QuoteHistory() {
   const [activities, setActivities] = useState([]);
   const [showActivities, setShowActivities] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [clients, setClients] = useState([]);
+  const [selectedClient, setSelectedClient] = useState("");
+  const [facturaModal, setFacturaModal] = useState(null);
+  const [facturaNum, setFacturaNum] = useState("");
   const token = localStorage.getItem("token");
   const headers = { Authorization: `Bearer ${token}` };
   const newPath = isPO ? "/purchase-orders/new" : "/quotes/new";
@@ -107,6 +111,16 @@ export default function QuoteHistory() {
 
   useEffect(() => { fetchQuotes(); }, [fetchQuotes]);
 
+  useEffect(() => {
+    const fetchClients = async () => {
+      try {
+        const res = await axios.get(`${API_URL}/api/clients/`, { headers });
+        setClients(res.data || []);
+      } catch {}
+    };
+    fetchClients();
+  }, []);
+
   const handleDelete = async (id) => {
     if (!window.confirm(showTrash ? "¿Eliminar permanentemente?" : "¿Mover a papelera?")) return;
     try {
@@ -124,10 +138,10 @@ export default function QuoteHistory() {
     } catch { toast.error("Error"); }
   };
 
-  const handleGeneratePDF = async (id, type = "PROFORMA") => {
+  const handleGeneratePDF = async (id, type = "PROFORMA", factura = "") => {
     try {
       const res = await axios.post(`${API_URL}/api/quotes-v2/${id}/generate-pdf`, null, {
-        params: { doc_type: type },
+        params: { doc_type: type, factura },
         headers
       });
       setPdfPreview({ base64: res.data.pdf_base64, filename: res.data.filename });
@@ -159,12 +173,14 @@ export default function QuoteHistory() {
     } catch { toast.error("Error al cargar actividades"); }
   };
 
-  const filtered = quotes.filter(q =>
-    !search ||
-    q.client_name?.toLowerCase().includes(search.toLowerCase()) ||
-    q.quote_number?.includes(search) ||
-    q.client_email?.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = quotes.filter(q => {
+    const matchesSearch = !search ||
+      q.client_name?.toLowerCase().includes(search.toLowerCase()) ||
+      q.quote_number?.includes(search) ||
+      q.client_email?.toLowerCase().includes(search.toLowerCase());
+    const matchesClient = !selectedClient || q.client_id === selectedClient;
+    return matchesSearch && matchesClient;
+  });
 
   return (
     <div className="p-4 lg:p-6" data-testid="quotes-page">
@@ -207,12 +223,23 @@ export default function QuoteHistory() {
         </div>
       </div>
 
-      {/* Search */}
-      <div className="flex gap-3 mb-4">
+      {/* Search + Client Filter */}
+      <div className="flex gap-3 mb-4 flex-wrap">
         <div className="relative flex-1 max-w-md">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <Input placeholder="Buscar por cliente, número..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9 bg-white" data-testid="search-quotes-input" />
         </div>
+        <select
+          value={selectedClient}
+          onChange={e => setSelectedClient(e.target.value)}
+          className="h-9 border rounded-md px-3 text-sm bg-white text-gray-700 min-w-[180px]"
+          data-testid="client-filter-select"
+        >
+          <option value="">Todos los clientes</option>
+          {clients.map(c => (
+            <option key={c.id} value={c.id}>{c.name}</option>
+          ))}
+        </select>
       </div>
 
       {/* Quotes List */}
@@ -258,6 +285,11 @@ export default function QuoteHistory() {
                     <Button variant="ghost" size="sm" onClick={() => handleGeneratePDF(q.id, q.doc_type === "PO" ? "ORDEN_COMPRA" : "PROFORMA")} className="text-xs" data-testid={`pdf-btn-${q.id}`}>
                       <Eye size={14} className="mr-1" /> PDF
                     </Button>
+                    {q.doc_type === "PO" && (
+                      <Button variant="ghost" size="sm" onClick={() => { setFacturaModal(q); setFacturaNum(q.factura || ""); }} className="text-xs text-orange-600" data-testid={`factura-btn-${q.id}`}>
+                        <FileText size={14} className="mr-1" /> Factura
+                      </Button>
+                    )}
                     <Button variant="ghost" size="sm" onClick={() => setSendModal(q)} className="text-xs text-blue-600" data-testid={`send-btn-${q.id}`}>
                       <Send size={14} className="mr-1" /> Enviar
                     </Button>
@@ -278,6 +310,39 @@ export default function QuoteHistory() {
           </div>
         ))}
       </div>
+
+      {/* Factura Modal */}
+      {facturaModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" data-testid="factura-modal">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm mx-4">
+            <div className="flex items-center justify-between p-4 border-b">
+              <h2 className="font-bold">Número de Factura - OC #{facturaModal.quote_number}</h2>
+              <button onClick={() => setFacturaModal(null)} className="p-1 hover:bg-gray-100 rounded"><X size={20} /></button>
+            </div>
+            <div className="p-4 space-y-4">
+              <div>
+                <label className="text-sm font-medium text-gray-700 mb-1 block">Factura</label>
+                <Input
+                  value={facturaNum}
+                  onChange={e => setFacturaNum(e.target.value)}
+                  placeholder="Ingrese número de factura..."
+                  data-testid="factura-input"
+                />
+              </div>
+              <Button
+                className="w-full bg-[#63AC9A] hover:bg-[#4F9A87] text-white"
+                onClick={() => {
+                  handleGeneratePDF(facturaModal.id, "ORDEN_COMPRA", facturaNum);
+                  setFacturaModal(null);
+                }}
+                data-testid="generate-factura-pdf-btn"
+              >
+                <Eye size={14} className="mr-1" /> Generar PDF con Factura
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* PDF Preview Modal */}
       {pdfPreview && (

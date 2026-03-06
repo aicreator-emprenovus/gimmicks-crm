@@ -6,7 +6,7 @@ from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, 
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import cm
 from reportlab.lib.utils import ImageReader
-from reportlab.lib.enums import TA_RIGHT
+from reportlab.lib.enums import TA_RIGHT, TA_CENTER
 from reportlab.lib import colors
 import io
 import base64
@@ -294,7 +294,7 @@ def fetch_image(url, width_cm=None):
         return None
     return None
 
-def _generate_pdf_bytes(quote: Quote, is_po: bool = False) -> bytes:
+def _generate_pdf_bytes(quote: Quote, is_po: bool = False, client_data: dict = None) -> bytes:
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=30, leftMargin=30, topMargin=30, bottomMargin=30)
     elements = []
@@ -314,30 +314,73 @@ def _generate_pdf_bytes(quote: Quote, is_po: bool = False) -> bytes:
     day = quote.created_at.day
     month = months[quote.created_at.month]
     year = quote.created_at.year
-    date_str = f"Quito, {day} de {month} de {year}"
-    style_title_right = ParagraphStyle("TitleRight", parent=styles["Heading1"], fontSize=10, alignment=TA_RIGHT)
-    right_col_content = [Paragraph(title_text, style_title_right)]
-    if logo:
-        right_col_content.append(logo)
-    header_data = [[Paragraph(date_str, style_normal), right_col_content]]
-    header_table = Table(header_data, colWidths=[9*cm, 9*cm])
-    header_table.setStyle(TableStyle([('VALIGN',(0,0),(-1,-1),'TOP'),('ALIGN',(0,0),(0,0),'LEFT'),('ALIGN',(1,0),(1,0),'RIGHT')]))
-    elements.append(header_table)
-    elements.append(Spacer(1, 1*cm))
-    style_client_header = ParagraphStyle("ClientHeader", parent=style_bold, textColor=colors.HexColor('#64AF9C'), fontSize=11)
-    style_normal_large = ParagraphStyle("NormalLarge", parent=style_normal, fontSize=11)
-    elements.append(Paragraph("Señores", style_client_header))
-    elements.append(Paragraph(f"<b>{quote.client_name.upper()}</b>", style_bold))
-    if quote.client_contact:
-        elements.append(Paragraph(f"Att: {quote.client_contact}", style_normal))
-    elements.append(Paragraph("Presente.-", style_normal_large))
-    elements.append(Spacer(1, 0.5*cm))
-    if effective_is_po:
+
+    if effective_is_po and client_data:
+        # PO header format with client details
+        style_title_center = ParagraphStyle("TitleCenter", parent=styles["Heading1"], fontSize=12, alignment=TA_CENTER)
+        style_subtitle = ParagraphStyle("Subtitle", parent=style_bold, fontSize=11, alignment=TA_CENTER)
+        style_field_label = ParagraphStyle("FieldLabel", parent=style_bold, fontSize=9)
+        style_field_value = ParagraphStyle("FieldValue", parent=style_normal, fontSize=9)
+        if logo:
+            elements.append(logo)
+            elements.append(Spacer(1, 0.3*cm))
+        elements.append(Paragraph(title_text, style_title_center))
+        elements.append(Spacer(1, 0.5*cm))
+        elements.append(Paragraph("<b>CONTRATO DE TRABAJO</b>", style_subtitle))
+        elements.append(Spacer(1, 0.8*cm))
+        date_str = f"{day} {month.lower()} {year}"
+        c_name = quote.client_name or ""
+        c_address = client_data.get("address", "")
+        c_contact = client_data.get("contact_person", "") or quote.client_contact or ""
+        c_ruc = client_data.get("tax_id", "")
+        c_phone = client_data.get("phone", "")
+        c_email = client_data.get("email", "") or quote.client_email or ""
+        c_factura = quote.factura or ""
+        info_data = [
+            [Paragraph("<b>FECHA:</b>", style_field_label), Paragraph(date_str, style_field_value),
+             Paragraph("<b>ORDEN DE</b><br/><b>COMPRA</b><br/><b>CLIENTE:</b>", style_field_label), Paragraph(c_name, style_field_value)],
+            [Paragraph("<b>CLIENTE:</b>", style_field_label), Paragraph(c_name, style_field_value),
+             Paragraph("<b>FACTURA:</b>", style_field_label), Paragraph(c_factura, style_field_value)],
+            [Paragraph("<b>DIRECCION:</b>", style_field_label), Paragraph(c_address, style_field_value),
+             Paragraph("<b>TELEFONO:</b>", style_field_label), Paragraph(c_phone, style_field_value)],
+            [Paragraph("<b>SOLICITADO POR:</b>", style_field_label), Paragraph(c_contact, style_field_value),
+             Paragraph("<b>CORREO:</b>", style_field_label), Paragraph(c_email, style_field_value)],
+            [Paragraph("<b>RUC:</b>", style_field_label), Paragraph(c_ruc, style_field_value),
+             Paragraph("", style_field_label), Paragraph("", style_field_value)],
+        ]
+        info_table = Table(info_data, colWidths=[3*cm, 6*cm, 3*cm, 6*cm])
+        info_table.setStyle(TableStyle([
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('TOPPADDING', (0, 0), (-1, -1), 3),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+        ]))
+        elements.append(info_table)
+        elements.append(Spacer(1, 0.5*cm))
+        style_normal_large = ParagraphStyle("NormalLarge", parent=style_normal, fontSize=11)
         elements.append(Paragraph("Detalle de la Orden de Compra:", style_normal_large))
+        elements.append(Spacer(1, 0.5*cm))
     else:
+        date_str = f"Quito, {day} de {month} de {year}"
+        style_title_right = ParagraphStyle("TitleRight", parent=styles["Heading1"], fontSize=10, alignment=TA_RIGHT)
+        right_col_content = [Paragraph(title_text, style_title_right)]
+        if logo:
+            right_col_content.append(logo)
+        header_data = [[Paragraph(date_str, style_normal), right_col_content]]
+        header_table = Table(header_data, colWidths=[9*cm, 9*cm])
+        header_table.setStyle(TableStyle([('VALIGN',(0,0),(-1,-1),'TOP'),('ALIGN',(0,0),(0,0),'LEFT'),('ALIGN',(1,0),(1,0),'RIGHT')]))
+        elements.append(header_table)
+        elements.append(Spacer(1, 1*cm))
+        style_client_header = ParagraphStyle("ClientHeader", parent=style_bold, textColor=colors.HexColor('#64AF9C'), fontSize=11)
+        style_normal_large = ParagraphStyle("NormalLarge", parent=style_normal, fontSize=11)
+        elements.append(Paragraph("Señores", style_client_header))
+        elements.append(Paragraph(f"<b>{quote.client_name.upper()}</b>", style_bold))
+        if quote.client_contact:
+            elements.append(Paragraph(f"Att: {quote.client_contact}", style_normal))
+        elements.append(Paragraph("Presente.-", style_normal_large))
+        elements.append(Spacer(1, 0.5*cm))
         elements.append(Paragraph("De nuestra consideración:", style_normal_large))
         elements.append(Paragraph("Por medio de la presente pongo a su consideración la siguiente proforma:", style_normal_large))
-    elements.append(Spacer(1, 0.5*cm))
+        elements.append(Spacer(1, 0.5*cm))
     table_headers = ['CÓDIGO', 'CANTIDAD', 'DESCRIPCIÓN', 'VALOR\nUNITARIO', 'VALOR\nTOTAL', 'IMAGEN']
     table_data = [table_headers]
     for item in quote.items:
@@ -405,7 +448,7 @@ def _generate_pdf_bytes(quote: Quote, is_po: bool = False) -> bytes:
     return buffer.getvalue()
 
 @router.post("/{id}/generate-pdf")
-async def generate_pdf(id: str, doc_type: str = "PROFORMA"):
+async def generate_pdf(id: str, doc_type: str = "PROFORMA", factura: str = ""):
     quote_data = await db.quotes_v2.find_one({"id": id}, {"_id": 0})
     if not quote_data:
         try:
@@ -417,9 +460,15 @@ async def generate_pdf(id: str, doc_type: str = "PROFORMA"):
             pass
     if not quote_data:
         raise HTTPException(status_code=404, detail="Quote not found")
+    if factura:
+        quote_data['factura'] = factura
+        await db.quotes_v2.update_one({"id": id}, {"$set": {"factura": factura}})
     quote = Quote(**quote_data)
     is_po = (doc_type == "ORDEN_COMPRA") or (quote.doc_type == "PO")
-    pdf_bytes = _generate_pdf_bytes(quote, is_po=is_po)
+    client_data = None
+    if is_po and quote.client_id:
+        client_data = await db.clients.find_one({"id": quote.client_id}, {"_id": 0})
+    pdf_bytes = _generate_pdf_bytes(quote, is_po=is_po, client_data=client_data)
     pdf_base64 = base64.b64encode(pdf_bytes).decode('utf-8')
     prefix = "ORDEN_COMPRA" if is_po else "PROFORMA"
     filename = f"{prefix}_{quote.quote_number}.pdf"

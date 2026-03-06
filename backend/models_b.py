@@ -59,6 +59,7 @@ class Quote(BaseModel):
     client_name: str = ""
     client_contact: str = ""
     client_email: str = ""
+    factura: str = ""
     items: List[QuoteItem] = []
     subtotal: float = 0.0
     tax: float = 0.0
