@@ -85,10 +85,25 @@ async def log_document_activity(document_id: str, document_number: str, document
     }
     await db.document_activities.insert_one(activity)
 
+async def get_next_po_number():
+    """Get next purchase order number from independent sequence starting at 4712"""
+    existing = await db.counters.find_one({"_id": "po_number"})
+    if not existing:
+        await db.counters.insert_one({"_id": "po_number", "seq": 4711})
+    result = await db.counters.find_one_and_update(
+        {"_id": "po_number"},
+        {"$inc": {"seq": 1}},
+        return_document=True
+    )
+    return str(result["seq"])
+
 @router.post("/", response_model=Quote)
 async def create_quote(quote: Quote, authorization: str = Header(None)):
-    count = await db.quotes_v2.count_documents({})
-    quote.quote_number = str(4698 + count)
+    if quote.doc_type == "PO":
+        quote.quote_number = await get_next_po_number()
+    else:
+        count = await db.quotes_v2.count_documents({"doc_type": {"$ne": "PO"}})
+        quote.quote_number = str(4698 + count)
     if not quote.doc_type:
         quote.doc_type = "QUOTE"
     user = await get_user_from_token(authorization)
@@ -427,27 +442,8 @@ async def convert_to_po(id: str):
     po_data['doc_type'] = "PO"
     po_data['status'] = "orden_compra"
     po_data['created_at'] = datetime.now(timezone.utc)
-    base_number = quote_data.get('quote_number')
-    if base_number:
-        pattern = f"^{re.escape(base_number)}(-\\d+)?$"
-        existing_pos = await db.quotes_v2.find({"doc_type": "PO", "quote_number": {"$regex": pattern}}).to_list(1000)
-        version = 1
-        if existing_pos:
-            versions = []
-            for po in existing_pos:
-                qn = po.get('quote_number', '')
-                if qn == base_number:
-                    versions.append(0)
-                elif qn.startswith(base_number + "-"):
-                    try:
-                        suffix = qn.split('-')[-1]
-                        if suffix.isdigit():
-                            versions.append(int(suffix))
-                    except Exception:
-                        pass
-            if versions:
-                version = max(versions) + 1
-        po_data['quote_number'] = f"{base_number}-{version}"
+    po_data['source_quote_number'] = quote_data.get('quote_number')
+    po_data['quote_number'] = await get_next_po_number()
     await db.quotes_v2.insert_one(po_data)
     await log_client_activity(po_data['client_id'], "po_generated", f"Orden de Compra generada #{po_data['quote_number']}")
     return {"message": "Orden de compra generada", "po_id": po_data['id']}
