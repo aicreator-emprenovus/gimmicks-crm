@@ -447,26 +447,70 @@ export default function QuoteBuilder() {
 
 function ClientDropdown({ clients, onSelect }) {
   const [search, setSearch] = useState("");
-  const [open, setOpen] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const ref = useRef(null);
   const filtered = clients.filter(c =>
-    !search || c.name?.toLowerCase().includes(search.toLowerCase()) || c.email?.toLowerCase().includes(search.toLowerCase())
+    search.length > 0 && (c.name?.toLowerCase().includes(search.toLowerCase()) || c.email?.toLowerCase().includes(search.toLowerCase()) || c.phone?.includes(search))
   );
 
+  useEffect(() => {
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setShowSuggestions(false); };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
   return (
-    <div className="relative">
-      <select
-        className="w-full border rounded-lg px-3 py-2 text-sm bg-white appearance-none cursor-pointer"
-        value=""
-        onChange={e => {
-          const c = clients.find(cl => cl.id === e.target.value);
-          if (c) onSelect(c);
-        }}
-        data-testid="client-dropdown"
-      >
-        <option value="">Seleccionar Cliente...</option>
-        {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-      </select>
-      <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+    <div className="space-y-1.5" ref={ref}>
+      <div className="relative">
+        <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+        <input
+          type="text"
+          value={search}
+          onChange={e => { setSearch(e.target.value); setShowSuggestions(true); }}
+          onFocus={() => search.length > 0 && setShowSuggestions(true)}
+          placeholder="Buscar cliente por nombre, email, teléfono..."
+          className="w-full border rounded-lg pl-8 pr-3 py-2 text-sm bg-white focus:ring-1 focus:ring-[#63AC9A] focus:border-[#63AC9A] outline-none"
+          data-testid="client-search-input"
+        />
+        {showSuggestions && filtered.length > 0 && (
+          <div className="absolute z-20 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-48 overflow-y-auto" data-testid="client-suggestions">
+            {filtered.map(c => (
+              <button
+                key={c.id}
+                onClick={() => { onSelect(c); setSearch(""); setShowSuggestions(false); }}
+                className="w-full text-left px-3 py-2 hover:bg-[#63AC9A]/10 text-sm flex items-center justify-between border-b last:border-b-0"
+                data-testid={`client-suggestion-${c.id}`}
+              >
+                <div className="min-w-0">
+                  <p className="font-medium truncate">{c.name}</p>
+                  <p className="text-xs text-gray-400 truncate">{c.email || c.phone || ""}</p>
+                </div>
+                <ChevronRight size={14} className="text-gray-300 flex-shrink-0" />
+              </button>
+            ))}
+          </div>
+        )}
+        {showSuggestions && search.length > 0 && filtered.length === 0 && (
+          <div className="absolute z-20 w-full mt-1 bg-white border rounded-lg shadow-lg px-3 py-2 text-sm text-gray-400">
+            No se encontraron clientes
+          </div>
+        )}
+      </div>
+      <div className="relative">
+        <select
+          className="w-full border rounded-lg px-3 py-2 text-sm bg-white appearance-none cursor-pointer"
+          value=""
+          onChange={e => {
+            const c = clients.find(cl => cl.id === e.target.value);
+            if (c) onSelect(c);
+          }}
+          data-testid="client-dropdown"
+        >
+          <option value="">Seleccionar Cliente...</option>
+          {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+        </select>
+        <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+      </div>
     </div>
   );
 }
