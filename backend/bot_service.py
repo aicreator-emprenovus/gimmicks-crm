@@ -1057,6 +1057,10 @@ MENSAJE ACTUAL DEL CLIENTE: {message_text}"""
                 correo = collected_data.get("correo", "tu correo")
                 quote_notify = f"Tu cotización ha sido registrada y será enviada a {correo}. Nuestro equipo la revisará pronto."
                 await send_message_fn(phone_number, conversation_id, quote_notify)
+            else:
+                # Quote was updated - still respond to the user
+                update_notify = response_text or "Tu cotización ha sido actualizada. Nuestro equipo la revisará pronto."
+                await send_message_fn(phone_number, conversation_id, update_notify)
         else:
             state_quote = state.get("quote_generated", False)
 
