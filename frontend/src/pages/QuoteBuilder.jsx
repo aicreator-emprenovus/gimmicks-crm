@@ -157,7 +157,7 @@ export default function QuoteBuilder() {
   };
 
   const updateCartItem = (itemId, field, value) => {
-    setCart(cart.map(i => {
+    setCart(prev => prev.map(i => {
       if (i.item_id !== itemId) return i;
       const updated = { ...i, [field]: value };
       let base = updated.quantity * updated.unit_price;
@@ -169,12 +169,12 @@ export default function QuoteBuilder() {
         if (updated.additional_type === "%") base += base * (updated.additional_amount / 100);
         else base += updated.additional_amount;
       }
-      updated.total_price = Math.max(0, base);
+      updated.total_price = Math.round(Math.max(0, base) * 100) / 100;
       return updated;
     }));
   };
 
-  const removeFromCart = (itemId) => setCart(cart.filter(i => i.item_id !== itemId));
+  const removeFromCart = (itemId) => setCart(prev => prev.filter(i => i.item_id !== itemId));
 
   const subtotal = cart.reduce((sum, i) => sum + i.total_price, 0);
   const tax = subtotal * 0.15;
@@ -550,8 +550,8 @@ function CartItemCompact({ item, onUpdate, onRemove, onDuplicate, getImageUrl })
           <div>
             <p className="text-xs font-semibold text-gray-600 mb-1">Descuento</p>
             <div className="flex gap-1">
-              <Input type="number" step="0.01" value={item.discount_amount} onChange={e => onUpdate(item.item_id, "discount_amount", parseFloat(e.target.value) || 0)} className="h-7 text-xs flex-1" />
-              <select value={item.discount_type} onChange={e => onUpdate(item.item_id, "discount_type", e.target.value)} className="border rounded h-7 text-xs px-1">
+              <Input type="number" step="0.01" value={item.discount_amount} onChange={e => onUpdate(item.item_id, "discount_amount", parseFloat(e.target.value) || 0)} className="h-7 text-xs flex-1" data-testid={`discount-input-${item.item_id}`} />
+              <select value={item.discount_type} onChange={e => onUpdate(item.item_id, "discount_type", e.target.value)} className="border rounded h-7 text-xs px-1" data-testid={`discount-type-${item.item_id}`}>
                 <option value="$">$</option>
                 <option value="%">%</option>
               </select>
@@ -561,13 +561,43 @@ function CartItemCompact({ item, onUpdate, onRemove, onDuplicate, getImageUrl })
           <div>
             <p className="text-xs font-semibold text-gray-600 flex items-center gap-1 mb-1"><Plus size={12} /> Valor adicional</p>
             <div className="flex gap-1">
-              <Input type="number" step="0.01" value={item.additional_amount} onChange={e => onUpdate(item.item_id, "additional_amount", parseFloat(e.target.value) || 0)} className="h-7 text-xs flex-1" />
-              <select value={item.additional_type} onChange={e => onUpdate(item.item_id, "additional_type", e.target.value)} className="border rounded h-7 text-xs px-1">
+              <Input type="number" step="0.01" value={item.additional_amount} onChange={e => onUpdate(item.item_id, "additional_amount", parseFloat(e.target.value) || 0)} className="h-7 text-xs flex-1" data-testid={`additional-input-${item.item_id}`} />
+              <select value={item.additional_type} onChange={e => onUpdate(item.item_id, "additional_type", e.target.value)} className="border rounded h-7 text-xs px-1" data-testid={`additional-type-${item.item_id}`}>
                 <option value="$">$</option>
                 <option value="%">%</option>
               </select>
             </div>
           </div>
+          {/* Price Breakdown */}
+          {(item.discount_amount > 0 || item.additional_amount > 0) && (
+            <div className="bg-gray-50 rounded p-1.5 text-[10px] space-y-0.5" data-testid={`price-breakdown-${item.item_id}`}>
+              <div className="flex justify-between text-gray-500">
+                <span>Base ({item.quantity} x {formatCurrency(item.unit_price)})</span>
+                <span>{formatCurrency(item.quantity * item.unit_price)}</span>
+              </div>
+              {item.discount_amount > 0 && (
+                <div className="flex justify-between text-red-500">
+                  <span>- Descuento {item.discount_type === "%" ? `${item.discount_amount}%` : formatCurrency(item.discount_amount)}</span>
+                  <span>-{formatCurrency(item.discount_type === "%" ? (item.quantity * item.unit_price * item.discount_amount / 100) : item.discount_amount)}</span>
+                </div>
+              )}
+              {item.additional_amount > 0 && (() => {
+                const afterDiscount = item.discount_amount > 0
+                  ? (item.discount_type === "%" ? item.quantity * item.unit_price * (1 - item.discount_amount / 100) : Math.max(0, item.quantity * item.unit_price - item.discount_amount))
+                  : item.quantity * item.unit_price;
+                return (
+                  <div className="flex justify-between text-green-600">
+                    <span>+ Adicional {item.additional_type === "%" ? `${item.additional_amount}%` : formatCurrency(item.additional_amount)}</span>
+                    <span>+{formatCurrency(item.additional_type === "%" ? afterDiscount * item.additional_amount / 100 : item.additional_amount)}</span>
+                  </div>
+                );
+              })()}
+              <div className="flex justify-between font-bold text-[#63AC9A] border-t pt-0.5">
+                <span>Total</span>
+                <span>{formatCurrency(item.total_price)}</span>
+              </div>
+            </div>
+          )}
           {/* Otros */}
           <div>
             <p className="text-xs font-semibold text-gray-600 flex items-center gap-1 mb-1"><FileText size={12} /> Otros</p>
