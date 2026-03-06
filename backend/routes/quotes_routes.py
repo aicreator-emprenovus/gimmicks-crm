@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException, Body, BackgroundTasks, Header
 from typing import List, Optional
+from pydantic import BaseModel as PydanticBaseModel
 from models_b import Quote
 from reportlab.lib.pagesizes import A4
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
@@ -328,17 +329,19 @@ def _generate_pdf_bytes(quote: Quote, is_po: bool = False, client_data: dict = N
         elements.append(Spacer(1, 0.5*cm))
         elements.append(Paragraph("<b>CONTRATO DE TRABAJO</b>", style_subtitle))
         elements.append(Spacer(1, 0.8*cm))
-        date_str = f"{day} {month.lower()} {year}"
-        c_name = quote.client_name or ""
+        fecha_override = client_data.get("fecha_override", "")
+        date_str = fecha_override if fecha_override else f"{day} {month.lower()} {year}"
+        c_name = client_data.get("name", "") or quote.client_name or ""
         c_address = client_data.get("address", "")
         c_contact = client_data.get("contact_person", "") or quote.client_contact or ""
         c_ruc = client_data.get("tax_id", "")
         c_phone = client_data.get("phone", "")
         c_email = client_data.get("email", "") or quote.client_email or ""
-        c_factura = quote.factura or ""
+        c_factura = client_data.get("factura", "") or quote.factura or ""
+        c_oc_cliente = client_data.get("orden_compra_cliente", "") or c_name
         info_data = [
             [Paragraph("<b>FECHA:</b>", style_field_label), Paragraph(date_str, style_field_value),
-             Paragraph("<b>ORDEN DE</b><br/><b>COMPRA</b><br/><b>CLIENTE:</b>", style_field_label), Paragraph(c_name, style_field_value)],
+             Paragraph("<b>ORDEN DE</b><br/><b>COMPRA</b><br/><b>CLIENTE:</b>", style_field_label), Paragraph(c_oc_cliente, style_field_value)],
             [Paragraph("<b>CLIENTE:</b>", style_field_label), Paragraph(c_name, style_field_value),
              Paragraph("<b>FACTURA:</b>", style_field_label), Paragraph(c_factura, style_field_value)],
             [Paragraph("<b>DIRECCION:</b>", style_field_label), Paragraph(c_address, style_field_value),
@@ -447,8 +450,13 @@ def _generate_pdf_bytes(quote: Quote, is_po: bool = False, client_data: dict = N
     doc.build(elements)
     return buffer.getvalue()
 
+class GeneratePDFRequest(PydanticBaseModel):
+    doc_type: str = "PROFORMA"
+    factura: str = ""
+    overrides: Optional[dict] = None
+
 @router.post("/{id}/generate-pdf")
-async def generate_pdf(id: str, doc_type: str = "PROFORMA", factura: str = ""):
+async def generate_pdf(id: str, body: GeneratePDFRequest = GeneratePDFRequest()):
     quote_data = await db.quotes_v2.find_one({"id": id}, {"_id": 0})
     if not quote_data:
         try:
@@ -460,14 +468,22 @@ async def generate_pdf(id: str, doc_type: str = "PROFORMA", factura: str = ""):
             pass
     if not quote_data:
         raise HTTPException(status_code=404, detail="Quote not found")
-    if factura:
-        quote_data['factura'] = factura
-        await db.quotes_v2.update_one({"id": id}, {"$set": {"factura": factura}})
+    if body.factura:
+        quote_data['factura'] = body.factura
+        await db.quotes_v2.update_one({"id": id}, {"$set": {"factura": body.factura}})
     quote = Quote(**quote_data)
-    is_po = (doc_type == "ORDEN_COMPRA") or (quote.doc_type == "PO")
+    is_po = (body.doc_type == "ORDEN_COMPRA") or (quote.doc_type == "PO")
     client_data = None
     if is_po and quote.client_id:
         client_data = await db.clients.find_one({"id": quote.client_id}, {"_id": 0})
+    if body.overrides:
+        if not client_data:
+            client_data = {}
+        for k, v in body.overrides.items():
+            client_data[k] = v
+        if "factura" in body.overrides:
+            quote.factura = body.overrides["factura"]
+            await db.quotes_v2.update_one({"id": id}, {"$set": {"factura": body.overrides["factura"]}})
     pdf_bytes = _generate_pdf_bytes(quote, is_po=is_po, client_data=client_data)
     pdf_base64 = base64.b64encode(pdf_bytes).decode('utf-8')
     prefix = "ORDEN_COMPRA" if is_po else "PROFORMA"

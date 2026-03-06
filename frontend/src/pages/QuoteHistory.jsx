@@ -41,7 +41,33 @@ export default function QuoteHistory() {
   const [clients, setClients] = useState([]);
   const [selectedClient, setSelectedClient] = useState("");
   const [facturaModal, setFacturaModal] = useState(null);
-  const [facturaNum, setFacturaNum] = useState("");
+  const [facturaFields, setFacturaFields] = useState({});
+
+  const openFacturaModal = async (q) => {
+    let clientData = {};
+    if (q.client_id) {
+      try {
+        const res = await axios.get(`${API_URL}/api/clients/`, { headers });
+        const client = res.data.find(c => c.id === q.client_id);
+        if (client) clientData = client;
+      } catch {}
+    }
+    const months = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+    const d = q.created_at ? new Date(q.created_at) : new Date();
+    const dateStr = `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+    setFacturaFields({
+      fecha: dateStr,
+      cliente: q.client_name || clientData.name || "",
+      direccion: clientData.address || "",
+      solicitado_por: clientData.contact_person || q.client_contact || "",
+      ruc: clientData.tax_id || "",
+      orden_compra_cliente: q.client_name || "",
+      factura: q.factura || "",
+      telefono: clientData.phone || "",
+      correo: clientData.email || q.client_email || "",
+    });
+    setFacturaModal(q);
+  };
   const token = localStorage.getItem("token");
   const headers = { Authorization: `Bearer ${token}` };
   const newPath = isPO ? "/purchase-orders/new" : "/quotes/new";
@@ -138,12 +164,13 @@ export default function QuoteHistory() {
     } catch { toast.error("Error"); }
   };
 
-  const handleGeneratePDF = async (id, type = "PROFORMA", factura = "") => {
+  const handleGeneratePDF = async (id, type = "PROFORMA", overrides = null) => {
     try {
-      const res = await axios.post(`${API_URL}/api/quotes-v2/${id}/generate-pdf`, null, {
-        params: { doc_type: type, factura },
-        headers
-      });
+      const res = await axios.post(`${API_URL}/api/quotes-v2/${id}/generate-pdf`, {
+        doc_type: type,
+        factura: overrides?.factura || "",
+        overrides: overrides
+      }, { headers });
       setPdfPreview({ base64: res.data.pdf_base64, filename: res.data.filename });
     } catch { toast.error("Error al generar PDF"); }
   };
@@ -286,7 +313,7 @@ export default function QuoteHistory() {
                       <Eye size={14} className="mr-1" /> PDF
                     </Button>
                     {q.doc_type === "PO" && (
-                      <Button variant="ghost" size="sm" onClick={() => { setFacturaModal(q); setFacturaNum(q.factura || ""); }} className="text-xs text-orange-600" data-testid={`factura-btn-${q.id}`}>
+                      <Button variant="ghost" size="sm" onClick={() => openFacturaModal(q)} className="text-xs text-orange-600" data-testid={`factura-btn-${q.id}`}>
                         <FileText size={14} className="mr-1" /> Factura
                       </Button>
                     )}
@@ -314,30 +341,69 @@ export default function QuoteHistory() {
       {/* Factura Modal */}
       {facturaModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" data-testid="factura-modal">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm mx-4">
-            <div className="flex items-center justify-between p-4 border-b">
-              <h2 className="font-bold">Número de Factura - OC #{facturaModal.quote_number}</h2>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-4 border-b sticky top-0 bg-white rounded-t-2xl z-10">
+              <h2 className="font-bold text-sm">Datos para PDF - OC #{facturaModal.quote_number}</h2>
               <button onClick={() => setFacturaModal(null)} className="p-1 hover:bg-gray-100 rounded"><X size={20} /></button>
             </div>
-            <div className="p-4 space-y-4">
-              <div>
-                <label className="text-sm font-medium text-gray-700 mb-1 block">Factura</label>
-                <Input
-                  value={facturaNum}
-                  onChange={e => setFacturaNum(e.target.value)}
-                  placeholder="Ingrese número de factura..."
-                  data-testid="factura-input"
-                />
+            <div className="p-4 space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-medium text-gray-500 mb-0.5 block">Fecha</label>
+                  <Input value={facturaFields.fecha} onChange={e => setFacturaFields({...facturaFields, fecha: e.target.value})} className="h-8 text-sm" data-testid="factura-fecha" />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-500 mb-0.5 block">Orden de Compra Cliente</label>
+                  <Input value={facturaFields.orden_compra_cliente} onChange={e => setFacturaFields({...facturaFields, orden_compra_cliente: e.target.value})} className="h-8 text-sm" data-testid="factura-oc-cliente" />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-500 mb-0.5 block">Cliente</label>
+                  <Input value={facturaFields.cliente} onChange={e => setFacturaFields({...facturaFields, cliente: e.target.value})} className="h-8 text-sm" data-testid="factura-cliente" />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-orange-600 mb-0.5 block font-bold">Factura</label>
+                  <Input value={facturaFields.factura} onChange={e => setFacturaFields({...facturaFields, factura: e.target.value})} placeholder="Ej: FAC-001-2026" className="h-8 text-sm border-orange-300 focus:ring-orange-400" data-testid="factura-input" />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-500 mb-0.5 block">Dirección</label>
+                  <Input value={facturaFields.direccion} onChange={e => setFacturaFields({...facturaFields, direccion: e.target.value})} className="h-8 text-sm" data-testid="factura-direccion" />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-500 mb-0.5 block">Teléfono</label>
+                  <Input value={facturaFields.telefono} onChange={e => setFacturaFields({...facturaFields, telefono: e.target.value})} className="h-8 text-sm" data-testid="factura-telefono" />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-500 mb-0.5 block">Solicitado por</label>
+                  <Input value={facturaFields.solicitado_por} onChange={e => setFacturaFields({...facturaFields, solicitado_por: e.target.value})} className="h-8 text-sm" data-testid="factura-solicitado" />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-500 mb-0.5 block">Correo</label>
+                  <Input value={facturaFields.correo} onChange={e => setFacturaFields({...facturaFields, correo: e.target.value})} className="h-8 text-sm" data-testid="factura-correo" />
+                </div>
+                <div className="col-span-2">
+                  <label className="text-xs font-medium text-gray-500 mb-0.5 block">RUC</label>
+                  <Input value={facturaFields.ruc} onChange={e => setFacturaFields({...facturaFields, ruc: e.target.value})} className="h-8 text-sm" data-testid="factura-ruc" />
+                </div>
               </div>
               <Button
-                className="w-full bg-[#63AC9A] hover:bg-[#4F9A87] text-white"
+                className="w-full bg-[#63AC9A] hover:bg-[#4F9A87] text-white mt-2"
                 onClick={() => {
-                  handleGeneratePDF(facturaModal.id, "ORDEN_COMPRA", facturaNum);
+                  handleGeneratePDF(facturaModal.id, "ORDEN_COMPRA", {
+                    address: facturaFields.direccion,
+                    phone: facturaFields.telefono,
+                    email: facturaFields.correo,
+                    tax_id: facturaFields.ruc,
+                    contact_person: facturaFields.solicitado_por,
+                    name: facturaFields.cliente,
+                    factura: facturaFields.factura,
+                    fecha_override: facturaFields.fecha,
+                    orden_compra_cliente: facturaFields.orden_compra_cliente,
+                  });
                   setFacturaModal(null);
                 }}
                 data-testid="generate-factura-pdf-btn"
               >
-                <Eye size={14} className="mr-1" /> Generar PDF con Factura
+                <Eye size={14} className="mr-1" /> Generar PDF
               </Button>
             </div>
           </div>
