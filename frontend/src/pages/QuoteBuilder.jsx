@@ -490,7 +490,19 @@ function CartItemCompact({ item, onUpdate, onRemove, onDuplicate, getImageUrl })
               <p className="text-gray-500">{item.code}</p>
             </div>
             <div className="text-right flex-shrink-0 ml-1">
-              <p className="text-gray-500">{formatCurrency(item.unit_price)} x {item.quantity}</p>
+              <div className="flex items-center gap-0.5 justify-end">
+                <span className="text-gray-400 text-[10px]">$</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={item.unit_price}
+                  onChange={e => onUpdate(item.item_id, "unit_price", parseFloat(e.target.value) || 0)}
+                  className="w-16 text-right border rounded px-1 h-5 text-xs focus:ring-1 focus:ring-[#63AC9A] focus:border-[#63AC9A]"
+                  data-testid={`price-input-${item.item_id}`}
+                />
+                <span className="text-gray-400">x{item.quantity}</span>
+              </div>
               <p className="font-bold text-[#63AC9A]">{formatCurrency(item.total_price)}</p>
             </div>
           </div>

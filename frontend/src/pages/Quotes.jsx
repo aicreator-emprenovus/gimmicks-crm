@@ -54,7 +54,7 @@ export default function Quotes() {
   const [filterStatus, setFilterStatus] = useState("all");
   const [selectedQuote, setSelectedQuote] = useState(null);
   const [editingQuote, setEditingQuote] = useState(null);
-  const [editData, setEditData] = useState({ total: 0, notes: "" });
+  const [editData, setEditData] = useState({ total: 0, notes: "", items: [] });
   const [sending, setSending] = useState(null);
 
   const fetchQuotes = async () => {
@@ -177,6 +177,7 @@ export default function Quotes() {
                         <span className="font-mono text-[#63AC9A]">{item.code}</span>
                         <span className="truncate">{item.product_name}</span>
                         {(item.quantity || q.cantidad) && <span className="shrink-0 font-semibold">x{item.quantity || q.cantidad}</span>}
+                        {item.unit_price > 0 && <span className="shrink-0 text-zinc-400">${item.unit_price.toLocaleString("es-EC", { minimumFractionDigits: 2 })}</span>}
                       </span>
                     ))}
                     {(!q.items || q.items.length === 0) && (
@@ -198,7 +199,17 @@ export default function Quotes() {
                     <Button size="sm" variant="outline" className="h-8 text-xs gap-1" onClick={() => setSelectedQuote(q)} data-testid={`view-quote-${q.id}`}>
                       <Eye className="w-3 h-3" /> Ver
                     </Button>
-                    <Button size="sm" variant="outline" className="h-8 text-xs gap-1" onClick={() => { setEditingQuote(q); setEditData({ total: q.total, notes: q.notes || "" }); }} data-testid={`edit-quote-${q.id}`}>
+                    <Button size="sm" variant="outline" className="h-8 text-xs gap-1" onClick={() => {
+                      setEditingQuote(q);
+                      const items = (q.items || []).map(item => ({
+                        ...item,
+                        unit_price: item.unit_price || 0,
+                        quantity: item.quantity || q.cantidad || 1,
+                        subtotal: (item.unit_price || 0) * (item.quantity || q.cantidad || 1),
+                      }));
+                      const total = items.reduce((sum, it) => sum + it.subtotal, 0);
+                      setEditData({ total: total || q.total, notes: q.notes || "", items });
+                    }} data-testid={`edit-quote-${q.id}`}>
                       <Edit className="w-3 h-3" /> Editar
                     </Button>
                     {q.status === "pending" && (
@@ -253,9 +264,10 @@ export default function Quotes() {
                         <span className="ml-2 font-medium">{item.product_name}</span>
                         {item.description && <p className="text-zinc-500 mt-0.5">{item.description}</p>}
                       </div>
-                      <div className="shrink-0 text-right">
-                        <span className="font-semibold text-zinc-700">{item.quantity || selectedQuote.cantidad || "-"}</span>
-                        <span className="text-zinc-400 ml-1">uds</span>
+                      <div className="shrink-0 text-right space-y-0.5">
+                        <div><span className="font-semibold text-zinc-700">{item.quantity || selectedQuote.cantidad || "-"}</span><span className="text-zinc-400 ml-1">uds</span></div>
+                        {item.unit_price > 0 && <div className="text-zinc-500">${item.unit_price.toLocaleString("es-EC", { minimumFractionDigits: 2 })} c/u</div>}
+                        {item.subtotal > 0 && <div className="font-semibold text-[#63AC9A]">${item.subtotal.toLocaleString("es-EC", { minimumFractionDigits: 2 })}</div>}
                       </div>
                     </div>
                   ))}
@@ -275,11 +287,67 @@ export default function Quotes() {
 
       {/* Edit Dialog */}
       <Dialog open={!!editingQuote} onOpenChange={(o) => !o && setEditingQuote(null)}>
-        <DialogContent>
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="font-['Manrope']">Editar Cotización</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 mt-2">
+            {editData.items.length > 0 && (
+              <div className="space-y-3">
+                <Label className="text-sm font-semibold">Productos</Label>
+                {editData.items.map((item, idx) => (
+                  <div key={idx} className="bg-zinc-50 p-3 rounded-lg border border-zinc-200 space-y-2" data-testid={`edit-item-${idx}`}>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-xs text-[#63AC9A]">{item.code || item.product_id}</span>
+                      <span className="text-sm font-medium text-zinc-800 truncate">{item.product_name}</span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      <div>
+                        <Label className="text-xs text-zinc-500">Cantidad</Label>
+                        <Input
+                          type="number"
+                          min="1"
+                          className="h-8 text-sm"
+                          value={item.quantity}
+                          onChange={(e) => {
+                            const newItems = [...editData.items];
+                            const qty = parseInt(e.target.value) || 0;
+                            newItems[idx] = { ...newItems[idx], quantity: qty, subtotal: qty * newItems[idx].unit_price };
+                            const total = newItems.reduce((s, it) => s + it.subtotal, 0);
+                            setEditData({ ...editData, items: newItems, total });
+                          }}
+                          data-testid={`edit-item-qty-${idx}`}
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs text-zinc-500">Precio Unit. ($)</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          className="h-8 text-sm"
+                          value={item.unit_price}
+                          onChange={(e) => {
+                            const newItems = [...editData.items];
+                            const price = parseFloat(e.target.value) || 0;
+                            newItems[idx] = { ...newItems[idx], unit_price: price, subtotal: newItems[idx].quantity * price };
+                            const total = newItems.reduce((s, it) => s + it.subtotal, 0);
+                            setEditData({ ...editData, items: newItems, total });
+                          }}
+                          data-testid={`edit-item-price-${idx}`}
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs text-zinc-500">Subtotal</Label>
+                        <div className="h-8 flex items-center text-sm font-semibold text-zinc-700">
+                          ${item.subtotal.toLocaleString("es-EC", { minimumFractionDigits: 2 })}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
             <div className="space-y-2">
               <Label>Total ($)</Label>
               <Input type="number" step="0.01" value={editData.total} onChange={(e) => setEditData({ ...editData, total: parseFloat(e.target.value) || 0 })} data-testid="edit-quote-total" />
