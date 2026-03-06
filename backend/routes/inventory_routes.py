@@ -2,6 +2,7 @@ from fastapi import APIRouter, UploadFile, File, HTTPException, Query
 from typing import List, Optional
 from models_b import Product, ProductCreate
 from motor.motor_asyncio import AsyncIOMotorClient
+from datetime import datetime, timezone
 import pandas as pd
 import io
 import uuid
@@ -338,9 +339,6 @@ async def upload_product_image(image: UploadFile = File(...)):
     if len(contents) > 20 * 1024 * 1024:
         raise HTTPException(status_code=400, detail="La imagen no debe superar 20MB")
     
-    upload_dir = Path("/app/backend/uploads/products")
-    upload_dir.mkdir(parents=True, exist_ok=True)
-    
     try:
         from PIL import Image as PILImage
         img = PILImage.open(io.BytesIO(contents))
@@ -359,11 +357,27 @@ async def upload_product_image(image: UploadFile = File(...)):
         if img.width > max_dim or img.height > max_dim:
             img.thumbnail((max_dim, max_dim), PILImage.LANCZOS)
         
-        unique_filename = f"{uuid.uuid4()}.jpg"
-        file_path = upload_dir / unique_filename
-        img.save(file_path, 'JPEG', quality=82, optimize=True)
+        buf = io.BytesIO()
+        img.save(buf, 'JPEG', quality=82, optimize=True)
+        image_bytes = buf.getvalue()
         
-        image_url = f"/api/uploads/products/{unique_filename}"
+        image_id = str(uuid.uuid4())
+        await db.product_images.insert_one({
+            "id": image_id,
+            "data": image_bytes,
+            "content_type": "image/jpeg",
+            "created_at": datetime.now(timezone.utc).isoformat()
+        })
+        
+        image_url = f"/api/inventory/images/{image_id}"
         return {"image_url": image_url, "message": "Imagen subida exitosamente"}
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"No se pudo procesar la imagen: {str(e)}")
+
+@router.get("/images/{image_id}")
+async def get_product_image(image_id: str):
+    from fastapi.responses import Response
+    doc = await db.product_images.find_one({"id": image_id}, {"_id": 0, "data": 1, "content_type": 1})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Imagen no encontrada")
+    return Response(content=doc["data"], media_type=doc.get("content_type", "image/jpeg"), headers={"Cache-Control": "public, max-age=31536000"})

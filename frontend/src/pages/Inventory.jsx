@@ -108,7 +108,7 @@ export default function Inventory() {
 
   const getImageUrl = (url) => {
     if (!url) return null;
-    if (url.startsWith("/api/uploads/")) return `${API_URL}${url}`;
+    if (url.startsWith("/api/uploads/") || url.startsWith("/api/inventory/images/")) return `${API_URL}${url}`;
     const driveMatch = url.match(/drive\.google\.com\/file\/d\/([^/\?]+)/);
     if (driveMatch) return `https://drive.google.com/thumbnail?id=${driveMatch[1]}&sz=w200`;
     if (url.match(/drive\.google\.com\/open\?id=(.+)/)) {
@@ -441,7 +441,7 @@ function ProductModal({ product, onClose, onSave, allCategories = [] }) {
 
   const resolveImageUrl = (url) => {
     if (!url) return null;
-    if (url.startsWith("/api/uploads/")) return `${API_URL}${url}`;
+    if (url.startsWith("/api/uploads/") || url.startsWith("/api/inventory/images/")) return `${API_URL}${url}`;
     const driveMatch = url.match(/drive\.google\.com\/file\/d\/([^/\?]+)/);
     if (driveMatch) return `https://drive.google.com/thumbnail?id=${driveMatch[1]}&sz=w400`;
     const driveOpen = url.match(/drive\.google\.com\/open\?id=([^&]+)/);
