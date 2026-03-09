@@ -28,7 +28,6 @@ CRM para ventas comerciales con WhatsApp Business que integra bot IA (GPT-4o), g
 - SOLO acceso a Configuracion
 - No puede ser eliminado ni modificado por admin
 - No aparece en listado de usuarios para admin
-- No tiene acceso a ninguna otra data del sistema
 - Credenciales: aicreator@emprenovus.com / Jlsb*1082
 
 ## Completed Tasks
@@ -48,7 +47,31 @@ CRM para ventas comerciales con WhatsApp Business que integra bot IA (GPT-4o), g
 - [x] Role-based permissions (admin/asesor/desarrollador) - Feb 23, 2026
 - [x] Asesor: no delete/export, no dashboard/leads
 - [x] Desarrollador: only Configuracion access, protected user
+- [x] WhatsApp number migration (+593963560326) - Mar 2026
+- [x] Editable quote prices in QuoteBuilder
+- [x] Discount calculation fix (stale closure bug)
+- [x] Persistent image storage (MongoDB product_images collection)
+- [x] Independent PO numbering (counters collection, starting 4712)
+- [x] Enhanced PO PDF with editable client fields modal
+- [x] Client filtering & predictive search in quotes
+- [x] **P0 Performance fix** - Mar 9, 2026:
+  - SecurityHeadersMiddleware: skip Cache-Control override for image/upload routes
+  - RequestSizeLimitMiddleware: 10MB -> 25MB
+  - Image endpoint: ETag + immutable cache headers
+  - PDF generation: direct MongoDB read for images (no HTTP roundtrip)
 
 ## Remaining Tasks
-1. **P2 - Refactor bot_service.py**: Split into smaller modules
-2. **P3 - Deploy to Railway**: Save to GitHub and redeploy
+1. **P1 - Generate 3 Demo WhatsApp Conversations**: Simulate with curl
+2. **P2 - Refactor bot_service.py**: Split into smaller modules
+3. **P2 - Refactor large frontend components**: Extract modals
+4. **P3 - Asesor permission audit**: Full audit of role permissions
+5. **P3 - Deploy to Railway**: Save to GitHub and redeploy
+
+## Key DB Collections
+- `counters`: `{ _id: str, seq: int }` (PO numbering)
+- `product_images`: `{ id: str, data: bytes, content_type: str }` (image storage)
+- `quotes_v2`: `{ ..., factura: Optional[str] }` (quotes/POs)
+
+## Test Credentials
+- Admin: admin@gimmicks.com / admin123456
+- Developer: aicreator@emprenovus.com / Jlsb*1082
