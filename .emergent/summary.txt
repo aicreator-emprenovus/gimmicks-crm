@@ -1,169 +1,1090 @@
 <analysis>**original_problem_statement:**
-The user's initial goal was to merge a CRM (Proyecto A) with a quoting tool (Proyecto B), replacing the CRM's catalog and quoting modules while integrating new features from the quoting tool. Throughout the process, the user added numerous requirements, which are now core to the product:
+The user's initial goal was to merge a CRM (Proyecto A) with a quoting tool (Proyecto B). This has evolved into a comprehensive system with a conversational WhatsApp bot, role-based access control, data import/export, and advanced inventory/quote management.
 
-**PRODUCT REQUIREMENTS:**
-1.  **System Merge & Feature Integration**: Combine two projects, establishing a new feature set based on user requests.
-2.  **Conversational WhatsApp Bot**: Implement an AI assistant () to handle a multi-step customer interaction flow: gathering contact info, understanding product needs, sending catalog links (both a public web catalog and a fallback PDF), generating quotes, and creating leads.
-3.  **Client vs. Prospect (Interesado)**: Differentiate between manually created Clientes and prospects generated via WhatsApp, called Interesados, with a dedicated UI section.
-4.  **Lead-to-Client Automation**: Automatically promote an Interesado to a Cliente when their lead is moved to the Entregado (Delivered) column in the Kanban board.
-5.  **Role-Based Access Control (RBAC)**:
-    *   **Admin**: Full access.
-    *   **Asesor (Advisor)**: Can create/edit entities (clients, quotes, orders) but cannot delete or export data. Cannot access Dashboard or Leads sections.
-    *   **Desarrollador (Developer)**: A hidden, protected user with exclusive access to the Configuración (Settings) section.
-6.  **Data Management**: Implement Import/Export functionality for clients, quotes, and orders using Excel files, with duplicate detection on import.
-7.  **Inventory & Category Management**: Allow full CRUD management of product categories, ensuring changes (rename/delete) cascade to all relevant products.
-8.  **UI/UX Enhancements**: Implement various user-requested UI improvements, such as a show password toggle, a sticky sidebar, and streamlined forms.
-9.  **System Operations**: Configure email sending (SMTP), staff notifications via WhatsApp, and fix production deployment issues on Railway.
+The most recent user requests include:
+1.  **WhatsApp Integration**: Configure a new WhatsApp number for a client's business (Gimmicks) and decommission the old one, ensuring the bot operates correctly with the new number.
+2.  **Editable Quote Prices**: Allow the price of items to be editable directly within a quote.
+3.  **Correct Discount Logic**: Ensure percentage-based discounts are calculated correctly on the total sum.
+4.  **Persistent Image Storage**: Fix an issue where uploaded product images disappear after deployment.
+5.  **Independent Purchase Order (PO) Numbering**: POs should have their own sequential numbering, starting from 4712, independent of quote numbers.
+6.  **PO PDF & Client Filtering**: Update the PO PDF format to include more client details from an editable modal and add a client filter dropdown to the quotes/POs list.
+7.  **Predictive Client Search**: Add a predictive text input for client selection in the quote builder.
+8.  **Critical Performance Issue**: After the latest deployment, the entire application has become extremely slow and unstable, with pages loading as blank, images failing to load, and PDFs not downloading.
 
 **User's preferred language**: Spanish
 
 **what currently exists?**
-A full-stack application (FastAPI, React, MongoDB) that has successfully merged the two original projects and implemented all user-requested features. This includes a sophisticated WhatsApp bot, a clear distinction and automated promotion between Interesados and Clientes, and a comprehensive role-based access control system for Admin, Asesor, and Desarrollador users. The system supports Excel data import/export for key modules and features advanced inventory category management. Numerous UI/UX and operational fixes have been completed, including resolving deployment issues on Railway. The application has been branded as Gimmicks - Agente cotizador IA with a custom favicon and footer credits.
+A full-stack application (FastAPI, React, MongoDB) with a sophisticated quoting system, CRM features, and an integrated AI WhatsApp bot. All user-requested features, including the complex WhatsApp number migration, editable quote prices, and independent PO numbering, have been implemented. However, the latest deployment has introduced a severe, system-wide performance degradation that has rendered the application unstable and partially unusable.
 
 **Last working item**:
--   **Last item agent was working**: The user requested the creation of three complete, sample conversations with generated quotes to be used for a product demonstration.
--   **Status**: NOT STARTED
+-   **Last item agent was working**: The user reported a critical performance issue after the last deployment. The application is extremely slow, pages load as blank, and image/PDF downloads are failing. The agent was just beginning to investigate this system-wide problem.
+-   **Status**: IN PROGRESS
 -   **Agent Testing Done**: N
--   **Which testing method agent to use?** Manual testing by using  to simulate three separate, complete user conversations with the WhatsApp bot endpoint ().
--   **User Testing Done**: N
+-   **Which testing method agent to use?** Both.
+    -   **Backend**: Use ==> /var/log/supervisor/backend.err.log <==
+  File "/usr/local/lib/python3.11/asyncio/runners.py", line 190, in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/asyncio/base_events.py", line 654, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "/root/.venv/lib/python3.11/site-packages/uvicorn/server.py", line 69, in serve
+    config.load()
+  File "/root/.venv/lib/python3.11/site-packages/uvicorn/config.py", line 458, in load
+    self.loaded_app = import_from_string(self.app)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.venv/lib/python3.11/site-packages/uvicorn/importer.py", line 21, in import_from_string
+    module = importlib.import_module(module_str)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/importlib/__init__.py", line 126, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1204, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1176, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1147, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 690, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 940, in exec_module
+  File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
+  File "/app/backend/server.py", line 99, in <module>
+    from routes.quotes_routes import router as quotes_v2_router, set_db as set_quotes_db, set_jwt_secret as set_quotes_jwt
+  File "/app/backend/routes/quotes_routes.py", line 450, in <module>
+    class GeneratePDFRequest(BaseModel):
+                             ^^^^^^^^^
+NameError: name 'BaseModel' is not defined
+WARNING:  WatchFiles detected changes in 'routes/quotes_routes.py'. Reloading...
+Process SpawnProcess-13:
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.11/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/local/lib/python3.11/multiprocessing/process.py", line 108, in run
+    self._target(*self._args, **self._kwargs)
+  File "/root/.venv/lib/python3.11/site-packages/uvicorn/_subprocess.py", line 78, in subprocess_started
+    target(sockets=sockets)
+  File "/root/.venv/lib/python3.11/site-packages/uvicorn/server.py", line 62, in run
+    return asyncio.run(self.serve(sockets=sockets))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/asyncio/runners.py", line 190, in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/asyncio/base_events.py", line 654, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "/root/.venv/lib/python3.11/site-packages/uvicorn/server.py", line 69, in serve
+    config.load()
+  File "/root/.venv/lib/python3.11/site-packages/uvicorn/config.py", line 458, in load
+    self.loaded_app = import_from_string(self.app)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.venv/lib/python3.11/site-packages/uvicorn/importer.py", line 21, in import_from_string
+    module = importlib.import_module(module_str)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/importlib/__init__.py", line 126, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1204, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1176, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1147, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 690, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 940, in exec_module
+  File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
+  File "/app/backend/server.py", line 99, in <module>
+    from routes.quotes_routes import router as quotes_v2_router, set_db as set_quotes_db, set_jwt_secret as set_quotes_jwt
+  File "/app/backend/routes/quotes_routes.py", line 451, in <module>
+    class GeneratePDFRequest(BaseModel):
+                             ^^^^^^^^^
+NameError: name 'BaseModel' is not defined
+WARNING:  WatchFiles detected changes in 'routes/quotes_routes.py'. Reloading...
+INFO:     Started server process [3506]
+INFO:     Waiting for application startup.
+2026-03-06 22:55:33,449 - services.sync_service - INFO - Background sync started (interval: 120s)
+INFO:     Application startup complete.
+2026-03-06 22:55:33,816 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+WARNING:  WatchFiles detected changes in 'routes/quotes_routes.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [3506]
+INFO:     Started server process [3596]
+INFO:     Waiting for application startup.
+2026-03-06 22:56:32,116 - services.sync_service - INFO - Background sync started (interval: 120s)
+INFO:     Application startup complete.
+2026-03-06 22:56:32,489 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+WARNING:  WatchFiles detected changes in 'routes/quotes_routes.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [3596]
+INFO:     Started server process [3625]
+INFO:     Waiting for application startup.
+2026-03-06 22:56:38,692 - services.sync_service - INFO - Background sync started (interval: 120s)
+INFO:     Application startup complete.
+2026-03-06 22:56:39,045 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+2026-03-06 22:58:39,410 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+2026-03-06 23:00:39,760 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+2026-03-06 23:02:40,113 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+2026-03-06 23:04:40,488 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+2026-03-06 23:06:40,874 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+2026-03-06 23:08:41,239 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+2026-03-06 23:10:41,599 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+2026-03-06 23:12:41,962 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+2026-03-06 23:14:42,325 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+2026-03-06 23:16:42,679 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+2026-03-06 23:18:43,036 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+2026-03-06 23:20:43,393 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+2026-03-06 23:22:43,775 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+2026-03-06 23:24:44,133 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+2026-03-06 23:26:44,604 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+2026-03-06 23:28:44,962 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+2026-03-06 23:30:45,339 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+2026-03-06 23:32:45,683 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+2026-03-06 23:34:46,033 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+2026-03-06 23:36:46,500 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+2026-03-06 23:38:46,836 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+2026-03-06 23:40:47,190 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+2026-03-06 23:42:47,548 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+2026-03-06 23:44:47,908 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+2026-03-06 23:46:48,272 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+2026-03-06 23:48:48,741 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+2026-03-06 23:50:49,116 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+2026-03-06 23:52:49,467 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+2026-03-06 23:54:49,831 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+2026-03-06 23:56:50,204 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+2026-03-06 23:58:50,553 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+2026-03-07 00:00:50,907 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+2026-03-07 00:02:51,265 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+2026-03-07 00:04:51,624 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+2026-03-07 00:06:51,990 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+2026-03-07 00:08:52,360 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+INFO:     Will watch for changes in these directories: ['/app/backend']
+INFO:     Uvicorn running on http://0.0.0.0:8001 (Press CTRL+C to quit)
+INFO:     Started reloader process [48] using WatchFiles
+INFO:     Started server process [94]
+INFO:     Waiting for application startup.
+2026-03-09 02:42:22,533 - services.sync_service - INFO - Background sync started (interval: 120s)
+INFO:     Application startup complete.
+2026-03-09 02:42:22,933 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+WARNING:  WatchFiles detected changes in 'tests/test_leads_and_webhook.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [94]
+INFO:     Started server process [288]
+INFO:     Waiting for application startup.
+2026-03-09 02:44:19,297 - services.sync_service - INFO - Background sync started (interval: 120s)
+INFO:     Application startup complete.
+2026-03-09 02:44:19,642 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+2026-03-09 02:46:19,993 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+WARNING:  WatchFiles detected changes in 'server.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [288]
+INFO:     Started server process [366]
+INFO:     Waiting for application startup.
+2026-03-09 02:47:33,642 - services.sync_service - INFO - Background sync started (interval: 120s)
+INFO:     Application startup complete.
+2026-03-09 02:47:33,986 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+2026-03-09 02:49:34,345 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+2026-03-09 02:51:34,701 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 1, 'updated': 10, 'total_prod': 11}}
+2026-03-09 02:53:35,056 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 11, 'total_prod': 11}}
+2026-03-09 02:55:35,403 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 11, 'total_prod': 11}}
+2026-03-09 02:57:35,779 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 11, 'total_prod': 11}}
+2026-03-09 02:59:36,156 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 11, 'total_prod': 11}}
+2026-03-09 03:01:36,546 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 11, 'total_prod': 11}}
+2026-03-09 03:03:36,896 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 11, 'total_prod': 11}}
+2026-03-09 03:05:37,269 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 11, 'total_prod': 11}}
+2026-03-09 03:07:37,657 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 11, 'total_prod': 11}}
+2026-03-09 03:09:38,002 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 11, 'total_prod': 11}}
+2026-03-09 03:11:38,400 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 11, 'total_prod': 11}}
+2026-03-09 03:13:38,748 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 11, 'total_prod': 11}}
+2026-03-09 03:15:39,102 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 11, 'total_prod': 11}}
+2026-03-09 03:17:39,456 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 11, 'total_prod': 11}}
+INFO:     Will watch for changes in these directories: ['/app/backend']
+INFO:     Uvicorn running on http://0.0.0.0:8001 (Press CTRL+C to quit)
+INFO:     Started reloader process [46] using WatchFiles
+INFO:     Started server process [92]
+INFO:     Waiting for application startup.
+2026-03-09 22:10:52,730 - services.sync_service - INFO - Background sync started (interval: 120s)
+INFO:     Application startup complete.
+2026-03-09 22:10:53,125 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 11, 'total_prod': 11}}
+2026-03-09 22:12:53,559 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 11, 'total_prod': 11}}
+2026-03-09 22:14:53,975 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 11, 'total_prod': 11}}
+INFO:     Will watch for changes in these directories: ['/app/backend']
+INFO:     Uvicorn running on http://0.0.0.0:8001 (Press CTRL+C to quit)
+INFO:     Started reloader process [48] using WatchFiles
+INFO:     Started server process [92]
+INFO:     Waiting for application startup.
+2026-03-09 22:17:18,270 - services.sync_service - INFO - Background sync started (interval: 120s)
+INFO:     Application startup complete.
+2026-03-09 22:17:18,664 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 11, 'total_prod': 11}}
+
+==> /var/log/supervisor/backend.out.log <==
+INFO:     10.79.167.145:39078 - "GET /api/clients/ HTTP/1.1" 200 OK
+INFO:     10.79.167.145:51086 - "GET /api/inventory/categories HTTP/1.1" 200 OK
+INFO:     10.79.167.145:51086 - "GET /api/inventory/?page=1&limit=20 HTTP/1.1" 200 OK
+INFO:     10.79.167.146:58038 - "GET /api/clients/ HTTP/1.1" 200 OK
+INFO:     10.79.167.145:51086 - "GET /api/inventory/categories HTTP/1.1" 200 OK
+INFO:     10.79.167.145:51096 - "GET /api/clients/ HTTP/1.1" 200 OK
+INFO:     10.79.167.145:51112 - "GET /api/inventory/?page=1&limit=20 HTTP/1.1" 200 OK
+INFO:     10.79.167.146:49496 - "GET /api/inventory/?page=1&limit=20 HTTP/1.1" 200 OK
+INFO:     10.79.167.146:58840 - "POST /api/auth/login HTTP/1.1" 200 OK
+INFO:     10.79.167.145:47798 - "GET /api/dashboard-v2/top-products?limit=5 HTTP/1.1" 200 OK
+INFO:     10.79.167.145:47824 - "GET /api/dashboard-v2/top-clients?limit=5 HTTP/1.1" 200 OK
+INFO:     10.79.167.145:47788 - "GET /api/dashboard-v2/stats HTTP/1.1" 200 OK
+INFO:     10.79.167.145:47808 - "GET /api/dashboard-v2/activity-chart?days=14 HTTP/1.1" 200 OK
+INFO:     10.79.167.145:47824 - "GET /api/dashboard-v2/top-products?limit=5 HTTP/1.1" 200 OK
+INFO:     10.79.167.145:47824 - "GET /api/dashboard-v2/top-clients?limit=5 HTTP/1.1" 200 OK
+INFO:     10.79.167.146:58840 - "GET /api/dashboard-v2/stats HTTP/1.1" 200 OK
+INFO:     10.79.167.145:47798 - "GET /api/dashboard-v2/activity-chart?days=14 HTTP/1.1" 200 OK
+INFO:     10.79.167.146:58840 - "GET /api/auth/me HTTP/1.1" 200 OK
+INFO:     10.79.167.145:47824 - "GET /api/auth/me HTTP/1.1" 200 OK
+INFO:     10.79.167.146:58840 - "GET /api/clients/ HTTP/1.1" 200 OK
+INFO:     10.79.167.145:47824 - "GET /api/inventory/categories HTTP/1.1" 200 OK
+INFO:     10.79.167.145:47824 - "GET /api/inventory/?page=1&limit=20 HTTP/1.1" 200 OK
+INFO:     10.79.167.145:47824 - "GET /api/inventory/categories HTTP/1.1" 200 OK
+INFO:     10.79.167.145:47798 - "GET /api/clients/ HTTP/1.1" 200 OK
+INFO:     10.79.167.145:47798 - "GET /api/inventory/?page=1&limit=20 HTTP/1.1" 200 OK
+INFO:     10.79.167.145:40352 - "POST /api/quotes-v2/ HTTP/1.1" 200 OK
+INFO:     10.79.167.146:60472 - "GET /api/quotes-v2/?trash=false&doc_type=QUOTE HTTP/1.1" 200 OK
+INFO:     10.79.167.145:40352 - "GET /api/clients/ HTTP/1.1" 200 OK
+INFO:     10.79.167.145:40352 - "GET /api/clients/ HTTP/1.1" 200 OK
+INFO:     10.79.167.145:40352 - "GET /api/quotes-v2/?trash=false&doc_type=QUOTE HTTP/1.1" 200 OK
+INFO:     10.79.167.145:40352 - "POST /api/quotes-v2/bc2d15c4-9451-4c17-98f0-11ea2e24f961/generate-pdf HTTP/1.1" 200 OK
+INFO:     10.79.167.145:40364 - "POST /api/quotes-v2/bc2d15c4-9451-4c17-98f0-11ea2e24f961/convert-to-po HTTP/1.1" 200 OK
+INFO:     10.79.167.146:54298 - "GET /api/quotes-v2/?trash=false&doc_type=QUOTE HTTP/1.1" 200 OK
+INFO:     10.79.167.145:40364 - "GET /api/quotes-v2/?trash=false&doc_type=PO HTTP/1.1" 200 OK
+INFO:     10.79.167.146:60664 - "GET /api/clients/ HTTP/1.1" 200 OK
+INFO:     10.79.167.145:34186 - "POST /api/quotes-v2/55d69df7-3e0a-4ad3-9fe4-fbfcf8dbe201/generate-pdf HTTP/1.1" 200 OK
+INFO:     10.79.167.145:34192 - "POST /api/quotes-v2/55d69df7-3e0a-4ad3-9fe4-fbfcf8dbe201/generate-pdf HTTP/1.1" 200 OK
+INFO:     10.79.167.146:36016 - "GET /api/clients/ HTTP/1.1" 200 OK
+INFO:     10.79.167.145:36708 - "POST /api/quotes-v2/55d69df7-3e0a-4ad3-9fe4-fbfcf8dbe201/generate-pdf HTTP/1.1" 200 OK
+INFO:     10.79.167.146:36016 - "POST /api/quotes-v2/55d69df7-3e0a-4ad3-9fe4-fbfcf8dbe201/generate-pdf HTTP/1.1" 200 OK
+INFO:     10.79.167.145:56270 - "GET /api/clients/ HTTP/1.1" 200 OK
+INFO:     10.79.167.146:48550 - "POST /api/quotes-v2/55d69df7-3e0a-4ad3-9fe4-fbfcf8dbe201/generate-pdf HTTP/1.1" 200 OK
+INFO:     10.79.167.145:56270 - "POST /api/quotes-v2/55d69df7-3e0a-4ad3-9fe4-fbfcf8dbe201/generate-pdf HTTP/1.1" 200 OK
+INFO:     10.79.167.146:53786 - "GET /api/clients/?trash=false&source=manual HTTP/1.1" 200 OK
+INFO:     10.79.167.145:46292 - "GET /api/clients/?trash=false&source=manual HTTP/1.1" 200 OK
+INFO:     10.79.167.146:56656 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.146:56656 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.145:53300 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.145:40084 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.145:59426 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.146:48928 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.146:48690 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.145:45428 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.146:47272 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.146:47272 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.146:47134 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.146:40090 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.146:37318 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.145:49132 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.146:44310 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.146:41154 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.145:36570 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.145:56304 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.146:47488 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.145:35872 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.145:37228 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.146:35060 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.145:52534 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.146:45490 - "GET /api/auth/me HTTP/1.1" 200 OK
+INFO:     10.79.167.145:52534 - "GET /api/auth/me HTTP/1.1" 200 OK
+INFO:     10.79.167.145:52534 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.146:45490 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.146:35152 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.146:56458 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.146:38854 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.145:32790 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.145:37130 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.146:44208 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.145:42628 - "POST /api/auth/login HTTP/1.1" 200 OK
+INFO:     10.79.167.145:42628 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.146:43536 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.146:48476 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.145:47562 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.146:43406 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.145:38556 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.145:54486 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.145:33972 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.146:41396 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.145:47926 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.145:51104 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.146:54586 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.145:47386 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.146:59520 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.146:51500 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.146:48708 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.145:55772 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.145:60696 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.146:43276 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.145:52188 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.145:55698 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.145:34098 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.146:42428 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.146:58772 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.145:58928 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.145:36500 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.145:34912 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.146:51568 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.145:59316 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.146:42224 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.145:51690 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.145:49444 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.145:42400 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.146:54780 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.146:44040 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.145:50836 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.146:49330 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.146:38900 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.145:49196 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.146:41992 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.146:38202 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.145:56172 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.146:33538 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.145:53682 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.145:50246 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.146:51674 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.146:45634 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.146:41754 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.145:44042 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.146:47958 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.145:46808 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.145:54374 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.145:58304 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.145:33322 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.145:48398 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.146:34444 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.71:57790 - "GET /api/auth/me HTTP/1.1" 401 Unauthorized
+INFO:     10.79.132.71:57790 - "GET /api/auth/me HTTP/1.1" 401 Unauthorized
+INFO:     10.79.132.66:49620 - "POST /api/auth/login HTTP/1.1" 200 OK
+INFO:     10.79.132.71:41640 - "GET /api/dashboard-v2/top-clients?limit=5 HTTP/1.1" 200 OK
+INFO:     10.79.132.66:53950 - "GET /api/dashboard-v2/top-products?limit=5 HTTP/1.1" 200 OK
+INFO:     10.79.132.66:49620 - "GET /api/dashboard-v2/activity-chart?days=14 HTTP/1.1" 200 OK
+INFO:     10.79.132.71:41654 - "GET /api/dashboard-v2/stats HTTP/1.1" 200 OK
+INFO:     10.79.132.71:41654 - "GET /api/dashboard-v2/top-clients?limit=5 HTTP/1.1" 200 OK
+INFO:     10.79.132.66:53950 - "GET /api/dashboard-v2/top-products?limit=5 HTTP/1.1" 200 OK
+INFO:     10.79.132.71:41654 - "GET /api/dashboard-v2/stats HTTP/1.1" 200 OK
+INFO:     10.79.132.66:49620 - "GET /api/dashboard-v2/activity-chart?days=14 HTTP/1.1" 200 OK
+INFO:     10.79.132.71:41654 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.66:49620 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.66:59242 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.71:34864 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.66:58874 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.71:32802 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.66:43906 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.71:41048 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.66:35426 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.71:39132 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.71:53310 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.71:53778 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.66:48694 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.66:39148 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.66:36798 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.71:38130 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.66:49248 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.71:43534 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.71:58306 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.71:48308 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.66:48016 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.66:42554 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.66:38220 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.71:46242 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.71:60370 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.71:51688 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.71:51524 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.71:35378 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.71:60356 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.66:40778 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.71:33084 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.66:38994 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.71:35406 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.66:40922 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.66:41816 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.66:36752 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.66:43550 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.71:45494 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.71:47216 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.71:45854 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.71:44008 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.66:55852 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.66:41310 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.66:60216 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.71:40334 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.66:38298 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.71:54604 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.66:52904 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.66:40598 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.71:54520 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.71:37204 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.66:47340 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.71:52642 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.66:50590 - "GET /api/conversations HTTP/1.1" 200 OK to check for new errors or timeouts.
+    -   **Frontend**: Use the browser's Developer Tools (Network and Console tabs) on the deployed application to identify slow API calls, failed requests (4xx, 5xx), or JavaScript errors that could be halting the UI rendering.
+-   **User Testing Done**: Y (User reported the issue)
 
 **All Pending/In progress Issue list**:
--   **Issue 1: (P0) Generate Demo Conversations**
-    -   **Description**: The user needs sample data for a demo. The task is to create three full conversations from start to finish, each resulting in a generated quote.
+-   **Issue 1: (P0) Critical Performance Degradation and System Instability**
+    -   **Description**: After the last deployment, the entire application is extremely slow. Pages (including the login page) often load as blank and require a refresh. Product images fail to load intermittently, and PDF downloads are not working. The application is in an unstable, borderline unusable state.
+    -   **Attempted fixes**: None yet. The investigation has just started.
     -   **Next debug checklist**:
-        1.  Formulate three distinct  test sequences, each simulating a unique user (e.g., one asking for the full catalog, one for a specific product found in the system, one for a product not in the system).
-        2.  Execute the  sequences against the  endpoint to populate the database.
-        3.  Verify in the UI (Inbox, Cotizaciones) that the three conversations and their corresponding quotes have been created correctly.
-    -   **Why fix this issue and what will be achieved with the fix?**: This will provide the user with the necessary data to showcase the application's functionality to stakeholders.
-    -   **Status**: NOT STARTED
+        1.  **Check Backend Logs**: Run ==> /var/log/supervisor/backend.err.log <==
+  File "/usr/local/lib/python3.11/asyncio/runners.py", line 190, in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/asyncio/base_events.py", line 654, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "/root/.venv/lib/python3.11/site-packages/uvicorn/server.py", line 69, in serve
+    config.load()
+  File "/root/.venv/lib/python3.11/site-packages/uvicorn/config.py", line 458, in load
+    self.loaded_app = import_from_string(self.app)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.venv/lib/python3.11/site-packages/uvicorn/importer.py", line 21, in import_from_string
+    module = importlib.import_module(module_str)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/importlib/__init__.py", line 126, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1204, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1176, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1147, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 690, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 940, in exec_module
+  File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
+  File "/app/backend/server.py", line 99, in <module>
+    from routes.quotes_routes import router as quotes_v2_router, set_db as set_quotes_db, set_jwt_secret as set_quotes_jwt
+  File "/app/backend/routes/quotes_routes.py", line 450, in <module>
+    class GeneratePDFRequest(BaseModel):
+                             ^^^^^^^^^
+NameError: name 'BaseModel' is not defined
+WARNING:  WatchFiles detected changes in 'routes/quotes_routes.py'. Reloading...
+Process SpawnProcess-13:
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.11/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/local/lib/python3.11/multiprocessing/process.py", line 108, in run
+    self._target(*self._args, **self._kwargs)
+  File "/root/.venv/lib/python3.11/site-packages/uvicorn/_subprocess.py", line 78, in subprocess_started
+    target(sockets=sockets)
+  File "/root/.venv/lib/python3.11/site-packages/uvicorn/server.py", line 62, in run
+    return asyncio.run(self.serve(sockets=sockets))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/asyncio/runners.py", line 190, in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/asyncio/base_events.py", line 654, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "/root/.venv/lib/python3.11/site-packages/uvicorn/server.py", line 69, in serve
+    config.load()
+  File "/root/.venv/lib/python3.11/site-packages/uvicorn/config.py", line 458, in load
+    self.loaded_app = import_from_string(self.app)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.venv/lib/python3.11/site-packages/uvicorn/importer.py", line 21, in import_from_string
+    module = importlib.import_module(module_str)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/importlib/__init__.py", line 126, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1204, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1176, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1147, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 690, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 940, in exec_module
+  File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
+  File "/app/backend/server.py", line 99, in <module>
+    from routes.quotes_routes import router as quotes_v2_router, set_db as set_quotes_db, set_jwt_secret as set_quotes_jwt
+  File "/app/backend/routes/quotes_routes.py", line 451, in <module>
+    class GeneratePDFRequest(BaseModel):
+                             ^^^^^^^^^
+NameError: name 'BaseModel' is not defined
+WARNING:  WatchFiles detected changes in 'routes/quotes_routes.py'. Reloading...
+INFO:     Started server process [3506]
+INFO:     Waiting for application startup.
+2026-03-06 22:55:33,449 - services.sync_service - INFO - Background sync started (interval: 120s)
+INFO:     Application startup complete.
+2026-03-06 22:55:33,816 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+WARNING:  WatchFiles detected changes in 'routes/quotes_routes.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [3506]
+INFO:     Started server process [3596]
+INFO:     Waiting for application startup.
+2026-03-06 22:56:32,116 - services.sync_service - INFO - Background sync started (interval: 120s)
+INFO:     Application startup complete.
+2026-03-06 22:56:32,489 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+WARNING:  WatchFiles detected changes in 'routes/quotes_routes.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [3596]
+INFO:     Started server process [3625]
+INFO:     Waiting for application startup.
+2026-03-06 22:56:38,692 - services.sync_service - INFO - Background sync started (interval: 120s)
+INFO:     Application startup complete.
+2026-03-06 22:56:39,045 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+2026-03-06 22:58:39,410 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+2026-03-06 23:00:39,760 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+2026-03-06 23:02:40,113 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+2026-03-06 23:04:40,488 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+2026-03-06 23:06:40,874 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+2026-03-06 23:08:41,239 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+2026-03-06 23:10:41,599 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+2026-03-06 23:12:41,962 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+2026-03-06 23:14:42,325 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+2026-03-06 23:16:42,679 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+2026-03-06 23:18:43,036 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+2026-03-06 23:20:43,393 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+2026-03-06 23:22:43,775 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+2026-03-06 23:24:44,133 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+2026-03-06 23:26:44,604 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+2026-03-06 23:28:44,962 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+2026-03-06 23:30:45,339 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+2026-03-06 23:32:45,683 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+2026-03-06 23:34:46,033 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+2026-03-06 23:36:46,500 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+2026-03-06 23:38:46,836 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+2026-03-06 23:40:47,190 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+2026-03-06 23:42:47,548 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+2026-03-06 23:44:47,908 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+2026-03-06 23:46:48,272 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+2026-03-06 23:48:48,741 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+2026-03-06 23:50:49,116 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+2026-03-06 23:52:49,467 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+2026-03-06 23:54:49,831 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+2026-03-06 23:56:50,204 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+2026-03-06 23:58:50,553 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+2026-03-07 00:00:50,907 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+2026-03-07 00:02:51,265 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+2026-03-07 00:04:51,624 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+2026-03-07 00:06:51,990 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+2026-03-07 00:08:52,360 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+INFO:     Will watch for changes in these directories: ['/app/backend']
+INFO:     Uvicorn running on http://0.0.0.0:8001 (Press CTRL+C to quit)
+INFO:     Started reloader process [48] using WatchFiles
+INFO:     Started server process [94]
+INFO:     Waiting for application startup.
+2026-03-09 02:42:22,533 - services.sync_service - INFO - Background sync started (interval: 120s)
+INFO:     Application startup complete.
+2026-03-09 02:42:22,933 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+WARNING:  WatchFiles detected changes in 'tests/test_leads_and_webhook.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [94]
+INFO:     Started server process [288]
+INFO:     Waiting for application startup.
+2026-03-09 02:44:19,297 - services.sync_service - INFO - Background sync started (interval: 120s)
+INFO:     Application startup complete.
+2026-03-09 02:44:19,642 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+2026-03-09 02:46:19,993 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+WARNING:  WatchFiles detected changes in 'server.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [288]
+INFO:     Started server process [366]
+INFO:     Waiting for application startup.
+2026-03-09 02:47:33,642 - services.sync_service - INFO - Background sync started (interval: 120s)
+INFO:     Application startup complete.
+2026-03-09 02:47:33,986 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+2026-03-09 02:49:34,345 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 10, 'total_prod': 10}}
+2026-03-09 02:51:34,701 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 1, 'updated': 10, 'total_prod': 11}}
+2026-03-09 02:53:35,056 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 11, 'total_prod': 11}}
+2026-03-09 02:55:35,403 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 11, 'total_prod': 11}}
+2026-03-09 02:57:35,779 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 11, 'total_prod': 11}}
+2026-03-09 02:59:36,156 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 11, 'total_prod': 11}}
+2026-03-09 03:01:36,546 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 11, 'total_prod': 11}}
+2026-03-09 03:03:36,896 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 11, 'total_prod': 11}}
+2026-03-09 03:05:37,269 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 11, 'total_prod': 11}}
+2026-03-09 03:07:37,657 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 11, 'total_prod': 11}}
+2026-03-09 03:09:38,002 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 11, 'total_prod': 11}}
+2026-03-09 03:11:38,400 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 11, 'total_prod': 11}}
+2026-03-09 03:13:38,748 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 11, 'total_prod': 11}}
+2026-03-09 03:15:39,102 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 11, 'total_prod': 11}}
+2026-03-09 03:17:39,456 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 11, 'total_prod': 11}}
+INFO:     Will watch for changes in these directories: ['/app/backend']
+INFO:     Uvicorn running on http://0.0.0.0:8001 (Press CTRL+C to quit)
+INFO:     Started reloader process [46] using WatchFiles
+INFO:     Started server process [92]
+INFO:     Waiting for application startup.
+2026-03-09 22:10:52,730 - services.sync_service - INFO - Background sync started (interval: 120s)
+INFO:     Application startup complete.
+2026-03-09 22:10:53,125 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 11, 'total_prod': 11}}
+2026-03-09 22:12:53,559 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 11, 'total_prod': 11}}
+2026-03-09 22:14:53,975 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 11, 'total_prod': 11}}
+INFO:     Will watch for changes in these directories: ['/app/backend']
+INFO:     Uvicorn running on http://0.0.0.0:8001 (Press CTRL+C to quit)
+INFO:     Started reloader process [48] using WatchFiles
+INFO:     Started server process [92]
+INFO:     Waiting for application startup.
+2026-03-09 22:17:18,270 - services.sync_service - INFO - Background sync started (interval: 120s)
+INFO:     Application startup complete.
+2026-03-09 22:17:18,664 - services.sync_service - INFO - Background sync completed: {'leads': {'inserted': 0, 'updated': 11, 'total_prod': 11}}
+
+==> /var/log/supervisor/backend.out.log <==
+INFO:     10.79.167.145:39078 - "GET /api/clients/ HTTP/1.1" 200 OK
+INFO:     10.79.167.145:51086 - "GET /api/inventory/categories HTTP/1.1" 200 OK
+INFO:     10.79.167.145:51086 - "GET /api/inventory/?page=1&limit=20 HTTP/1.1" 200 OK
+INFO:     10.79.167.146:58038 - "GET /api/clients/ HTTP/1.1" 200 OK
+INFO:     10.79.167.145:51086 - "GET /api/inventory/categories HTTP/1.1" 200 OK
+INFO:     10.79.167.145:51096 - "GET /api/clients/ HTTP/1.1" 200 OK
+INFO:     10.79.167.145:51112 - "GET /api/inventory/?page=1&limit=20 HTTP/1.1" 200 OK
+INFO:     10.79.167.146:49496 - "GET /api/inventory/?page=1&limit=20 HTTP/1.1" 200 OK
+INFO:     10.79.167.146:58840 - "POST /api/auth/login HTTP/1.1" 200 OK
+INFO:     10.79.167.145:47798 - "GET /api/dashboard-v2/top-products?limit=5 HTTP/1.1" 200 OK
+INFO:     10.79.167.145:47824 - "GET /api/dashboard-v2/top-clients?limit=5 HTTP/1.1" 200 OK
+INFO:     10.79.167.145:47788 - "GET /api/dashboard-v2/stats HTTP/1.1" 200 OK
+INFO:     10.79.167.145:47808 - "GET /api/dashboard-v2/activity-chart?days=14 HTTP/1.1" 200 OK
+INFO:     10.79.167.145:47824 - "GET /api/dashboard-v2/top-products?limit=5 HTTP/1.1" 200 OK
+INFO:     10.79.167.145:47824 - "GET /api/dashboard-v2/top-clients?limit=5 HTTP/1.1" 200 OK
+INFO:     10.79.167.146:58840 - "GET /api/dashboard-v2/stats HTTP/1.1" 200 OK
+INFO:     10.79.167.145:47798 - "GET /api/dashboard-v2/activity-chart?days=14 HTTP/1.1" 200 OK
+INFO:     10.79.167.146:58840 - "GET /api/auth/me HTTP/1.1" 200 OK
+INFO:     10.79.167.145:47824 - "GET /api/auth/me HTTP/1.1" 200 OK
+INFO:     10.79.167.146:58840 - "GET /api/clients/ HTTP/1.1" 200 OK
+INFO:     10.79.167.145:47824 - "GET /api/inventory/categories HTTP/1.1" 200 OK
+INFO:     10.79.167.145:47824 - "GET /api/inventory/?page=1&limit=20 HTTP/1.1" 200 OK
+INFO:     10.79.167.145:47824 - "GET /api/inventory/categories HTTP/1.1" 200 OK
+INFO:     10.79.167.145:47798 - "GET /api/clients/ HTTP/1.1" 200 OK
+INFO:     10.79.167.145:47798 - "GET /api/inventory/?page=1&limit=20 HTTP/1.1" 200 OK
+INFO:     10.79.167.145:40352 - "POST /api/quotes-v2/ HTTP/1.1" 200 OK
+INFO:     10.79.167.146:60472 - "GET /api/quotes-v2/?trash=false&doc_type=QUOTE HTTP/1.1" 200 OK
+INFO:     10.79.167.145:40352 - "GET /api/clients/ HTTP/1.1" 200 OK
+INFO:     10.79.167.145:40352 - "GET /api/clients/ HTTP/1.1" 200 OK
+INFO:     10.79.167.145:40352 - "GET /api/quotes-v2/?trash=false&doc_type=QUOTE HTTP/1.1" 200 OK
+INFO:     10.79.167.145:40352 - "POST /api/quotes-v2/bc2d15c4-9451-4c17-98f0-11ea2e24f961/generate-pdf HTTP/1.1" 200 OK
+INFO:     10.79.167.145:40364 - "POST /api/quotes-v2/bc2d15c4-9451-4c17-98f0-11ea2e24f961/convert-to-po HTTP/1.1" 200 OK
+INFO:     10.79.167.146:54298 - "GET /api/quotes-v2/?trash=false&doc_type=QUOTE HTTP/1.1" 200 OK
+INFO:     10.79.167.145:40364 - "GET /api/quotes-v2/?trash=false&doc_type=PO HTTP/1.1" 200 OK
+INFO:     10.79.167.146:60664 - "GET /api/clients/ HTTP/1.1" 200 OK
+INFO:     10.79.167.145:34186 - "POST /api/quotes-v2/55d69df7-3e0a-4ad3-9fe4-fbfcf8dbe201/generate-pdf HTTP/1.1" 200 OK
+INFO:     10.79.167.145:34192 - "POST /api/quotes-v2/55d69df7-3e0a-4ad3-9fe4-fbfcf8dbe201/generate-pdf HTTP/1.1" 200 OK
+INFO:     10.79.167.146:36016 - "GET /api/clients/ HTTP/1.1" 200 OK
+INFO:     10.79.167.145:36708 - "POST /api/quotes-v2/55d69df7-3e0a-4ad3-9fe4-fbfcf8dbe201/generate-pdf HTTP/1.1" 200 OK
+INFO:     10.79.167.146:36016 - "POST /api/quotes-v2/55d69df7-3e0a-4ad3-9fe4-fbfcf8dbe201/generate-pdf HTTP/1.1" 200 OK
+INFO:     10.79.167.145:56270 - "GET /api/clients/ HTTP/1.1" 200 OK
+INFO:     10.79.167.146:48550 - "POST /api/quotes-v2/55d69df7-3e0a-4ad3-9fe4-fbfcf8dbe201/generate-pdf HTTP/1.1" 200 OK
+INFO:     10.79.167.145:56270 - "POST /api/quotes-v2/55d69df7-3e0a-4ad3-9fe4-fbfcf8dbe201/generate-pdf HTTP/1.1" 200 OK
+INFO:     10.79.167.146:53786 - "GET /api/clients/?trash=false&source=manual HTTP/1.1" 200 OK
+INFO:     10.79.167.145:46292 - "GET /api/clients/?trash=false&source=manual HTTP/1.1" 200 OK
+INFO:     10.79.167.146:56656 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.146:56656 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.145:53300 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.145:40084 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.145:59426 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.146:48928 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.146:48690 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.145:45428 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.146:47272 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.146:47272 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.146:47134 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.146:40090 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.146:37318 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.145:49132 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.146:44310 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.146:41154 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.145:36570 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.145:56304 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.146:47488 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.145:35872 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.145:37228 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.146:35060 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.145:52534 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.146:45490 - "GET /api/auth/me HTTP/1.1" 200 OK
+INFO:     10.79.167.145:52534 - "GET /api/auth/me HTTP/1.1" 200 OK
+INFO:     10.79.167.145:52534 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.146:45490 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.146:35152 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.146:56458 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.146:38854 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.145:32790 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.145:37130 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.146:44208 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.145:42628 - "POST /api/auth/login HTTP/1.1" 200 OK
+INFO:     10.79.167.145:42628 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.146:43536 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.146:48476 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.145:47562 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.146:43406 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.145:38556 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.145:54486 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.145:33972 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.146:41396 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.145:47926 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.145:51104 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.146:54586 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.145:47386 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.146:59520 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.146:51500 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.146:48708 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.145:55772 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.145:60696 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.146:43276 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.145:52188 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.145:55698 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.145:34098 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.146:42428 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.146:58772 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.145:58928 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.145:36500 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.145:34912 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.146:51568 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.145:59316 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.146:42224 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.145:51690 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.145:49444 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.145:42400 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.146:54780 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.146:44040 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.145:50836 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.146:49330 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.146:38900 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.145:49196 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.146:41992 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.146:38202 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.145:56172 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.146:33538 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.145:53682 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.145:50246 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.146:51674 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.146:45634 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.146:41754 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.145:44042 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.146:47958 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.145:46808 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.145:54374 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.145:58304 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.145:33322 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.145:48398 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.167.146:34444 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.71:57790 - "GET /api/auth/me HTTP/1.1" 401 Unauthorized
+INFO:     10.79.132.71:57790 - "GET /api/auth/me HTTP/1.1" 401 Unauthorized
+INFO:     10.79.132.66:49620 - "POST /api/auth/login HTTP/1.1" 200 OK
+INFO:     10.79.132.71:41640 - "GET /api/dashboard-v2/top-clients?limit=5 HTTP/1.1" 200 OK
+INFO:     10.79.132.66:53950 - "GET /api/dashboard-v2/top-products?limit=5 HTTP/1.1" 200 OK
+INFO:     10.79.132.66:49620 - "GET /api/dashboard-v2/activity-chart?days=14 HTTP/1.1" 200 OK
+INFO:     10.79.132.71:41654 - "GET /api/dashboard-v2/stats HTTP/1.1" 200 OK
+INFO:     10.79.132.71:41654 - "GET /api/dashboard-v2/top-clients?limit=5 HTTP/1.1" 200 OK
+INFO:     10.79.132.66:53950 - "GET /api/dashboard-v2/top-products?limit=5 HTTP/1.1" 200 OK
+INFO:     10.79.132.71:41654 - "GET /api/dashboard-v2/stats HTTP/1.1" 200 OK
+INFO:     10.79.132.66:49620 - "GET /api/dashboard-v2/activity-chart?days=14 HTTP/1.1" 200 OK
+INFO:     10.79.132.71:41654 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.66:49620 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.66:59242 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.71:34864 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.66:58874 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.71:32802 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.66:43906 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.71:41048 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.66:35426 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.71:39132 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.71:53310 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.71:53778 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.66:48694 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.66:39148 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.66:36798 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.71:38130 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.66:49248 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.71:43534 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.71:58306 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.71:48308 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.66:48016 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.66:42554 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.66:38220 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.71:46242 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.71:60370 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.71:51688 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.71:51524 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.71:35378 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.71:60356 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.66:40778 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.71:33084 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.66:38994 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.71:35406 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.66:40922 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.66:41816 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.66:36752 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.66:43550 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.71:45494 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.71:47216 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.71:45854 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.71:44008 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.66:55852 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.66:41310 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.66:60216 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.71:40334 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.66:38298 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.71:54604 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.66:52904 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.66:40598 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.71:54520 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.71:37204 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.66:47340 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.71:52642 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     10.79.132.66:50590 - "GET /api/conversations HTTP/1.1" 200 OK to look for new exceptions, database timeouts, or resource-heavy operations that correlate with user actions.
+        2.  **Inspect Browser DevTools (on deployed app)**:
+            *   **Network Tab**: Filter API requests. Look for endpoints that are taking a very long time to respond (high TTFB). The image () and PDF () endpoints are prime suspects. Check for any failed requests (4xx or 5xx status codes).
+            *   **Console Tab**: Look for any red JavaScript errors that might be breaking React components and preventing them from rendering, causing the blank page issue.
+        3.  **Review Recent Code Changes**: The most likely culprits are the recent I/O-heavy features:
+            *   **Image Serving from MongoDB**: The logic in  to fetch image data from the  collection might be inefficient, causing slow image loads.
+            *   **PDF Generation Logic**: The changes in  to fetch multiple pieces of client data and handle overrides for the PDF could have introduced performance bottlenecks.
+    -   **Why fix this issue and what will be achieved with the fix?**: The application is currently unusable for the client. Fixing this is critical to restore basic functionality.
+    -   **Status**: IN PROGRESS
     -   **Is recurring issue?** N
-    -   **Should Test frontend/backend/both after fix?**: Backend (for creation), Frontend (for verification).
+    -   **Should Test frontend/backend/both after fix?**: Both
+    -   **Blocked on other issue**: None. This is the blocker.
 
 **In progress Task List**:
--   **Task 1: Generate 3 Demo Conversations**
-    -   **Where to resume**: Start by writing and executing the first  script to simulate a full WhatsApp conversation.
-    -   **What will be achieved with this?**: The database will be populated with three realistic conversations and quotes, fulfilling the user's request for demo data.
-    -   **Status**: NOT STARTED
-    -   **Should Test frontend/backend/both after fix?**: Backend
+-   None. The sole focus is on fixing the P0 performance issue.
 
 **Upcoming and Future Tasks**
+-   **Upcoming Tasks**:
+    -   **(P1) Generate 3 Demo Conversations**: This was the user's original request before the debugging and feature work began. It involves using  to simulate three full WhatsApp conversations to populate the system with demo data.
 -   **Future Tasks**:
-    -   **Refactor **: This file is very large and handles conversation state, prompt engineering, and database interactions. It should be broken down into smaller, more manageable modules (e.g., a state manager, a prompt builder, a database service).
-    -   **Refactor Large Frontend Components**: Pages like  and  have grown very large. The modal logic () within  should be extracted into its own file under .
-    -   **Proactive Asesor Permission Audit**: While many permissions have been implemented reactively, a full, proactive audit of the Asesor role has not been performed to ensure no permissions were missed.
+    -   **Refactor **: Break the large file into smaller, single-responsibility modules.
+    -   **Refactor Large Frontend Components**: Extract modals from pages like  and  into separate component files.
+    -   **Proactive Asesor Permission Audit**: Conduct a full audit of the Asesor role to ensure no permissions were missed.
 
 **Completed work in this session**
--   **Role-Based Access Control**: Implemented Asesor and Desarrollador roles with specific UI and API restrictions.
--   **Bot Logic Overhaul**:
-    -   Refined conversation flow to correctly handle quote generation, prevent duplicate questions, and manage user data gathering.
-    -   Implemented logic to send a PDF catalog as a fallback or for generic requests.
-    -   Fixed bugs causing raw JSON to be sent in chats.
-    -   Replaced personalization question with a logo color question.
--   **Data Management**: Added Excel import/export functionality for Clients, Quotes, and Purchase Orders, with duplicate handling.
--   **Category Management**: Created a full CRUD interface for product categories, ensuring changes cascade across all products and adding duplicate validation.
--   **PDF Generation**: Modified PDF generation for quotes to exclude product categories by default, but include characteristics manually added by the user.
--   **UI/UX Fixes**: Made the sidebar sticky, added a show password feature, cleaned up the quote editor state, and improved various forms and modals.
--   **Production DB Sync**: Implemented a background service to sync data from the production Railway DB, which was later disabled by user request.
--   **Railway Deployment Fix**: Resolved a recurring build failure by ensuring the  for  persists in .
--   **System Re-branding**: Changed the application title, favicon, sender email name (Gimmicks), and meta descriptions as requested.
--   **Feature Documentation**: Generated a PDF document listing all system features for the user.
--   **General Bug Fixes**: Corrected issues with quote deletion authorization, starred conversation filtering, and form resets.
+-   **WhatsApp Integration & Migration**: Successfully resolved a complex series of Meta API issues to connect the client's new WhatsApp number (), register it for the Cloud API, subscribe the app to the WABA, and configure a permanent token.
+-   **Webhook Filtering**: Implemented a filter in  to ignore messages from the old, decommissioned WhatsApp number, making the bot logic more robust.
+-   **Bot Logic Bug Fix**: Fixed a bug in  that prevented the bot from replying to users when it was updating an existing quote.
+-   **Editable Quote Prices**: The price of each item in a quote is now an editable field in the  component.
+-   **Discount Calculation Fix**: Corrected a stale closure bug and the logical order of operations for applying discounts in .
+-   **Persistent Image Storage**: Migrated product image storage from the ephemeral filesystem to a new  collection in MongoDB to ensure images persist across deployments.
+-   **Independent Purchase Order Numbering**: Implemented a new  collection in MongoDB to provide a separate, sequential numbering system for Purchase Orders starting at 4712.
+-   **Enhanced PO PDF & UI**: Overhauled the Purchase Order PDF to include detailed client information and created a modal in  allowing users to edit all header fields before generation.
+-   **Client Filtering & Predictive Search**: Added a client filter dropdown to the quote/PO lists and a predictive search input for selecting clients in the quote builder.
 
 **Earlier issues found/mentioned but not fixed**
--   None. All previously identified issues have been addressed.
+-   None.
 
 **Known issue recurrence from previous fork**
--   ** overwritten**: When updating dependencies,  overwrites the manual entry for , causing deployment failures. This line must be manually preserved.
-    -   **Recurrence count**: 2
+-   ** overwritten**: The issue of aiohappyeyeballs==2.6.1
+aiohttp==3.13.3
+aiosignal==1.4.0
+annotated-types==0.7.0
+anyio==4.12.1
+attrs==25.4.0
+bcrypt==4.1.2
+black==25.12.0
+boto3==1.42.29
+botocore==1.42.29
+certifi==2026.1.4
+cffi==2.0.0
+charset-normalizer==3.4.4
+click==8.3.1
+cryptography==46.0.3
+defusedxml==0.7.1
+Deprecated==1.3.1
+distro==1.9.0
+dnspython==2.4.2
+ecdsa==0.19.1
+email-validator==2.1.0
+emergentintegrations==0.1.0
+et_xmlfile==2.0.0
+fastapi==0.110.1
+fastuuid==0.14.0
+filelock==3.20.3
+flake8==7.3.0
+fonttools==4.61.1
+fpdf2==2.8.6
+frozenlist==1.8.0
+fsspec==2026.1.0
+google-ai-generativelanguage==0.6.15
+google-api-core==2.29.0
+google-api-python-client==2.188.0
+google-auth==2.47.0
+google-auth-httplib2==0.3.0
+google-genai==1.46.0
+google-generativeai==0.8.6
+googleapis-common-protos==1.72.0
+grpcio==1.76.0
+grpcio-status==1.71.2
+h11==0.16.0
+hf-xet==1.2.0
+httpcore==1.0.9
+httplib2==0.31.1
+httpx==0.28.1
+huggingface_hub==1.3.2
+idna==3.11
+importlib_metadata==8.7.1
+iniconfig==2.3.0
+isort==7.0.0
+Jinja2==3.1.6
+jiter==0.12.0
+jmespath==1.0.1
+jq==1.10.0
+jsonschema==4.26.0
+jsonschema-specifications==2025.9.1
+librt==0.7.8
+limits==5.8.0
+litellm==1.80.0
+markdown-it-py==4.0.0
+MarkupSafe==3.0.3
+mccabe==0.7.0
+mdurl==0.1.2
+motor==3.6.0
+multidict==6.7.0
+mypy==1.19.1
+mypy_extensions==1.1.0
+numpy==2.4.1
+oauthlib==3.3.1
+openai==1.99.9
+openpyxl==3.1.2
+packaging==25.0
+pandas==2.3.3
+passlib==1.7.4
+pathspec==1.0.3
+pillow==12.1.0
+platformdirs==4.5.1
+pluggy==1.6.0
+propcache==0.4.1
+proto-plus==1.27.0
+protobuf==5.29.5
+pyasn1==0.6.1
+pyasn1_modules==0.4.2
+pycodestyle==2.14.0
+pycparser==2.23
+pydantic==2.6.1
+pydantic_core==2.16.2
+pyflakes==3.4.0
+Pygments==2.19.2
+PyJWT==2.8.0
+pymongo==4.9.1
+PyMuPDF==1.27.1
+pyparsing==3.3.1
+pytest==9.0.2
+python-dateutil==2.9.0.post0
+python-dotenv==1.0.1
+python-jose==3.5.0
+python-multipart==0.0.9
+pytokens==0.3.0
+pytz==2025.2
+PyYAML==6.0.3
+referencing==0.37.0
+regex==2026.1.15
+reportlab==4.4.10
+requests==2.32.5
+requests-oauthlib==2.0.0
+resend==2.22.0
+rich==14.2.0
+rpds-py==0.30.0
+rsa==4.9.1
+s3transfer==0.16.0
+s5cmd==0.2.0
+shellingham==1.5.4
+six==1.17.0
+slowapi==0.1.9
+sniffio==1.3.1
+starlette==0.37.2
+stripe==14.1.0
+tenacity==9.1.2
+tiktoken==0.12.0
+tokenizers==0.22.2
+tqdm==4.67.1
+typer==0.21.1
+typer-slim==0.21.1
+typing-inspection==0.4.2
+typing_extensions==4.15.0
+tzdata==2025.3
+uritemplate==4.2.0
+urllib3==2.6.3
+uvicorn==0.27.1
+watchfiles==1.1.1
+websockets==15.0.1
+wrapt==2.1.1
+xlrd==2.0.1
+yarl==1.22.0
+zipp==3.23.0 overwriting the  line for  occurred again and was fixed. This remains a point of vigilance for future dependency updates.
+    -   **Recurrence count**: 3+
     -   **Status**: RESOLVED (but requires vigilance).
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
--   **Role-Based Access Control (RBAC)**: Comprehensive implementation on both frontend (hiding UI elements) and backend (protecting API endpoints with dependencies).
--   **Database Seeding**: Automatically creating the 'desarrollador' user on application startup.
--   **Asynchronous Background Tasks**: Used  in FastAPI for production data synchronization (now disabled but code exists).
--   **Complex Data Manipulation**:
-    -   Updating a field across multiple documents in MongoDB ( with  and  for categories).
-    -   Parsing and validating uploaded Excel files () for data import, including duplicate detection.
--   **State Management in React**: Managing complex state in the quote editor (), including resetting state on navigation and passing state between parent/child components ( and modals).
--   **PDF Generation**: Dynamically generating PDF documents for quotes using  on the backend.
+-   **MongoDB for File Storage**: Storing binary data (images) directly in a MongoDB collection () to achieve persistence in a containerized environment.
+-   **API-based WhatsApp Configuration**: Using the Meta Graph API directly (,  endpoints) to configure WABAs, numbers, and webhooks when the UI fails.
+-   **State Management & Closures in React**: Diagnosed and fixed a stale closure bug by using functional updates with the  hook ().
+-   **Database Counters**: Implemented a  collection in MongoDB to manage independent, auto-incrementing sequences for documents like Purchase Orders.
 
 **key DB schema**
--   **users**: 
--   **products**: 
--   **quotes_v2**:  array objects now include 
+-   **counters**:  (New, for PO numbering)
+-   **product_images**:  (New, for image storage)
+-   **quotes_v2**:  (New field added)
 
 **changes in tech stack**
--   : Added to the backend for reading  files.
+-   No new packages, but a fundamental change in application architecture: storing images in the database instead of the filesystem.
 
 **All files of reference**
--   : Core of all bot logic.
--   : Main FastAPI app; contains startup events, background tasks, and API routers.
--   : Endpoints for quotes, orders, and PDF generation.
--   : Endpoints for user management and RBAC.
--   : Contains the product table and the category management modal logic.
--   : The complex quote/order creation and editing page.
--   : Main navigation component with role-based logic.
--   : Contains app title, favicon, and meta tags.
--   : Critical file for deployment; requires manual preservation of a line.
+-   : Contains the critical webhook logic, including the new filter.
+-   : Contains logic for PO numbering, PDF generation, and editable PDF fields.
+-   : Contains the new logic for uploading and serving images from MongoDB.
+-   : The core quote editor, which received fixes for discounts and new features for price editing and client search.
+-   : The list view for quotes/POs, which received the client filter and the new editable PO modal.
 
 **Areas that need refactoring**:
--   ****: Remains a large, monolithic file that should be broken down into smaller, single-responsibility modules (e.g., state management, prompt generation, DB interaction).
--   ****: The  component logic is defined inside this file. It should be extracted to its own file in  for better code organization.
--   ****: This component is extremely large and handles a lot of state and logic for client selection, cart management, and form submission. It could be broken down into smaller hooks and components.
+-   The new image serving endpoint in  should be reviewed for efficiency. Serving large files directly from a standard FastAPI route can be slow and memory-intensive.
 
 **key api endpoints**
--   : Main entry point for the WhatsApp bot.
--   : New endpoints for data import from Excel.
--   : New endpoints for managing product categories.
--   , , : Now protected by admin-level role checks.
+-   : Now saves image data to MongoDB.
+-   : New endpoint to serve images stored in MongoDB.
+-   : Now accepts a JSON body with override data for PDF fields.
+-   : Now uses the independent counter for PO numbering.
 
 **Critical Info for New Agent**
--   **Immediate Task**: Your first priority is to generate the three demo conversations as requested by the user. Use  to simulate full conversations with the bot.
--   **Railway Deployment Warning**: When adding backend dependencies, **DO NOT** use . This will break deployment. Manually add the new dependency and ensure the line  remains at the top of .
--   **Role System is Key**: All new features or changes must account for the three user roles: , , and . The  has significant restrictions.
--   **DB Sync is Disabled**: The background task to sync the production database to the preview environment is currently commented out in  at the user's request. The code is still there if it needs to be re-enabled.
+-   **PRIORITY #1: FIX THE PERFORMANCE.** The application is unstable and slow. Your immediate task is to diagnose and resolve the critical performance degradation. Follow the debugging checklist provided in the All Pending/In progress Issue list. Suspect the new image-serving logic from MongoDB and the complex PDF generation queries first.
+-   **WhatsApp Configuration is Done**: The complex process of migrating the WhatsApp number is complete. Do not change any WhatsApp-related configurations unless directly related to the performance bug.
+-   **Deployment Risk**: Be aware of the recurring issue with . If you add any backend dependencies, you must manually preserve the  line to avoid breaking the Railway deployment.
 
 **documents and test reports created in this job**
--   : A static PDF documenting the system's features.
--   : A shell script created to perform E2E tests on the bot's flow.
--   Multiple test reports from the testing agent are available in .
+-   None.
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **Request**: Create 3 complete demo conversations with quotes. **Status**: PENDING.
-2.  **Request**: Fix sticky sidebar to always show user/logout. **Status**: Completed.
-3.  **Request**: Implement full CRUD for product categories. **Status**: Completed.
-4.  **Request**: Fix category rename bug and add duplicate validation. **Status**: Completed.
-5.  **Request**: Fix category deletion bug. **Status**: Completed.
-6.  **Request**: Do not show product categories in PDF unless manually added by the user. **Status**: Completed.
-7.  **Request**: Ensure manually added characteristics save and appear in PDF. **Status**: Completed.
-8.  **Request**: Clear the quote editor when navigating to New Quote. **Status**: Completed.
-9.  **Request**: Change the phone number for WhatsApp staff alerts. **Status**: Completed.
-10. **Query**: User asked for guidance on why their new WhatsApp number isn't appearing in the Meta API. **Status**: Completed (Agent provided guidance).
+1.  **User (Critical Bug)**: Reports the entire system is slow and unstable after the last deploy (blank pages, images/PDFs failing). **Status**: IN PROGRESS.
+2.  **User (Question)**: Asks if the image storage changes will affect the existing inventory. **Status**: Completed (Agent explained it's backward compatible).
+3.  **User (Feature)**: Requests POs to have their own sequential number starting from 4712. **Status**: Completed.
+4.  **User (Feature)**: Requests PO PDF format update and an editable Factura field. **Status**: Completed.
+5.  **User (Enhancement)**: Requests the Factura modal to allow editing of all PO header fields. **Status**: Completed.
+6.  **User (Feature)**: Requests a predictive text input for client search in the quote builder. **Status**: Completed.
+7.  **User (Bug)**: Reports the chat inbox is empty on production after deployment. **Status**: Resolved (Agent added a webhook filter and cleaned the DB).
+8.  **User (Bug)**: Reports the bot is still responding to messages sent to the old number. **Status**: Resolved.
+9.  **User (Bug)**: Reports the discount percentage calculation is incorrect. **Status**: Resolved.
+10. **User (Feature)**: Requests editable prices in quotes. **Status**: Completed.
 
 **Project Health Check:**
--   **Broken**: None.
--   **Mocked**: None.
+-   **Broken**: The entire application is suffering from critical performance degradation, making it slow and unstable.
 
 **3rd Party Integrations**
 -   **WhatsApp Business Cloud API**: Used for the bot. Requires a User API Key.
 -   **OpenAI GPT-4o**: Used for the bot's intelligence, accessed via  library.
 -   **Railway**: Production hosting platform.
--   **Gmail SMTP**: Used for sending emails (quotes, orders). Requires user credentials.
+-   **Gmail SMTP**: Used for sending emails. Requires user credentials.
 
 **Testing status**
--   **Testing agent used after significant changes**: YES
+-   **Testing agent used after significant changes**: NO
 -   **Troubleshoot agent used after agent stuck in loop**: NO
 -   **Test files created**: []
--   **Known regressions**: None.
+-   **Known regressions**: Severe performance degradation across the entire application after the last deployment.
 
 **Credentials to test flow:**
 -   **Admin**:  / 
 -   **Developer**:  / 
--   **Asesor (Advisor)**: (No explicit credentials given, but one can be created by the admin to test permissions).
 
 **What agent forgot to execute**
--   The agent did not start the final user request to create three demo conversations.
--   The  component was implemented inside the  page file instead of being extracted to its own file in the  directory, which is a minor code organization oversight.</analysis>
+-   The original request to create three demo conversations was never started due to the continuous stream of higher-priority bugs and feature requests.
+-   The agent did not run performance tests or use a testing agent after implementing significant architectural changes (like storing images in MongoDB), which likely would have caught the current performance regression before it reached the user.</analysis>
