@@ -233,8 +233,9 @@ def format_currency_ecuador(value):
 
 def fetch_image(url, width_cm=None):
     try:
-        if not url:
+        if not url or str(url).strip().upper() in ("N/A", "NA", "-", "NONE", "NULL", "0", ""):
             return None
+        url = str(url).strip()
         img_data = None
         if url.startswith("data:image"):
             try:
@@ -244,23 +245,18 @@ def fetch_image(url, width_cm=None):
             except Exception:
                 return None
         elif url.startswith("/api/inventory/images/"):
-            # Read directly from MongoDB instead of HTTP request
             image_id = url.split("/api/inventory/images/")[-1]
-            if image_id and db:
-                import asyncio
+            if image_id:
                 try:
-                    loop = asyncio.get_event_loop()
-                    if loop.is_running():
-                        import concurrent.futures
-                        from pymongo import MongoClient as SyncClient
-                        mongo_url = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
-                        db_name = os.environ.get('DB_NAME', 'gimmicks_crm')
-                        sync_client = SyncClient(mongo_url)
-                        sync_db = sync_client[db_name]
-                        doc = sync_db.product_images.find_one({"id": image_id}, {"_id": 0, "data": 1})
-                        sync_client.close()
-                        if doc and doc.get("data"):
-                            img_data = io.BytesIO(doc["data"])
+                    from pymongo import MongoClient as SyncClient
+                    mongo_url = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
+                    db_name_env = os.environ.get('DB_NAME', 'gimmicks_crm')
+                    sync_client = SyncClient(mongo_url, serverSelectionTimeoutMS=5000)
+                    sync_db = sync_client[db_name_env]
+                    doc = sync_db.product_images.find_one({"id": image_id}, {"_id": 0, "data": 1})
+                    sync_client.close()
+                    if doc and doc.get("data"):
+                        img_data = io.BytesIO(doc["data"])
                 except Exception:
                     pass
             if not img_data:
@@ -288,19 +284,48 @@ def fetch_image(url, width_cm=None):
                 except Exception:
                     pass
         else:
+            if not url.startswith("http"):
+                return None
+            # Google Drive folder URLs - cannot fetch
+            if 'drive.google.com/drive/folders' in url:
+                return None
+            # Google Drive file URLs - try multiple strategies
             drive_match = re.search(r'drive\.google\.com/file/d/([^/\?]+)', url)
             if drive_match:
                 file_id = drive_match.group(1)
-                url = f"https://drive.google.com/thumbnail?id={file_id}&sz=w400"
-            headers = {'User-Agent': 'Mozilla/5.0'}
-            response = requests.get(url, headers=headers, timeout=5)
-            if response.status_code == 200:
-                content_type = response.headers.get('content-type', '').lower()
-                if 'svg' in content_type or url.endswith('.svg'):
-                    return None
-                img_data = io.BytesIO(response.content)
+                drive_urls = [
+                    f"https://lh3.googleusercontent.com/d/{file_id}=w400",
+                    f"https://drive.google.com/thumbnail?id={file_id}&sz=w400",
+                    f"https://drive.google.com/uc?export=download&id={file_id}",
+                ]
+                for drive_url in drive_urls:
+                    try:
+                        resp = requests.get(drive_url, headers={'User-Agent': 'Mozilla/5.0'}, timeout=10, allow_redirects=True)
+                        ct = resp.headers.get('content-type', '').lower()
+                        if resp.status_code == 200 and 'image' in ct and len(resp.content) > 100:
+                            img_data = io.BytesIO(resp.content)
+                            break
+                    except Exception:
+                        continue
+            elif 'drive.google.com/thumbnail' in url or 'lh3.googleusercontent.com' in url:
+                try:
+                    resp = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'}, timeout=10, allow_redirects=True)
+                    ct = resp.headers.get('content-type', '').lower()
+                    if resp.status_code == 200 and 'image' in ct and len(resp.content) > 100:
+                        img_data = io.BytesIO(resp.content)
+                except Exception:
+                    pass
             else:
-                return None
+                try:
+                    response = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'}, timeout=10, allow_redirects=True)
+                    if response.status_code == 200:
+                        content_type = response.headers.get('content-type', '').lower()
+                        if 'svg' in content_type or url.endswith('.svg'):
+                            return None
+                        if 'image' in content_type and len(response.content) > 100:
+                            img_data = io.BytesIO(response.content)
+                except Exception:
+                    pass
         if img_data:
             try:
                 utils = ImageReader(img_data)

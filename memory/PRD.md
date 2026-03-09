@@ -59,6 +59,13 @@ CRM para ventas comerciales con WhatsApp Business que integra bot IA (GPT-4o), g
   - RequestSizeLimitMiddleware: 10MB -> 25MB
   - Image endpoint: ETag + immutable cache headers
   - PDF generation: direct MongoDB read for images (no HTTP roundtrip)
+- [x] **PDF image fetch robustness** - Mar 9, 2026:
+  - Handle "N/A", empty, null image URLs gracefully
+  - Google Drive: 3 fallback URL strategies (lh3.googleusercontent.com, thumbnail, uc?export)
+  - Increased timeout from 5s to 10s for external image fetches
+  - Skip Google Drive folder URLs (not fetchable)
+  - Validate content-type is image before embedding
+  - Non-HTTP URLs safely skipped
 
 ## Remaining Tasks
 1. **P1 - Generate 3 Demo WhatsApp Conversations**: Simulate with curl
