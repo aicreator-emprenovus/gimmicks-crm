@@ -1451,8 +1451,13 @@ async def handle_whatsapp_webhook(request_data: dict):
         for entry in request_data.get("entry", []):
             for change in entry.get("changes", []):
                 value = change.get("value", {})
+                # Only process messages from the configured phone number
+                incoming_phone_id = value.get("metadata", {}).get("phone_number_id", "")
+                configured_phone_id = os.environ.get("WHATSAPP_PHONE_NUMBER_ID", "")
+                if incoming_phone_id and configured_phone_id and incoming_phone_id != configured_phone_id:
+                    logger.info(f"Ignoring message from non-configured number: {incoming_phone_id}")
+                    continue
                 messages = value.get("messages", [])
-                
                 for message in messages:
                     await process_incoming_message(message, value.get("metadata", {}))
     
