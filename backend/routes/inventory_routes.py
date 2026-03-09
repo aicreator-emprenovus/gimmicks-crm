@@ -380,4 +380,11 @@ async def get_product_image(image_id: str):
     doc = await db.product_images.find_one({"id": image_id}, {"_id": 0, "data": 1, "content_type": 1})
     if not doc:
         raise HTTPException(status_code=404, detail="Imagen no encontrada")
-    return Response(content=doc["data"], media_type=doc.get("content_type", "image/jpeg"), headers={"Cache-Control": "public, max-age=31536000"})
+    return Response(
+        content=doc["data"],
+        media_type=doc.get("content_type", "image/jpeg"),
+        headers={
+            "Cache-Control": "public, max-age=31536000, immutable",
+            "ETag": f'"{image_id}"',
+        }
+    )

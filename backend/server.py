@@ -75,12 +75,18 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["X-XSS-Protection"] = "1; mode=block"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
-        response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate"
+        # Don't override Cache-Control for cacheable assets (images, uploads)
+        path = request.url.path
+        is_cacheable = path.startswith("/api/inventory/images/") or path.startswith("/api/uploads/")
+        if is_cacheable:
+            logger.debug(f"Skipping Cache-Control override for cacheable path: {path}")
+        else:
+            response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate"
         return response
 
 
 class RequestSizeLimitMiddleware(BaseHTTPMiddleware):
-    MAX_BODY_SIZE = 10 * 1024 * 1024  # 10MB
+    MAX_BODY_SIZE = 25 * 1024 * 1024  # 25MB to accommodate image uploads
 
     async def dispatch(self, request: Request, call_next):
         content_length = request.headers.get("content-length")

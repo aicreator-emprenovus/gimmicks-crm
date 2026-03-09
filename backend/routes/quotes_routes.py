@@ -243,6 +243,28 @@ def fetch_image(url, width_cm=None):
                 img_data = io.BytesIO(img_bytes)
             except Exception:
                 return None
+        elif url.startswith("/api/inventory/images/"):
+            # Read directly from MongoDB instead of HTTP request
+            image_id = url.split("/api/inventory/images/")[-1]
+            if image_id and db:
+                import asyncio
+                try:
+                    loop = asyncio.get_event_loop()
+                    if loop.is_running():
+                        import concurrent.futures
+                        from pymongo import MongoClient as SyncClient
+                        mongo_url = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
+                        db_name = os.environ.get('DB_NAME', 'gimmicks_crm')
+                        sync_client = SyncClient(mongo_url)
+                        sync_db = sync_client[db_name]
+                        doc = sync_db.product_images.find_one({"id": image_id}, {"_id": 0, "data": 1})
+                        sync_client.close()
+                        if doc and doc.get("data"):
+                            img_data = io.BytesIO(doc["data"])
+                except Exception:
+                    pass
+            if not img_data:
+                return None
         elif url.startswith("/api/uploads/") or url.startswith("/uploads/"):
             filename = url.split("/products/")[-1] if "/products/" in url else ""
             possible_paths = [
