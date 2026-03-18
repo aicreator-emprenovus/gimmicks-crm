@@ -5,7 +5,7 @@ import { formatCurrency } from "@/utils/currency";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   FileText, Plus, Trash2, Search, Eye, Send, RotateCcw, Archive,
-  Download, Upload, Loader2, ShoppingBag, Clock, Filter, X, ChevronDown
+  Download, Upload, Loader2, ShoppingBag, Clock, Filter, X, ChevronDown, Save
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,31 +42,57 @@ export default function QuoteHistory() {
   const [selectedClient, setSelectedClient] = useState("");
   const [facturaModal, setFacturaModal] = useState(null);
   const [facturaFields, setFacturaFields] = useState({});
+  const [savingPOHeader, setSavingPOHeader] = useState(false);
 
   const openFacturaModal = async (q) => {
-    let clientData = {};
-    if (q.client_id) {
-      try {
-        const res = await axios.get(`${API_URL}/api/clients/`, { headers });
-        const client = res.data.find(c => c.id === q.client_id);
-        if (client) clientData = client;
-      } catch {}
+    // First try to load saved PO header data
+    let savedData = null;
+    try {
+      const res = await axios.get(`${API_URL}/api/quotes-v2/${q.id}/po-header`, { headers });
+      if (res.data.po_header_data && Object.keys(res.data.po_header_data).length > 0) {
+        savedData = res.data.po_header_data;
+      }
+    } catch {}
+
+    if (savedData && savedData.cliente) {
+      // Use saved data
+      setFacturaFields(savedData);
+    } else {
+      // Fall back to client data
+      let clientData = {};
+      if (q.client_id) {
+        try {
+          const res = await axios.get(`${API_URL}/api/clients/`, { headers });
+          const client = res.data.find(c => c.id === q.client_id);
+          if (client) clientData = client;
+        } catch {}
+      }
+      const months = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+      const d = q.created_at ? new Date(q.created_at) : new Date();
+      const dateStr = `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+      setFacturaFields({
+        fecha: dateStr,
+        cliente: q.client_name || clientData.name || "",
+        direccion: clientData.address || "",
+        solicitado_por: clientData.contact_person || q.client_contact || "",
+        ruc: clientData.tax_id || "",
+        orden_compra_cliente: q.client_name || "",
+        factura: q.factura || "",
+        telefono: clientData.phone || "",
+        correo: clientData.email || q.client_email || "",
+      });
     }
-    const months = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
-    const d = q.created_at ? new Date(q.created_at) : new Date();
-    const dateStr = `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
-    setFacturaFields({
-      fecha: dateStr,
-      cliente: q.client_name || clientData.name || "",
-      direccion: clientData.address || "",
-      solicitado_por: clientData.contact_person || q.client_contact || "",
-      ruc: clientData.tax_id || "",
-      orden_compra_cliente: q.client_name || "",
-      factura: q.factura || "",
-      telefono: clientData.phone || "",
-      correo: clientData.email || q.client_email || "",
-    });
     setFacturaModal(q);
+  };
+
+  const savePOHeader = async () => {
+    if (!facturaModal) return;
+    setSavingPOHeader(true);
+    try {
+      await axios.put(`${API_URL}/api/quotes-v2/${facturaModal.id}/po-header`, facturaFields, { headers });
+      toast.success("Datos guardados");
+    } catch { toast.error("Error al guardar"); }
+    setSavingPOHeader(false);
   };
   const token = localStorage.getItem("token");
   const headers = { Authorization: `Bearer ${token}` };
@@ -385,26 +411,38 @@ export default function QuoteHistory() {
                   <Input value={facturaFields.ruc} onChange={e => setFacturaFields({...facturaFields, ruc: e.target.value})} className="h-8 text-sm" data-testid="factura-ruc" />
                 </div>
               </div>
-              <Button
-                className="w-full bg-[#63AC9A] hover:bg-[#4F9A87] text-white mt-2"
-                onClick={() => {
-                  handleGeneratePDF(facturaModal.id, "ORDEN_COMPRA", {
-                    address: facturaFields.direccion,
-                    phone: facturaFields.telefono,
-                    email: facturaFields.correo,
-                    tax_id: facturaFields.ruc,
-                    contact_person: facturaFields.solicitado_por,
-                    name: facturaFields.cliente,
-                    factura: facturaFields.factura,
-                    fecha_override: facturaFields.fecha,
-                    orden_compra_cliente: facturaFields.orden_compra_cliente,
-                  });
-                  setFacturaModal(null);
-                }}
-                data-testid="generate-factura-pdf-btn"
-              >
-                <Eye size={14} className="mr-1" /> Generar PDF
-              </Button>
+              <div className="flex gap-2 mt-2">
+                <Button
+                  variant="outline"
+                  className="flex-1 border-[#63AC9A] text-[#63AC9A] hover:bg-[#63AC9A]/10"
+                  onClick={savePOHeader}
+                  disabled={savingPOHeader}
+                  data-testid="save-po-header-btn"
+                >
+                  {savingPOHeader ? <Loader2 size={14} className="mr-1 animate-spin" /> : <Save size={14} className="mr-1" />}
+                  Guardar Datos
+                </Button>
+                <Button
+                  className="flex-1 bg-[#63AC9A] hover:bg-[#4F9A87] text-white"
+                  onClick={() => {
+                    handleGeneratePDF(facturaModal.id, "ORDEN_COMPRA", {
+                      address: facturaFields.direccion,
+                      phone: facturaFields.telefono,
+                      email: facturaFields.correo,
+                      tax_id: facturaFields.ruc,
+                      contact_person: facturaFields.solicitado_por,
+                      name: facturaFields.cliente,
+                      factura: facturaFields.factura,
+                      fecha_override: facturaFields.fecha,
+                      orden_compra_cliente: facturaFields.orden_compra_cliente,
+                    });
+                    setFacturaModal(null);
+                  }}
+                  data-testid="generate-factura-pdf-btn"
+                >
+                  <Eye size={14} className="mr-1" /> Generar PDF
+                </Button>
+              </div>
             </div>
           </div>
         </div>

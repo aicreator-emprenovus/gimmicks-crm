@@ -66,7 +66,12 @@ CRM para ventas comerciales con WhatsApp Business que integra bot IA (GPT-4o), g
   - Skip Google Drive folder URLs (not fetchable)
   - Validate content-type is image before embedding
   - Non-HTTP URLs safely skipped
-- [x] **Fix broken image URLs from old deployment** - Mar 18, 2026:
+- [x] **Persistencia de datos de Factura/OC** - Mar 18, 2026:
+  - Nuevo campo `po_header_data` en quotes_v2 para guardar datos del modal
+  - Endpoints: PUT/GET `/api/quotes-v2/{id}/po-header`
+  - Modal carga datos guardados al abrir, botón "Guardar Datos" junto a "Generar PDF"
+- [x] **Font size OC PDF +3pts** - Mar 18, 2026:
+  - Campos header del PDF de Orden de Compra: 9pt → 12pt (etiquetas y valores)
   - 29 products had absolute URLs to `quotepro-14.emergent.host` (non-existent) → converted to relative paths
   - Frontend `getImageUrl` now extracts relative paths from any full URL with `/api/uploads/` or `/api/inventory/images/`
   - Backend startup migration auto-fixes old deployment URLs on any new deploy

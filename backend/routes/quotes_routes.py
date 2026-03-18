@@ -367,8 +367,8 @@ def _generate_pdf_bytes(quote: Quote, is_po: bool = False, client_data: dict = N
         # PO header format with client details
         style_title_center = ParagraphStyle("TitleCenter", parent=styles["Heading1"], fontSize=12, alignment=TA_CENTER)
         style_subtitle = ParagraphStyle("Subtitle", parent=style_bold, fontSize=11, alignment=TA_CENTER)
-        style_field_label = ParagraphStyle("FieldLabel", parent=style_bold, fontSize=9)
-        style_field_value = ParagraphStyle("FieldValue", parent=style_normal, fontSize=9)
+        style_field_label = ParagraphStyle("FieldLabel", parent=style_bold, fontSize=12)
+        style_field_value = ParagraphStyle("FieldValue", parent=style_normal, fontSize=12)
         if logo:
             elements.append(logo)
             elements.append(Spacer(1, 0.3*cm))
@@ -501,6 +501,36 @@ class GeneratePDFRequest(PydanticBaseModel):
     doc_type: str = "PROFORMA"
     factura: str = ""
     overrides: Optional[dict] = None
+
+class SavePOHeaderRequest(PydanticBaseModel):
+    fecha: str = ""
+    orden_compra_cliente: str = ""
+    cliente: str = ""
+    factura: str = ""
+    direccion: str = ""
+    telefono: str = ""
+    solicitado_por: str = ""
+    correo: str = ""
+    ruc: str = ""
+
+@router.put("/{id}/po-header")
+async def save_po_header(id: str, body: SavePOHeaderRequest):
+    quote = await db.quotes_v2.find_one({"id": id}, {"_id": 0, "id": 1})
+    if not quote:
+        raise HTTPException(status_code=404, detail="Quote not found")
+    po_header = body.dict()
+    await db.quotes_v2.update_one(
+        {"id": id},
+        {"$set": {"po_header_data": po_header, "factura": body.factura}}
+    )
+    return {"message": "Datos guardados", "po_header_data": po_header}
+
+@router.get("/{id}/po-header")
+async def get_po_header(id: str):
+    quote = await db.quotes_v2.find_one({"id": id}, {"_id": 0, "po_header_data": 1})
+    if not quote:
+        raise HTTPException(status_code=404, detail="Quote not found")
+    return {"po_header_data": quote.get("po_header_data", {})}
 
 @router.post("/{id}/generate-pdf")
 async def generate_pdf(id: str, body: GeneratePDFRequest = GeneratePDFRequest()):
