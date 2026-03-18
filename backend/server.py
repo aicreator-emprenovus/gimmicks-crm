@@ -3597,6 +3597,20 @@ uploads_dir = ROOT_DIR / "uploads" / "products"
 uploads_dir.mkdir(parents=True, exist_ok=True)
 app.mount("/api/uploads/products", StaticFiles(directory=str(uploads_dir)), name="product_uploads")
 
+# Serve React frontend build (for production/Railway deployment)
+static_frontend_dir = ROOT_DIR / "static_frontend"
+if static_frontend_dir.exists():
+    from fastapi.responses import FileResponse
+    app.mount("/static", StaticFiles(directory=str(static_frontend_dir / "static")), name="react_static")
+
+    @app.get("/{full_path:path}")
+    async def serve_react_app(full_path: str):
+        """Serve React SPA - return index.html for all non-API routes"""
+        file_path = static_frontend_dir / full_path
+        if full_path and file_path.exists() and file_path.is_file():
+            return FileResponse(str(file_path))
+        return FileResponse(str(static_frontend_dir / "index.html"))
+
 @app.on_event("shutdown")
 async def shutdown_db_client():
     client.close()
