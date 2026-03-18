@@ -62,9 +62,10 @@ Si el cliente PIDE o MENCIONA cualquier tipo de producto (termos, jarros, gorras
 - NO preguntes cantidad ni nada más. Solo presenta las opciones y pide que te compartan los códigos de los productos que les gusten.
 - Termina el mensaje pidiendo que revisen el catálogo y compartan los códigos.
 
-Si el cliente pide el "catálogo completo" o "catálogo general" o "todo el catálogo":
-- NO pongas catalog_search. El sistema enviará automáticamente el PDF del catálogo completo.
-- Solo responde que le enviarás el catálogo completo para que pueda revisarlo.
+Si el cliente pide el "catálogo completo" o "catálogo general" o "todo el catálogo" o quiere ver todos los productos:
+- NO pongas catalog_search. El sistema anexará el link automáticamente.
+- NO menciones la web ni el link en tu respuesta, el sistema lo agregará al final.
+- Solo di algo como: "Con gusto, te comparto nuestro catálogo completo." y continúa pidiendo el nombre si aún no lo tienes.
 
 PASO 4 - CONFIRMACIÓN DE CÓDIGOS:
 Si el cliente comparte CÓDIGOS de productos (como GIMN06001, JARPOR00391, etc.):
@@ -122,7 +123,7 @@ Responde SIEMPRE en JSON válido:
 }"""
 
 
-EXTERNAL_CATALOG_PDF = "https://gimmicks.com.ec/wp-content/uploads/2026/01/CATALOGO-2026-CON-PRECIOS-2.pdf"
+EXTERNAL_CATALOG_PDF = "https://gimmicks.com.ec/"
 
 
 def build_catalog_url(keyword: str) -> str:
@@ -1038,15 +1039,25 @@ MENSAJE ACTUAL DEL CLIENTE: {message_text}"""
 
         # Handle catalog search - COMBINE with AI response in ONE message
         # Priority: 1) Public catalog link (if products found), 2) External PDF (fallback)
-        catalog_full_keywords = ["catálogo completo", "catalogo completo", "catálogo general", "catalogo general", "todo el catálogo", "todo el catalogo", "catálogo pdf", "catalogo pdf"]
+        catalog_full_keywords = ["catálogo completo", "catalogo completo", "catálogo general", "catalogo general", "todo el catálogo", "todo el catalogo", "catálogo pdf", "catalogo pdf", "todos los productos", "todo el catalogo", "ver todo", "catalogo entero", "catálogo entero", "ver mas productos", "ver más productos"]
         is_full_catalog_request = any(kw in message_text.lower() for kw in catalog_full_keywords)
+        # Also detect if AI intent is full catalog or response mentions the gimmicks.com.ec URL
+        if not is_full_catalog_request and ai_data.get("intent") == "solicitud_catalogo" and not catalog_search:
+            is_full_catalog_request = True
+        if not is_full_catalog_request and "gimmicks.com.ec" in response_text.lower():
+            is_full_catalog_request = True
 
         # Only send AI response if we are NOT about to generate a quote
         if not will_generate_quote:
             if is_full_catalog_request:
+                # Remove any duplicate URL or web mention the AI may have included
+                clean_response = response_text.replace("https://gimmicks.com.ec/", "").replace("https://gimmicks.com.ec", "")
+                # Clean up dangling colons or spaces from removed URLs
+                clean_response = re.sub(r':\s*\?', '? ', clean_response)
+                clean_response = re.sub(r':\s*$', '', clean_response).strip()
                 catalog_msg = (
-                    f"{response_text}\n\n"
-                    f"Aquí puedes revisar nuestro catálogo completo con precios: {EXTERNAL_CATALOG_PDF}"
+                    f"{clean_response}\n\n"
+                    f"Revisa nuestro catálogo completo en la web de Gimmicks: {EXTERNAL_CATALOG_PDF}"
                 )
                 await send_message_fn(phone_number, conversation_id, catalog_msg)
                 catalogs_sent.append("catalogo_completo")
@@ -1061,7 +1072,7 @@ MENSAJE ACTUAL DEL CLIENTE: {message_text}"""
                 else:
                     catalog_msg = (
                         f"{response_text}\n\n"
-                        f"Puedes revisar nuestro catálogo completo con precios aquí: {EXTERNAL_CATALOG_PDF}"
+                        f"Revisa nuestro catálogo completo en la web de Gimmicks: {EXTERNAL_CATALOG_PDF}"
                     )
                 await send_message_fn(phone_number, conversation_id, catalog_msg)
                 catalogs_sent.append(catalog_search)
