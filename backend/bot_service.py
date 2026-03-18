@@ -259,6 +259,31 @@ async def load_known_client_data(db: AsyncIOMotorDatabase, phone_number: str) ->
     return known
 
 
+async def load_automation_rules(db: AsyncIOMotorDatabase) -> str:
+    """Load active automation rules from DB and format them for the AI system prompt."""
+    rules = []
+    async for rule in db.automation_rules.find({"is_active": True}, {"_id": 0}):
+        trigger = rule.get("trigger_type", "")
+        trigger_val = rule.get("trigger_value") or ""
+        action_type = rule.get("action_type", "")
+        action_val = rule.get("action_value", "")
+        name = rule.get("name", "")
+        if trigger == "new_lead":
+            rules.append(f"- NUEVO LEAD: {action_val}")
+        elif trigger == "keyword":
+            rules.append(f"- Si el cliente menciona [{trigger_val}]: {action_val}")
+        elif trigger == "ai_intent":
+            rules.append(f"- Intención '{trigger_val}': {action_val}")
+        elif trigger == "no_response":
+            rules.append(f"- Sin respuesta ({trigger_val}h): {action_val}")
+        else:
+            rules.append(f"- {name}: {action_val}")
+    if not rules:
+        return ""
+    return "\n=== REGLAS DE AUTOMATIZACIÓN (DEBES SEGUIR ESTAS) ===\n" + "\n".join(rules)
+
+
+
 async def call_llm(system_msg: str, user_msg: str, phone_number: str = "") -> Optional[Dict]:
     """Call LLM and parse JSON response. Uses unique session per call to avoid repetition."""
     try:
@@ -269,7 +294,7 @@ async def call_llm(system_msg: str, user_msg: str, phone_number: str = "") -> Op
             return None
         session_id = f"gimmicks-{uuid.uuid4().hex[:12]}"
         chat = LlmChat(api_key=api_key, session_id=session_id, system_message=system_msg)
-        chat.with_model("openai", "gpt-4o")
+        chat.with_model("openai", "gpt-5.2")
         response_text = await chat.send_message(UserMessage(text=user_msg))
 
         # Strip markdown code fences before parsing
@@ -894,8 +919,10 @@ Pide UN SOLO dato por mensaje. No combines preguntas.
 
 MENSAJE ACTUAL DEL CLIENTE: {message_text}"""
 
-        # Call AI with persistent session per phone
-        ai_result = await call_llm(SYSTEM_PROMPT, user_prompt, phone_number)
+        # Call AI with persistent session per phone - inject automation rules
+        automation_rules_text = await load_automation_rules(db)
+        system_with_rules = SYSTEM_PROMPT + automation_rules_text if automation_rules_text else SYSTEM_PROMPT
+        ai_result = await call_llm(system_with_rules, user_prompt, phone_number)
 
         # If LLM failed, respond with friendly greeting
         if ai_result is None:

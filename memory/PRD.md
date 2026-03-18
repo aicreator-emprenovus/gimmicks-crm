@@ -48,7 +48,10 @@ CRM para ventas comerciales con WhatsApp Business que integra bot IA (GPT-4o), g
 - [x] Asesor: no delete/export, no dashboard/leads
 - [x] Desarrollador: only Configuracion access, protected user
 - [x] WhatsApp number migration (+593963560326) - Mar 2026
-- [x] **Fix sync service for Inbox** - Mar 18, 2026: Sync conversations+messages from production
+- [x] **Bot: Integración de reglas de automatización** - Mar 18, 2026:
+  - Bot ahora carga reglas activas de `automation_rules` e inyecta en system prompt
+  - 18 reglas activas: bienvenida, follow-up, catálogo, cotización, quejas, etc.
+- [x] **Bot: Upgrade a GPT-5.2** - Mar 18, 2026: Modelo actualizado de gpt-4o a gpt-5.2
 - [x] **Frontend served from FastAPI** - Mar 18, 2026: SPA catch-all for Railway production deploy
 - [x] Editable quote prices in QuoteBuilder
 - [x] Discount calculation fix (stale closure bug)
