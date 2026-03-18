@@ -107,13 +107,18 @@ export default function Inventory() {
   };
 
   const getImageUrl = (url) => {
-    if (!url) return null;
+    if (!url || url === 'N/A' || url === 'null') return null;
+    // Extract relative path from any full URL containing /api/uploads/ or /api/inventory/images/
+    const uploadMatch = url.match(/\/api\/uploads\/products\/[^"'\s]+/);
+    if (uploadMatch) return `${API_URL}${uploadMatch[0]}`;
+    const mongoMatch = url.match(/\/api\/inventory\/images\/[^"'\s]+/);
+    if (mongoMatch) return `${API_URL}${mongoMatch[0]}`;
     if (url.startsWith("/api/uploads/") || url.startsWith("/api/inventory/images/")) return `${API_URL}${url}`;
     const driveMatch = url.match(/drive\.google\.com\/file\/d\/([^/\?]+)/);
-    if (driveMatch) return `https://drive.google.com/thumbnail?id=${driveMatch[1]}&sz=w200`;
+    if (driveMatch) return `https://lh3.googleusercontent.com/d/${driveMatch[1]}=w200`;
     if (url.match(/drive\.google\.com\/open\?id=(.+)/)) {
       const id = url.match(/id=([^&]+)/)?.[1];
-      if (id) return `https://drive.google.com/thumbnail?id=${id}&sz=w200`;
+      if (id) return `https://lh3.googleusercontent.com/d/${id}=w200`;
     }
     return url;
   };
@@ -440,21 +445,26 @@ function ProductModal({ product, onClose, onSave, allCategories = [] }) {
   const isEdit = !!product;
 
   const resolveImageUrl = (url) => {
-    if (!url) return null;
+    if (!url || url === 'N/A' || url === 'null') return null;
+    // Extract relative path from any full URL containing /api/uploads/ or /api/inventory/images/
+    const uploadMatch = url.match(/\/api\/uploads\/products\/[^"'\s]+/);
+    if (uploadMatch) return `${API_URL}${uploadMatch[0]}`;
+    const mongoMatch = url.match(/\/api\/inventory\/images\/[^"'\s]+/);
+    if (mongoMatch) return `${API_URL}${mongoMatch[0]}`;
     if (url.startsWith("/api/uploads/") || url.startsWith("/api/inventory/images/")) return `${API_URL}${url}`;
     const driveMatch = url.match(/drive\.google\.com\/file\/d\/([^/\?]+)/);
-    if (driveMatch) return `https://drive.google.com/thumbnail?id=${driveMatch[1]}&sz=w400`;
+    if (driveMatch) return `https://lh3.googleusercontent.com/d/${driveMatch[1]}=w400`;
     const driveOpen = url.match(/drive\.google\.com\/open\?id=([^&]+)/);
-    if (driveOpen) return `https://drive.google.com/thumbnail?id=${driveOpen[1]}&sz=w400`;
+    if (driveOpen) return `https://lh3.googleusercontent.com/d/${driveOpen[1]}=w400`;
     return url;
   };
 
   const convertGoogleDriveUrl = (url) => {
     if (!url) return url;
     const fileMatch = url.match(/drive\.google\.com\/file\/d\/([^/\?]+)/);
-    if (fileMatch) return `https://drive.google.com/thumbnail?id=${fileMatch[1]}&sz=w1200`;
+    if (fileMatch) return `https://lh3.googleusercontent.com/d/${fileMatch[1]}=w1200`;
     const openMatch = url.match(/drive\.google\.com\/open\?id=([^&]+)/);
-    if (openMatch) return `https://drive.google.com/thumbnail?id=${openMatch[1]}&sz=w1200`;
+    if (openMatch) return `https://lh3.googleusercontent.com/d/${openMatch[1]}=w1200`;
     return url;
   };
 

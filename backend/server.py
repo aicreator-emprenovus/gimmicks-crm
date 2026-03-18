@@ -3437,6 +3437,8 @@ async def start_followup_task():
     _bg_sync.start()
     # Seed developer user
     await seed_developer_user()
+    # Fix old deployment image URLs
+    await fix_old_image_urls()
 
 
 async def seed_developer_user():
@@ -3457,6 +3459,27 @@ async def seed_developer_user():
         logger.info("Developer user seeded")
     elif existing.get("role") != "desarrollador":
         await db.users.update_one({"email": dev_email}, {"$set": {"role": "desarrollador", "is_protected": True}})
+
+
+async def fix_old_image_urls():
+    """Fix products with absolute URLs pointing to old deployments.
+    Converts them to relative paths so they work on any deployment."""
+    import re as _re
+    count = 0
+    async for prod in db.products.find(
+        {"image_url": {"$regex": r"https?://.*?/api/uploads/products/"}},
+        {"_id": 1, "code": 1, "image_url": 1}
+    ):
+        url = prod.get("image_url", "")
+        match = _re.search(r"(/api/uploads/products/[a-f0-9-]+\.\w+)", url)
+        if match:
+            await db.products.update_one(
+                {"_id": prod["_id"]},
+                {"$set": {"image_url": match.group(1)}}
+            )
+            count += 1
+    if count > 0:
+        logger.info(f"Fixed {count} products with old deployment image URLs")
 
 
 async def seed_system_automation_rules():

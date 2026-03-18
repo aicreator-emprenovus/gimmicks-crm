@@ -66,6 +66,12 @@ CRM para ventas comerciales con WhatsApp Business que integra bot IA (GPT-4o), g
   - Skip Google Drive folder URLs (not fetchable)
   - Validate content-type is image before embedding
   - Non-HTTP URLs safely skipped
+- [x] **Fix broken image URLs from old deployment** - Mar 18, 2026:
+  - 29 products had absolute URLs to `quotepro-14.emergent.host` (non-existent) → converted to relative paths
+  - Frontend `getImageUrl` now extracts relative paths from any full URL with `/api/uploads/` or `/api/inventory/images/`
+  - Backend startup migration auto-fixes old deployment URLs on any new deploy
+  - Google Drive URLs now use `lh3.googleusercontent.com` format (more reliable from servers)
+  - Migrated 5 local filesystem images to MongoDB's `product_images` collection
 
 ## Remaining Tasks
 1. **P1 - Generate 3 Demo WhatsApp Conversations**: Simulate with curl

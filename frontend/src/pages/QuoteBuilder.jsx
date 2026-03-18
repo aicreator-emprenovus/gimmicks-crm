@@ -225,10 +225,14 @@ export default function QuoteBuilder() {
   };
 
   const getImageUrl = (url) => {
-    if (!url) return null;
+    if (!url || url === 'N/A' || url === 'null') return null;
+    const uploadMatch = url.match(/\/api\/uploads\/products\/[^"'\s]+/);
+    if (uploadMatch) return `${API_URL}${uploadMatch[0]}`;
+    const mongoMatch = url.match(/\/api\/inventory\/images\/[^"'\s]+/);
+    if (mongoMatch) return `${API_URL}${mongoMatch[0]}`;
     if (url.startsWith("/api/uploads/") || url.startsWith("/api/inventory/images/")) return `${API_URL}${url}`;
     const driveMatch = url.match(/drive\.google\.com\/file\/d\/([^/\?]+)/);
-    if (driveMatch) return `https://drive.google.com/thumbnail?id=${driveMatch[1]}&sz=w200`;
+    if (driveMatch) return `https://lh3.googleusercontent.com/d/${driveMatch[1]}=w200`;
     return url;
   };
 
