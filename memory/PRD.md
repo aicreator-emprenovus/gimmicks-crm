@@ -48,6 +48,8 @@ CRM para ventas comerciales con WhatsApp Business que integra bot IA (GPT-4o), g
 - [x] Asesor: no delete/export, no dashboard/leads
 - [x] Desarrollador: only Configuracion access, protected user
 - [x] WhatsApp number migration (+593963560326) - Mar 2026
+- [x] **Fix sync service for Inbox** - Mar 18, 2026: Sync conversations+messages from production
+- [x] **Frontend served from FastAPI** - Mar 18, 2026: SPA catch-all for Railway production deploy
 - [x] Editable quote prices in QuoteBuilder
 - [x] Discount calculation fix (stale closure bug)
 - [x] Persistent image storage (MongoDB product_images collection)
