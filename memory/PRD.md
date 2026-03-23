@@ -91,6 +91,14 @@ CRM para ventas comerciales con WhatsApp Business que integra bot IA (GPT-5.2), 
   - User prompt inyecta contexto explícito: "CLIENTE RECURRENTE" o "CLIENTE NUEVO"
   - Anti-duplicación corregida: sender "bot" → "business" para coincidir con los mensajes reales
   - Link `https://gimmicks.com.ec/` se envía siempre que se pide catálogo
+- [x] **P0 - Bot: flujo conversacional profundo** - Mar 23, 2026:
+  - Lock de concurrencia por teléfono (asyncio.Lock) evita race conditions con mensajes rápidos
+  - Error handler inteligente: no envía fallback si ya se envió un mensaje exitoso (`message_sent` flag)
+  - Historial de conversación filtra mensajes de error para que el AI no los lea
+  - Post-procesamiento elimina saludos "Hola" redundantes en mensajes de seguimiento
+  - No fuerza auto-cotización cuando el usuario pide catálogo
+  - Limpieza de mensajes de error en BD local y producción
+  - Testing: 11/11 tests PASS (iteration_16)
 
 ## Remaining Tasks
 1. **P1 - Generate 3 Demo WhatsApp Conversations**: Simulate with curl
