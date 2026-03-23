@@ -20,7 +20,7 @@ import uuid
 
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL')
 if not BASE_URL:
-    BASE_URL = "https://whatsapp-crm-suite-1.preview.emergentagent.com"
+    BASE_URL = "https://gimmicks-chat-flow.preview.emergentagent.com"
 BASE_URL = BASE_URL.rstrip('/')
 
 TEST_PHONE = f"593999TEST{uuid.uuid4().hex[:4].upper()}"

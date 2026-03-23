@@ -1,10 +1,10 @@
 # PRD - Gimmicks CRM WhatsApp Business
 
 ## Problem Statement
-CRM para ventas comerciales con WhatsApp Business que integra bot IA (GPT-4o), gestion de leads, cotizaciones dinamicas, catalogo publico.
+CRM para ventas comerciales con WhatsApp Business que integra bot IA (GPT-5.2), gestion de leads, cotizaciones dinamicas, catalogo publico.
 
 ## Architecture
-- **Backend**: FastAPI + MongoDB + emergentintegrations (GPT-4o)
+- **Backend**: FastAPI + MongoDB + emergentintegrations (GPT-5.2)
 - **Frontend**: React + Shadcn/UI + TailwindCSS
 - **Email**: Gmail SMTP
 - **Production DB**: Railway MongoDB
@@ -83,12 +83,21 @@ CRM para ventas comerciales con WhatsApp Business que integra bot IA (GPT-4o), g
   - Google Drive URLs now use `lh3.googleusercontent.com` format (more reliable from servers)
   - Migrated 5 local filesystem images to MongoDB's `product_images` collection
 
+- [x] **P0 - Bot: diferenciación cliente nuevo/recurrente + link catálogo** - Mar 23, 2026:
+  - Fix crítico: `ai_data` (inexistente) → `ai_result` causaba NameError que crasheaba todo el flujo
+  - Detección de catálogo ampliada: ahora detecta "catálogo", "envíame el catálogo", "link del catálogo", etc.
+  - `load_known_client_data` solo carga datos de contacto (nombre, empresa, correo, ciudad), NO productos anteriores
+  - Prompt del sistema actualizado para distinguir explícitamente cliente nuevo vs recurrente
+  - User prompt inyecta contexto explícito: "CLIENTE RECURRENTE" o "CLIENTE NUEVO"
+  - Anti-duplicación corregida: sender "bot" → "business" para coincidir con los mensajes reales
+  - Link `https://gimmicks.com.ec/` se envía siempre que se pide catálogo
+
 ## Remaining Tasks
 1. **P1 - Generate 3 Demo WhatsApp Conversations**: Simulate with curl
 2. **P2 - Refactor bot_service.py**: Split into smaller modules
 3. **P2 - Refactor large frontend components**: Extract modals
 4. **P3 - Asesor permission audit**: Full audit of role permissions
-5. **P3 - Deploy to Railway**: Save to GitHub and redeploy
+5. **P3 - Deploy to Railway**: Save to GitHub → triggers Railway redeploy
 
 ## Key DB Collections
 - `counters`: `{ _id: str, seq: int }` (PO numbering)

@@ -44,16 +44,15 @@ NUNCA ignores datos que el cliente ya proporcionó. Extrae TODO en extracted_dat
 
 FLUJO OBLIGATORIO DE LA CONVERSACIÓN (SIGUE ESTE ORDEN ESTRICTAMENTE):
 
-PASO 1 - SALUDO:
-Cuando el cliente escribe por primera vez o saluda:
-- Saluda cordialmente y preséntate como Ana de Gimmicks.
-- Pregunta en qué le puedes ayudar.
+PASO 1 - SALUDO (DIFERENCIA CLIENTE NUEVO vs RECURRENTE):
+Revisa los DATOS YA RECOPILADOS. Si ya existe un nombre, ES UN CLIENTE RECURRENTE.
+- CLIENTE RECURRENTE (ya tiene nombre en datos recopilados): Salúdalo por su nombre, NO te presentes, NO pidas su nombre de nuevo. Ejemplo: "Hola [nombre], qué gusto tenerte de vuelta. ¿En qué te puedo ayudar?"
+- CLIENTE NUEVO (no hay datos previos): Saluda cordialmente y preséntate como Ana de Gimmicks. Pregunta en qué le puedes ayudar.
 
 PASO 2 - NOMBRE DEL CLIENTE:
-Antes de avanzar con productos, NECESITAS el nombre del cliente.
+- Si ya tienes el nombre en datos recopilados, NUNCA lo pidas de nuevo. Dirígete al cliente por su nombre siempre.
 - Si aún no tienes el nombre, pregúntale: "¿Me compartes tu nombre para registrarte?"
 - Guarda el nombre en extracted_data.nombre.
-- Una vez que tengas el nombre, úsalo para dirigirte al cliente de ahí en adelante.
 
 PASO 3 - PRODUCTO:
 Si el cliente PIDE o MENCIONA cualquier tipo de producto (termos, jarros, gorras, tazas, zapatos, camisetas, etc.):
@@ -62,10 +61,11 @@ Si el cliente PIDE o MENCIONA cualquier tipo de producto (termos, jarros, gorras
 - NO preguntes cantidad ni nada más. Solo presenta las opciones y pide que te compartan los códigos de los productos que les gusten.
 - Termina el mensaje pidiendo que revisen el catálogo y compartan los códigos.
 
-Si el cliente pide el "catálogo completo" o "catálogo general" o "todo el catálogo" o quiere ver todos los productos:
+Si el cliente pide el "catálogo completo" o "catálogo general" o "todo el catálogo" o quiere ver todos los productos, o simplemente dice "catálogo", "envíame el catálogo", "mándame el catálogo", "link del catálogo", "quiero ver el catálogo":
 - NO pongas catalog_search. El sistema anexará el link automáticamente.
 - NO menciones la web ni el link en tu respuesta, el sistema lo agregará al final.
 - Solo di algo como: "Con gusto, te comparto nuestro catálogo completo." y continúa pidiendo el nombre si aún no lo tienes.
+- Marca intent como "solicitud_catalogo".
 
 PASO 4 - CONFIRMACIÓN DE CÓDIGOS:
 Si el cliente comparte CÓDIGOS de productos (como GIMN06001, JARPOR00391, etc.):
@@ -237,21 +237,19 @@ async def get_conversation_history(db: AsyncIOMotorDatabase, conversation_id: st
 
 
 async def load_known_client_data(db: AsyncIOMotorDatabase, phone_number: str) -> Dict:
-    """Load previously saved data for a returning client from leads collection"""
+    """Load previously saved CONTACT data for a returning client from leads collection.
+    Only loads personal/contact info (name, email, company, city).
+    Product-specific data (codes, quantities, etc.) should come from the current conversation only."""
     lead = await db.leads.find_one({"phone_number": phone_number}, {"_id": 0})
     if not lead:
         return {}
     known = {}
+    # Only load contact/personal data — NOT product data
     field_map = {
         "name": "nombre",
         "empresa": "empresa",
         "ciudad": "ciudad",
         "correo": "correo",
-        "producto_interes": "producto",
-        "codigos_producto": "codigos_producto",
-        "cantidad_estimada": "cantidad",
-        "fecha_entrega": "fecha_entrega",
-        "personalizacion": "color_logo",
     }
     for src, dst in field_map.items():
         val = lead.get(src)
@@ -896,12 +894,23 @@ async def process_ai_conversation(
         if has_existing_quote:
             quote_context = "NOTA: Ya existe una cotización pendiente. Si el cliente agrega, quita o cambia productos/cantidades, marca needs_quote=true para ACTUALIZAR la cotización."
 
+        # Determine if returning client
+        is_returning_client = bool(collected_data.get("nombre"))
+        client_type_context = ""
+        if is_returning_client:
+            nombre = collected_data.get("nombre", "")
+            client_type_context = f"IMPORTANTE: Este es un CLIENTE RECURRENTE. Su nombre es {nombre}. NO te presentes, NO pidas su nombre. Salúdalo directamente por su nombre y pregunta en qué le puedes ayudar."
+        else:
+            client_type_context = "Este es un CLIENTE NUEVO. No hay datos previos. Preséntate como Ana de Gimmicks y pregunta en qué le puedes ayudar."
+
         user_prompt = f"""INSTRUCCIÓN: Revisa TODO el historial y los datos recopilados. NO pidas nada que ya se haya proporcionado. Haz UNA sola pregunta por mensaje. Tu respuesta debe ser UN solo mensaje coherente.
 IMPORTANTE: En extracted_data.codigos_producto siempre devuelve la lista COMPLETA ACUMULADA de códigos (no solo los nuevos).
 Si vas a enviar un catálogo (catalog_search), NO hagas otra pregunta en el mismo mensaje. Solo presenta opciones y el catálogo.
 PROHIBIDO repetir o parafrasear tu mensaje anterior. Si ya confirmaste algo, avanza directamente al siguiente paso.
 PROHIBIDO pedir el nombre si ya lo tienes en los datos recopilados. Dirígete al cliente por su nombre.
 Pide UN SOLO dato por mensaje. No combines preguntas.
+
+{client_type_context}
 
 {catalog_info}
 {catalog_availability}
@@ -962,7 +971,7 @@ MENSAJE ACTUAL DEL CLIENTE: {message_text}"""
 
         # Anti-duplication: check if response is too similar to last bot message
         last_bot_msg = await db.messages.find_one(
-            {"conversation_id": conversation_id, "sender": "bot"},
+            {"conversation_id": conversation_id, "sender": {"$in": ["bot", "business"]}},
             {"_id": 0, "content": 1},
             sort=[("timestamp", -1)]
         )
@@ -1039,10 +1048,23 @@ MENSAJE ACTUAL DEL CLIENTE: {message_text}"""
 
         # Handle catalog search - COMBINE with AI response in ONE message
         # Priority: 1) Public catalog link (if products found), 2) External PDF (fallback)
-        catalog_full_keywords = ["catálogo completo", "catalogo completo", "catálogo general", "catalogo general", "todo el catálogo", "todo el catalogo", "catálogo pdf", "catalogo pdf", "todos los productos", "todo el catalogo", "ver todo", "catalogo entero", "catálogo entero", "ver mas productos", "ver más productos"]
-        is_full_catalog_request = any(kw in message_text.lower() for kw in catalog_full_keywords)
+        msg_lower = message_text.lower()
+        catalog_full_keywords = [
+            "catálogo completo", "catalogo completo", "catálogo general", "catalogo general",
+            "todo el catálogo", "todo el catalogo", "catálogo pdf", "catalogo pdf",
+            "todos los productos", "ver todo", "catalogo entero", "catálogo entero",
+            "ver mas productos", "ver más productos",
+        ]
+        # Broader: any mention of "catálogo"/"catalogo" without a specific product keyword
+        catalog_single_words = ["catálogo", "catalogo", "catlogo"]
+        is_full_catalog_request = any(kw in msg_lower for kw in catalog_full_keywords)
+        if not is_full_catalog_request:
+            # If user mentions "catálogo" without specifying a product search keyword, treat as full catalog
+            has_catalog_word = any(w in msg_lower for w in catalog_single_words)
+            if has_catalog_word and not catalog_search:
+                is_full_catalog_request = True
         # Also detect if AI intent is full catalog or response mentions the gimmicks.com.ec URL
-        if not is_full_catalog_request and ai_data.get("intent") == "solicitud_catalogo" and not catalog_search:
+        if not is_full_catalog_request and ai_result.get("intent") == "solicitud_catalogo" and not catalog_search:
             is_full_catalog_request = True
         if not is_full_catalog_request and "gimmicks.com.ec" in response_text.lower():
             is_full_catalog_request = True
