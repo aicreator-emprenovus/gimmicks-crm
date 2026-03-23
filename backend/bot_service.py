@@ -2,6 +2,7 @@
 AI-powered conversational bot for Gimmicks CRM.
 Human-like sales assistant that guides customers through catalog, quoting, and purchase.
 """
+import asyncio
 import os
 import json
 import logging
@@ -13,6 +14,9 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 
 logger = logging.getLogger(__name__)
 
+# Per-phone concurrency lock to prevent race conditions when multiple messages arrive quickly
+_phone_locks: Dict[str, asyncio.Lock] = {}
+
 SYSTEM_PROMPT = """Eres Ana, asesora comercial de Gimmicks Marketing Services, empresa ecuatoriana de productos promocionales y publicitarios.
 
 PERSONALIDAD:
@@ -23,6 +27,7 @@ PERSONALIDAD:
 - Tutea al cliente
 - Ortografía impecable: siempre usa tildes (qué, cuántos, cuál, información, personalización, cotización, dirección, etc.)
 - Solo haz UNA pregunta por mensaje
+- NUNCA saludes con "Hola" más de una vez en la conversación. Solo di "Hola" en tu PRIMER mensaje. En mensajes posteriores, ve directo al punto.
 
 REGLA MÁS IMPORTANTE - LEE ESTO PRIMERO:
 Antes de responder, REVISA con atención el HISTORIAL COMPLETO y los DATOS YA RECOPILADOS.
@@ -220,7 +225,12 @@ async def format_catalog_message(products: List[Dict], category_name: str = "") 
 
 
 async def get_conversation_history(db: AsyncIOMotorDatabase, conversation_id: str, limit: int = 50) -> str:
-    """Get recent messages formatted as conversation text"""
+    """Get recent messages formatted as conversation text, filtering out error/fallback messages."""
+    # Fallback messages that pollute history and confuse the AI
+    ERROR_FALLBACKS = [
+        "gracias por contactarnos, en un momento atenderemos tu requerimiento",
+        "gracias por tu mensaje",
+    ]
     messages = await db.messages.find(
         {"conversation_id": conversation_id},
         {"_id": 0, "sender": 1, "content": 1}
@@ -229,10 +239,14 @@ async def get_conversation_history(db: AsyncIOMotorDatabase, conversation_id: st
 
     lines = []
     for msg in messages:
-        role = "Cliente" if msg["sender"] == "user" else "Ana (Gimmicks)"
         text = msg.get("content", {}).get("text", "")
-        if text:
-            lines.append(f"{role}: {text}")
+        if not text:
+            continue
+        # Skip error fallback messages from history
+        if msg["sender"] != "user" and any(fb in text.lower() for fb in ERROR_FALLBACKS):
+            continue
+        role = "Cliente" if msg["sender"] == "user" else "Ana (Gimmicks)"
+        lines.append(f"{role}: {text}")
     return "\n".join(lines)
 
 
@@ -663,7 +677,23 @@ async def process_ai_conversation(
     conversation_id: str,
     send_message_fn
 ):
-    """Main AI conversation handler"""
+    """Main AI conversation handler with per-phone concurrency lock."""
+    # Acquire a per-phone lock to prevent race conditions with rapid messages
+    if phone_number not in _phone_locks:
+        _phone_locks[phone_number] = asyncio.Lock()
+    async with _phone_locks[phone_number]:
+        await _process_ai_conversation_inner(db, phone_number, message_text, conversation_id, send_message_fn)
+
+
+async def _process_ai_conversation_inner(
+    db: AsyncIOMotorDatabase,
+    phone_number: str,
+    message_text: str,
+    conversation_id: str,
+    send_message_fn
+):
+    """Inner conversation handler — always called under per-phone lock."""
+    message_sent = False  # Track if we already sent a message to avoid double-sending on error
     try:
         now = datetime.now(timezone.utc)
 
@@ -714,6 +744,7 @@ async def process_ai_conversation(
                             f"¿Quieres que la retomemos o prefieres empezar de cero?"
                         )
                     await send_message_fn(phone_number, conversation_id, resume_msg)
+                    message_sent = True
                     # Mark as waiting for resume decision
                     await db.conversation_states.update_one(
                         {"phone_number": phone_number},
@@ -749,6 +780,7 @@ async def process_ai_conversation(
                         upsert=True
                     )
                     await send_message_fn(phone_number, conversation_id, "Perfecto, empezamos de cero. ¿En qué te puedo ayudar?")
+                    message_sent = True
                     return
                 else:
                     # Resume - clear the flag and continue normally
@@ -758,6 +790,7 @@ async def process_ai_conversation(
                     )
                     state.pop("waiting_resume_decision", None)
                     await send_message_fn(phone_number, conversation_id, "Perfecto, retomamos donde quedamos.")
+                    message_sent = True
                     # Fall through to normal processing
 
         # Reactivate if was perdido or transferred
@@ -942,6 +975,7 @@ MENSAJE ACTUAL DEL CLIENTE: {message_text}"""
             else:
                 fallback = "Gracias por tu mensaje. ¿En qué más te puedo ayudar?"
             await send_message_fn(phone_number, conversation_id, fallback)
+            message_sent = True
             await db.conversation_states.update_one(
                 {"phone_number": phone_number},
                 {"$set": {"message_count": msg_count, "last_interaction": now.isoformat()}}
@@ -962,6 +996,17 @@ MENSAJE ACTUAL DEL CLIENTE: {message_text}"""
                 except Exception:
                     pass
             response_text = response_text.strip()
+
+        # Remove redundant greetings in follow-up messages (not the first message)
+        if msg_count > 1 and response_text:
+            # Strip leading "Hola José," or "Hola José Silva," patterns from follow-up messages
+            response_text = re.sub(r'^Hola\s+[\w\s]+?,\s*', '', response_text, count=1)
+            # Also handle "Hola, " at the start
+            response_text = re.sub(r'^Hola,\s*', '', response_text, count=1)
+            # Capitalize first letter after stripping
+            if response_text and response_text[0].islower():
+                response_text = response_text[0].upper() + response_text[1:]
+
         extracted = ai_result.get("extracted_data", {})
         catalog_search = ai_result.get("catalog_search")
         lead_quality = ai_result.get("lead_quality", state.get("lead_quality", "frio"))
@@ -1029,8 +1074,11 @@ MENSAJE ACTUAL DEL CLIENTE: {message_text}"""
 
         # Check if quote will be generated BEFORE sending AI response
         # Force quote creation when all required data is present (codes + qty + email + empresa)
+        # BUT do NOT force a quote if the user is asking for a catalog — respond to catalog request first
         will_generate_quote = False
-        if not needs_quote and not state.get("quote_generated", False):
+        msg_lower_for_quote = message_text.lower()
+        is_catalog_request_msg = any(w in msg_lower_for_quote for w in ["catálogo", "catalogo", "catlogo", "catalog"])
+        if not needs_quote and not state.get("quote_generated", False) and not is_catalog_request_msg:
             has_codes = bool(collected_data.get("codigos_producto") or collected_data.get("producto"))
             has_qty = bool(collected_data.get("cantidad") or collected_data.get("cantidades_por_producto"))
             has_email = bool(collected_data.get("correo"))
@@ -1082,6 +1130,7 @@ MENSAJE ACTUAL DEL CLIENTE: {message_text}"""
                     f"Revisa nuestro catálogo completo en la web de Gimmicks: {EXTERNAL_CATALOG_PDF}"
                 )
                 await send_message_fn(phone_number, conversation_id, catalog_msg)
+                message_sent = True
                 catalogs_sent.append("catalogo_completo")
             elif catalog_search and catalog_search not in catalogs_sent:
                 catalog_url = build_catalog_url(catalog_search)
@@ -1097,9 +1146,11 @@ MENSAJE ACTUAL DEL CLIENTE: {message_text}"""
                         f"Revisa nuestro catálogo completo en la web de Gimmicks: {EXTERNAL_CATALOG_PDF}"
                     )
                 await send_message_fn(phone_number, conversation_id, catalog_msg)
+                message_sent = True
                 catalogs_sent.append(catalog_search)
             else:
                 await send_message_fn(phone_number, conversation_id, response_text)
+                message_sent = True
 
         # Handle quote creation
         if will_generate_quote:
@@ -1117,10 +1168,12 @@ MENSAJE ACTUAL DEL CLIENTE: {message_text}"""
                 correo = collected_data.get("correo", "tu correo")
                 quote_notify = f"Tu cotización ha sido registrada y será enviada a {correo}. Nuestro equipo la revisará pronto."
                 await send_message_fn(phone_number, conversation_id, quote_notify)
+                message_sent = True
             else:
                 # Quote was updated - still respond to the user
                 update_notify = response_text or "Tu cotización ha sido actualizada. Nuestro equipo la revisará pronto."
                 await send_message_fn(phone_number, conversation_id, update_notify)
+                message_sent = True
         else:
             state_quote = state.get("quote_generated", False)
 
@@ -1156,10 +1209,12 @@ MENSAJE ACTUAL DEL CLIENTE: {message_text}"""
 
     except Exception as e:
         logger.error(f"Error in AI conversation for {phone_number}: {e}", exc_info=True)
-        try:
-            await send_message_fn(phone_number, conversation_id, "Gracias por contactarnos, en un momento atenderemos tu requerimiento.")
-        except Exception:
-            pass
+        # Only send fallback if NO message was already sent during this processing
+        if not message_sent:
+            try:
+                await send_message_fn(phone_number, conversation_id, "Disculpa, tuve un problema procesando tu mensaje. ¿Podrías repetirlo?")
+            except Exception:
+                pass
 
 
 async def update_lead_from_ai(
