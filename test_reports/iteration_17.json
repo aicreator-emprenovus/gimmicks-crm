@@ -1,0 +1,117 @@
+{
+  "summary": "Iteration 17: Staff Notifications and Product Catalog Testing Complete. All 14 tests passed (100%). Verified: (1) Staff notifications sent when NEW quote created (ALERTA COTIZACION NUEVA to 593999440910), (2) Staff notifications sent when quote UPDATED (ALERTA COTIZACION ACTUALIZADA to 593999440910), (3) Product search returns ONLY current catalog products (JAR*, HT*, SC* - NOT old GIMK-* codes), (4) 'jarro' search returns JARPOR00391-BLA, JARVID00020, etc., (5) 'gorra' search returns HT2PR2, SC5CRNB, etc., (6) Catalog URL uses CATALOG_BASE_URL from env.",
+
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+
+  "passed_tests": {
+    "product_search_no_old_gimk": [
+      "✓ 0 old GIMK-* products in database (removed)",
+      "✓ Current products exist: JAR: 155, HT: 71, SC: 7"
+    ],
+    "search_jarro_returns_current": [
+      "✓ Search 'jarro' returns 10 products",
+      "✓ Products: JARVID00020, JARPOR00391-BLA, JARPOR00250-PLA, etc.",
+      "✓ No GIMK codes in results"
+    ],
+    "search_gorra_returns_current": [
+      "✓ Search 'gorra' returns 10 products",
+      "✓ Products: HT2PR2, SC5CRNB, SC5BR, HX002R, etc.",
+      "✓ No GIMK codes in results"
+    ],
+    "search_termo_returns_current": [
+      "✓ Search 'termo' returns 10 products",
+      "✓ No GIMK codes in results"
+    ],
+    "staff_notification_new_quote": [
+      "✓ Staff notification sent to 593999440910",
+      "✓ Message contains 'ALERTA COTIZACION NUEVA'",
+      "✓ Message contains client name, phone, email, products"
+    ],
+    "staff_notification_quote_update": [
+      "✓ Staff notification sent to 593999440910",
+      "✓ Message contains 'ALERTA COTIZACION ACTUALIZADA'"
+    ],
+    "notify_staff_function": [
+      "✓ Function has correct parameters: db, customer_phone, collected_data, is_update, send_message_fn",
+      "✓ STAFF_NOTIFICATION_PHONE = '593999440910'"
+    ],
+    "full_quote_flow": [
+      "✓ Quote created with number #4739",
+      "✓ Staff notification sent automatically",
+      "✓ Client notification sent"
+    ],
+    "catalog_availability_injection": [
+      "✓ Product search results injected into AI prompt",
+      "✓ Contains current product codes (JARPOR, JARVID)",
+      "✓ No GIMK codes in injected data"
+    ],
+    "build_catalog_url": [
+      "✓ Uses CATALOG_BASE_URL from env: https://gimmicks-chat-flow.preview.emergentagent.com",
+      "✓ Handles multiple keywords (uses first)"
+    ],
+    "per_phone_concurrency_lock": [
+      "✓ _phone_locks dictionary exists for concurrent message handling"
+    ]
+  },
+
+  "test_report_links": [
+    "/app/backend/tests/test_staff_notifications_and_products.py",
+    "/app/test_reports/pytest/pytest_iteration17.xml"
+  ],
+
+  "action_items": [],
+
+  "critical_code_review_comments": [
+    "All requested features verified working:",
+    "1. Staff notifications (notify_staff_new_quote) correctly sends to 593999440910 with ALERTA COTIZACION NUEVA/ACTUALIZADA",
+    "2. Product search (search_products_by_keyword) returns ONLY current catalog products - no old GIMK-* codes",
+    "3. sync_service.py includes 'products' in COLLECTIONS_TO_SYNC for production sync",
+    "4. catalog_availability injection in bot_service.py (lines 920-950) correctly searches and injects current products",
+    "5. build_catalog_url uses CATALOG_BASE_URL from env (line 139)",
+    "6. Per-phone concurrency lock (_phone_locks) prevents race conditions"
+  ],
+
+  "updated_files": [
+    "/app/backend/tests/test_staff_notifications_and_products.py"
+  ],
+
+  "success_rate": {
+    "backend": "100% (14/14 tests passed)",
+    "frontend": "N/A (backend only testing)"
+  },
+
+  "test_credentials": {
+    "admin_login": "admin@gimmicks.com / admin123456",
+    "EMERGENT_LLM_KEY": "sk-emergent-d6a8d6558541aFb412",
+    "test_phone_returning": "593963266566",
+    "staff_phone": "593999440910",
+    "test_conversation_id": "46696923-fcbd-48a2-850d-1e55fa500765"
+  },
+
+  "verified_functionality": {
+    "staff_notification_new_quote": "ALERTA COTIZACION NUEVA sent to 593999440910 with quote #, client name, phone, email, products",
+    "staff_notification_update_quote": "ALERTA COTIZACION ACTUALIZADA sent to 593999440910",
+    "product_search_jarro": "Returns JARVID00020, JARPOR00391-BLA, JARPOR00250-PLA (current catalog)",
+    "product_search_gorra": "Returns HT2PR2, SC5CRNB, SC5BR, HX002R (current catalog)",
+    "old_gimk_products_removed": "0 GIMK-* products in database",
+    "catalog_url": "https://gimmicks-chat-flow.preview.emergentagent.com/catalog?q={keyword}"
+  },
+
+  "seed_data_creation": "No seed data created - tested with existing lead data for phone 593963266566 (José Silva, Emprenovus)",
+
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+
+  "context_for_next_testing_agent": "Iteration 17 verified: (1) Staff notifications work - ALERTA COTIZACION NUEVA/ACTUALIZADA sent to 593999440910 when quotes are created/updated, (2) Product search returns ONLY current catalog products (JAR*, HT*, SC*) - old GIMK-* products removed from DB, (3) 'jarro' search returns JARPOR00391-BLA, JARVID00020, etc., (4) 'gorra' search returns HT2PR2, SC5CRNB, etc., (5) Catalog URL uses CATALOG_BASE_URL from env. All tests use mock_send function to capture bot responses without sending real WhatsApp messages.",
+
+  "mocked_api_note": "MOCKED: mock_send function replaces real WhatsApp sending - captures messages to a list for testing. GPT-5.2 via emergentintegrations is called with real EMERGENT_LLM_KEY."
+}

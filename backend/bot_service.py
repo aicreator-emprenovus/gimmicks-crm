@@ -94,6 +94,7 @@ REGLAS ADICIONALES:
 - Si el cliente envía algo que NO ENTIENDES o es ambiguo: Interpreta lo mejor posible.
 - extracted_data.cantidad es la cantidad general (si aplica a todos los productos por igual).
 - Si el cliente menciona un producto genérico (ej: "jarros"), ponlo en extracted_data.producto.
+- SOLO menciona productos que aparezcan en la sección PRODUCTOS ENCONTRADOS del prompt. NUNCA inventes nombres de productos ni códigos. Si no hay productos encontrados para lo que pide el cliente, di que pueden revisar el catálogo completo.
 
 COTIZACIÓN:
 Marca needs_quote=true ÚNICAMENTE cuando tengas TODOS estos datos: códigos de producto + cantidad + correo electrónico + nombre de empresa. Los cuatro datos son obligatorios.
@@ -132,9 +133,13 @@ EXTERNAL_CATALOG_PDF = "https://gimmicks.com.ec/"
 
 
 def build_catalog_url(keyword: str) -> str:
-    """Build public catalog URL for the given product keyword"""
+    """Build public catalog URL for the given product keyword.
+    Uses CATALOG_BASE_URL if set, otherwise auto-detects the correct base URL."""
     from urllib.parse import quote
     base_url = os.environ.get("CATALOG_BASE_URL", "").strip().rstrip("/")
+    if not base_url:
+        # Auto-detect: use REACT_APP_BACKEND_URL if available, else production URL
+        base_url = os.environ.get("REACT_APP_BACKEND_URL", "").strip().rstrip("/")
     if not base_url:
         base_url = "https://gimmicks-crm-production.up.railway.app"
     clean = keyword.strip().split(",")[0].split("/")[0].strip()
@@ -150,7 +155,8 @@ def format_price_ecuador(price: float) -> str:
 
 
 async def search_products_by_keyword(db: AsyncIOMotorDatabase, keyword: str, limit: int = 8) -> List[Dict]:
-    """Search products by keyword in name, description, or categories (supports both old and new schema)"""
+    """Search products by keyword in name, description, or categories (supports both old and new schema).
+    Excludes deleted products."""
     if not keyword:
         return []
     words = keyword.strip().split()
@@ -162,15 +168,21 @@ async def search_products_by_keyword(db: AsyncIOMotorDatabase, keyword: str, lim
         if w.endswith("s") and len(w) > 2:
             stems.add(w[:-1])
     regex = "|".join(stems)
+    query = {
+        "$and": [
+            {"is_deleted": {"$ne": True}},
+            {"$or": [
+                {"name": {"$regex": regex, "$options": "i"}},
+                {"description": {"$regex": regex, "$options": "i"}},
+                {"categories": {"$regex": regex, "$options": "i"}},
+                {"category_1": {"$regex": regex, "$options": "i"}},
+                {"category_2": {"$regex": regex, "$options": "i"}},
+                {"category_3": {"$regex": regex, "$options": "i"}}
+            ]}
+        ]
+    }
     products = await db.products.find(
-        {"$or": [
-            {"name": {"$regex": regex, "$options": "i"}},
-            {"description": {"$regex": regex, "$options": "i"}},
-            {"categories": {"$regex": regex, "$options": "i"}},
-            {"category_1": {"$regex": regex, "$options": "i"}},
-            {"category_2": {"$regex": regex, "$options": "i"}},
-            {"category_3": {"$regex": regex, "$options": "i"}}
-        ]},
+        query,
         {"_id": 0, "code": 1, "name": 1, "description": 1, "price": 1, "cost": 1, "image_url": 1, "categories": 1}
     ).limit(limit).to_list(limit)
     return products
@@ -906,20 +918,36 @@ async def _process_ai_conversation_inner(
         # Pre-check catalog availability for product searches
         catalog_availability = ""
         if message_text:
-            # Simple keyword detection to pre-check inventory
+            # Broader keyword detection - search for any product-related word
             product_keywords = ["jarro", "termo", "gorra", "taza", "agenda", "mochila", "bolso", "esfero",
-                              "boligrafo", "camiseta", "polo", "tecnolog", "usb", "cargador", "parlante",
-                              "botella", "vaso", "llavero", "libreta", "cuaderno", "bolsa", "paragua"]
+                              "boligrafo", "bolígrafo", "camiseta", "polo", "tecnolog", "usb", "cargador", "parlante",
+                              "botella", "vaso", "llavero", "libreta", "cuaderno", "bolsa", "paragua",
+                              "porta celular", "portacelular", "portalapiz", "tomatodo", "lonchera",
+                              "set", "kit", "madera", "ecológico", "ecologico", "antiestres", "antiestré",
+                              "organizador", "calendario", "mouse", "audifonos", "audífonos", "altavoz",
+                              "copa", "mate", "cerámica", "ceramica", "porcelana", "vidrio", "acero"]
             msg_lower = message_text.lower()
+            matched_kw = None
             for kw in product_keywords:
                 if kw in msg_lower:
-                    prods = await search_products_by_keyword(db, kw, limit=3)
-                    if prods:
-                        names = ", ".join([p.get("name", "") for p in prods[:3]])
-                        catalog_availability = f"\nPRODUCTOS ENCONTRADOS para '{kw}': {names}. Sí tenemos productos en esta categoría."
-                    else:
-                        catalog_availability = f"\nNO HAY PRODUCTOS en inventario para '{kw}'. Informa al cliente que por el momento no tenemos esa línea disponible y recomiéndale productos similares que sí tengamos."
+                    matched_kw = kw
                     break
+            
+            # If no keyword matched, try a general search using the user's message words
+            if not matched_kw and len(msg_lower.split()) <= 5:
+                # For short messages, try searching with the full message
+                for word in msg_lower.split():
+                    if len(word) >= 4 and word not in ("hola", "quiero", "necesito", "también", "tambien", "tiene", "tienen", "puedo", "envíame", "dame", "mándame", "muestrame", "muéstrame"):
+                        matched_kw = word
+                        break
+            
+            if matched_kw:
+                prods = await search_products_by_keyword(db, matched_kw, limit=5)
+                if prods:
+                    prod_details = ", ".join([f"{p.get('name', '')} (código: {p.get('code', '')})" for p in prods[:5]])
+                    catalog_availability = f"\nPRODUCTOS ENCONTRADOS EN INVENTARIO ACTUAL para '{matched_kw}': {prod_details}. Menciona SOLO estos productos. NUNCA inventes nombres o códigos que no estén aquí."
+                else:
+                    catalog_availability = f"\nNO HAY PRODUCTOS en inventario actual para '{matched_kw}'. Informa al cliente que por el momento no tenemos esa línea disponible y sugiere que revise el catálogo completo en gimmicks.com.ec."
 
         # Check if there's already a quote for context
         has_existing_quote = state.get("quote_generated", False)
