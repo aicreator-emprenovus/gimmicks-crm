@@ -99,6 +99,15 @@ CRM para ventas comerciales con WhatsApp Business que integra bot IA (GPT-5.2), 
   - No fuerza auto-cotización cuando el usuario pide catálogo
   - Limpieza de mensajes de error en BD local y producción
   - Testing: 11/11 tests PASS (iteration_16)
+- [x] **P0 - Staff notifications + catálogo vigente** - Mar 31, 2026:
+  - Notificaciones al staff (593999440910): ALERTA COTIZACION NUEVA/ACTUALIZADA enviadas correctamente al crear/actualizar cotizaciones
+  - Sync service: ahora sincroniza `products` y `automation_rules` de producción
+  - Productos GIMK-* del catálogo viejo eliminados del preview DB
+  - Búsqueda de productos retorna SOLO catálogo vigente (JAR*, HT*, SC*, etc.)
+  - Prompt del AI reforzado: SOLO menciona productos que aparecen en los resultados del DB
+  - Lista de keywords de productos ampliada significativamente
+  - `build_catalog_url` mejorado con auto-detección de URL correcta
+  - Testing: 14/14 tests PASS (iteration_17)
 
 ## Remaining Tasks
 1. **P1 - Generate 3 Demo WhatsApp Conversations**: Simulate with curl
