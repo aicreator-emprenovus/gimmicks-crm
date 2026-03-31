@@ -108,6 +108,12 @@ CRM para ventas comerciales con WhatsApp Business que integra bot IA (GPT-5.2), 
   - Lista de keywords de productos ampliada significativamente
   - `build_catalog_url` mejorado con auto-detección de URL correcta
   - Testing: 14/14 tests PASS (iteration_17)
+- [x] **Dashboard: Resumen de órdenes por cliente/mes** - Mar 31, 2026:
+  - Nuevo endpoint `/api/dashboard-v2/orders-by-client` (admin only, 403 para otros roles)
+  - Tabla: Cliente | # Órdenes | # Productos | Monto — con total del mes
+  - Navegación mensual con flechas (< Mes Año >)
+  - Solo visible para admin en Dashboard
+  - Testing: endpoint verificado con curl + screenshot
 
 ## Remaining Tasks
 1. **P1 - Generate 3 Demo WhatsApp Conversations**: Simulate with curl

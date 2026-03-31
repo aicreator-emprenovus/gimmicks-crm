@@ -132,3 +132,68 @@ async def get_top_clients(limit: int = 10, authorization: str = Header(None)):
     async for item in db.quotes_v2.aggregate(pipeline):
         results.append({"client_id": item["_id"], "client_name": item.get("client_name", ""), "total_quotes": item.get("total_quotes", 0), "total_value": item.get("total_value", 0)})
     return results
+
+
+
+@router.get("/orders-by-client")
+async def get_orders_by_client(month: int = None, year: int = None, authorization: str = Header(None)):
+    """Purchase orders summary grouped by client for a given month.
+    Admin only. Returns clients with their order count and total amount."""
+    user = await get_user_from_token(authorization)
+    if not user:
+        raise HTTPException(status_code=401, detail="No autorizado")
+    # Check admin role
+    full_user = await db.users.find_one({"id": user["id"]}, {"_id": 0, "role": 1})
+    if not full_user or full_user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Solo administradores")
+
+    now = datetime.now(timezone.utc)
+    m = month or now.month
+    y = year or now.year
+
+    start = datetime(y, m, 1, tzinfo=timezone.utc)
+    if m == 12:
+        end = datetime(y + 1, 1, 1, tzinfo=timezone.utc)
+    else:
+        end = datetime(y, m + 1, 1, tzinfo=timezone.utc)
+
+    pipeline = [
+        {"$match": {
+            "is_deleted": {"$ne": True},
+            "created_at": {"$gte": start, "$lt": end}
+        }},
+        {"$group": {
+            "_id": "$client_name",
+            "total_orders": {"$sum": 1},
+            "total_amount": {"$sum": "$total"},
+            "phone": {"$first": "$phone_number"},
+            "last_order": {"$max": "$created_at"},
+            "items_count": {"$sum": {"$size": {"$ifNull": ["$items", []]}}}
+        }},
+        {"$sort": {"total_amount": -1}}
+    ]
+
+    clients = []
+    grand_total = 0
+    grand_orders = 0
+    async for row in db.quotes_v2.aggregate(pipeline):
+        amount = row.get("total_amount", 0) or 0
+        orders = row.get("total_orders", 0)
+        clients.append({
+            "client_name": row["_id"] or "Sin nombre",
+            "total_orders": orders,
+            "total_amount": amount,
+            "phone": row.get("phone", ""),
+            "last_order": row.get("last_order").isoformat() if row.get("last_order") else None,
+            "items_count": row.get("items_count", 0)
+        })
+        grand_total += amount
+        grand_orders += orders
+
+    return {
+        "month": m,
+        "year": y,
+        "clients": clients,
+        "grand_total": grand_total,
+        "grand_orders": grand_orders
+    }

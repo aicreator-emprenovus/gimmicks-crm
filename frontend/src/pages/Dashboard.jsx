@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/utils/currency";
 import {
   Users, Package, FileText, ShoppingBag, MessageSquare,
-  TrendingUp, RefreshCw, Loader2, ArrowUpRight
+  TrendingUp, RefreshCw, Loader2, ArrowUpRight,
+  ChevronLeft, ChevronRight, CalendarDays
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -18,14 +19,21 @@ const API_URL = process.env.REACT_APP_BACKEND_URL;
 const COLORS = ["#63AC9A", "#3b82f6", "#f59e0b", "#8b5cf6", "#ec4899", "#10b981", "#ef4444", "#6366f1"];
 
 export default function Dashboard() {
-  const { getAuthHeaders } = useAuth();
+  const { getAuthHeaders, user: authUser } = useAuth();
   const [stats, setStats] = useState(null);
   const [activityChart, setActivityChart] = useState([]);
   const [topProducts, setTopProducts] = useState([]);
   const [topClients, setTopClients] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [ordersSummary, setOrdersSummary] = useState(null);
+  const [ordersMonth, setOrdersMonth] = useState(() => {
+    const now = new Date();
+    return { month: now.getMonth() + 1, year: now.getFullYear() };
+  });
+  const [ordersLoading, setOrdersLoading] = useState(false);
   const token = localStorage.getItem("token");
   const headers = { Authorization: `Bearer ${token}`, ...getAuthHeaders() };
+  const isAdmin = authUser?.role === "admin";
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
@@ -46,7 +54,23 @@ export default function Dashboard() {
     setLoading(false);
   }, []);
 
+  const fetchOrdersSummary = useCallback(async () => {
+    if (!isAdmin) return;
+    setOrdersLoading(true);
+    try {
+      const res = await axios.get(
+        `${API_URL}/api/dashboard-v2/orders-by-client?month=${ordersMonth.month}&year=${ordersMonth.year}`,
+        { headers }
+      );
+      setOrdersSummary(res.data);
+    } catch {
+      // silently fail for non-admin
+    }
+    setOrdersLoading(false);
+  }, [ordersMonth, isAdmin]);
+
   useEffect(() => { fetchAll(); }, [fetchAll]);
+  useEffect(() => { fetchOrdersSummary(); }, [fetchOrdersSummary]);
 
   if (loading) {
     return <div className="p-6 flex items-center justify-center min-h-[400px]"><Loader2 className="w-8 h-8 animate-spin text-[#63AC9A]" /></div>;
@@ -65,6 +89,26 @@ export default function Dashboard() {
     ...d,
     label: new Date(d.date).toLocaleDateString("es-EC", { day: "2-digit", month: "short" })
   }));
+
+  const MONTH_NAMES = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+    "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+
+  const prevMonth = () => {
+    setOrdersMonth(prev => {
+      if (prev.month === 1) return { month: 12, year: prev.year - 1 };
+      return { month: prev.month - 1, year: prev.year };
+    });
+  };
+  const nextMonth = () => {
+    const now = new Date();
+    setOrdersMonth(prev => {
+      const next = prev.month === 12
+        ? { month: 1, year: prev.year + 1 }
+        : { month: prev.month + 1, year: prev.year };
+      if (next.year > now.getFullYear() || (next.year === now.getFullYear() && next.month > now.getMonth() + 1)) return prev;
+      return next;
+    });
+  };
 
   return (
     <div className="p-4 lg:p-6 space-y-6" data-testid="dashboard-page">
@@ -187,6 +231,76 @@ export default function Dashboard() {
           )}
         </CardContent>
       </Card>
+
+      {/* Orders Summary by Client - Admin Only */}
+      {isAdmin && (
+        <Card className="bg-white shadow-sm" data-testid="orders-by-client-section">
+          <CardHeader className="border-b border-gray-100 pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base font-semibold text-gray-800 flex items-center gap-2">
+                <CalendarDays className="w-4 h-4 text-[#63AC9A]" />
+                Órdenes por Cliente
+              </CardTitle>
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={prevMonth} data-testid="orders-prev-month">
+                  <ChevronLeft className="w-4 h-4" />
+                </Button>
+                <span className="text-sm font-medium text-gray-700 min-w-[140px] text-center" data-testid="orders-month-label">
+                  {MONTH_NAMES[ordersMonth.month - 1]} {ordersMonth.year}
+                </span>
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={nextMonth} data-testid="orders-next-month">
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="p-4">
+            {ordersLoading ? (
+              <div className="h-[120px] flex items-center justify-center">
+                <Loader2 className="w-5 h-5 animate-spin text-[#63AC9A]" />
+              </div>
+            ) : ordersSummary?.clients?.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm" data-testid="orders-table">
+                  <thead>
+                    <tr className="text-left text-gray-500 border-b">
+                      <th className="pb-2 font-medium">Cliente</th>
+                      <th className="pb-2 font-medium text-center">Órdenes</th>
+                      <th className="pb-2 font-medium text-center">Productos</th>
+                      <th className="pb-2 font-medium text-right">Monto</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {ordersSummary.clients.map((c, i) => (
+                      <tr key={i} className="border-b last:border-0">
+                        <td className="py-2.5">
+                          <p className="font-medium text-gray-800">{c.client_name}</p>
+                          {c.phone && <p className="text-xs text-gray-400">{c.phone}</p>}
+                        </td>
+                        <td className="py-2.5 text-center text-gray-600">{c.total_orders}</td>
+                        <td className="py-2.5 text-center text-gray-600">{c.items_count}</td>
+                        <td className="py-2.5 text-right font-medium text-[#63AC9A]">{formatCurrency(c.total_amount)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr className="border-t-2 border-gray-200">
+                      <td className="pt-3 font-semibold text-gray-800">Total del mes</td>
+                      <td className="pt-3 text-center font-semibold text-gray-800">{ordersSummary.grand_orders}</td>
+                      <td className="pt-3"></td>
+                      <td className="pt-3 text-right font-semibold text-[#63AC9A] text-base">{formatCurrency(ordersSummary.grand_total)}</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            ) : (
+              <div className="h-[120px] flex items-center justify-center text-gray-400 text-sm">
+                Sin órdenes en {MONTH_NAMES[ordersMonth.month - 1]} {ordersMonth.year}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
