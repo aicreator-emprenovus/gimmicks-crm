@@ -1,0 +1,145 @@
+{
+  "summary": "Iteration 18: State Machine Overhaul Testing Complete. All 29 tests passed (100%). Verified complete conversational flow state machine for CRM Gimmicks WhatsApp Bot including: (1) CASO 1: Date response saved as fecha_entrega NOT product, (2) CASO 2: Phone numbers NOT treated as product codes, (3) CASO 3: Frustration/urgency triggers immediate escalation with structured summary to staff 593999440910, (4) Name capture works correctly (NOT product search), (5) 'un color' saved as color_logo, (6) 'Quito' saved as ciudad, (7) Catalog link sent on request, (8) Staff notification ALERTA COTIZACION NUEVA sent when quote generated.",
+
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+
+  "passed_tests": {
+    "escalation_detection": [
+      "✓ 'ya no quiero nada' triggers escalation",
+      "✓ 'pásame con alguien' triggers escalation",
+      "✓ 'quiero hablar con una persona' triggers escalation",
+      "✓ 'estoy molesto' triggers escalation",
+      "✓ 'terrible servicio' triggers escalation",
+      "✓ 'pésimo' triggers escalation",
+      "✓ 'sin más preguntas' triggers escalation",
+      "✓ 'quiero la cotización ahorita' triggers escalation",
+      "✓ Normal messages (jarros, codes, dates, cities) do NOT trigger escalation"
+    ],
+    "stage_determination": [
+      "✓ New user -> captura_nombre",
+      "✓ User with name -> busqueda_producto",
+      "✓ After catalog -> esperando_codigos",
+      "✓ With codes -> validando_codigos",
+      "✓ With codes + qty -> recopilando_datos",
+      "✓ escalado_humano persists",
+      "✓ After quote -> revision_humana"
+    ],
+    "field_aliases": [
+      "✓ Email aliases (email, mail, correo_electronico) -> correo",
+      "✓ Code aliases (codigos, codigo, códigos) -> codigos_producto",
+      "✓ Color aliases (tipo_de_personalizacion, color_logotipo) -> color_logo",
+      "✓ City aliases (ciudad_de_entrega, ciudad_entrega) -> ciudad"
+    ],
+    "valid_stages": [
+      "✓ All 8 stages defined: saludo, captura_nombre, busqueda_producto, esperando_codigos, validando_codigos, recopilando_datos, revision_humana, escalado_humano"
+    ],
+    "staff_notification": [
+      "✓ STAFF_NOTIFICATION_PHONE = 593999440910"
+    ],
+    "escalation_summary": [
+      "✓ Escalation summary contains: nombre, correo, empresa, codigos_producto, cantidad, ciudad, fecha_entrega, color_logo, reason",
+      "✓ Summary sent to staff phone 593999440910"
+    ],
+    "product_search": [
+      "✓ 'jarro' search returns: JARVID00020, JARPOR00391-BLA, JARPOR00250-PLA",
+      "✓ 'gorra' search returns: HT2PR2, SC5CRNB, SC5BR",
+      "✓ Validated codes: JARPOR00391-BLA, HT2PR2"
+    ],
+    "caso1_date_not_product": [
+      "✓ Date 'abril 15' saved as fecha_entrega: '15 de abril'",
+      "✓ NOT treated as product search"
+    ],
+    "caso2_phone_not_code": [
+      "✓ Phone '0999123456' NOT saved as codigos_producto"
+    ],
+    "caso3_frustration_escalation": [
+      "✓ 'ya no quiero nada' -> stage: escalado_humano",
+      "✓ transferred_to_human: true",
+      "✓ Staff received ESCALAMIENTO summary with client data"
+    ],
+    "name_capture": [
+      "✓ 'Hola soy María García' -> nombre: 'María García'",
+      "✓ NOT treated as product code"
+    ],
+    "color_logo_capture": [
+      "✓ 'un color' -> color_logo: 'a un color'",
+      "✓ NOT treated as product search"
+    ],
+    "city_capture": [
+      "✓ 'Quito' -> ciudad: 'Quito'",
+      "✓ NOT treated as product search"
+    ],
+    "catalog_link": [
+      "✓ 'quiero ver el catálogo completo' -> response includes gimmicks.com.ec"
+    ],
+    "staff_notification_quote": [
+      "✓ Quote #4740 created",
+      "✓ ALERTA COTIZACION NUEVA sent to 593999440910",
+      "✓ Contains: quote number, client name, phone, email, products"
+    ]
+  },
+
+  "test_report_links": [
+    "/app/backend/tests/test_iteration18_state_machine.py",
+    "/app/test_reports/pytest/pytest_iteration18.xml"
+  ],
+
+  "action_items": [],
+
+  "critical_code_review_comments": [
+    "All requested state machine features verified working:",
+    "1. ESCALATION_KEYWORDS (26 keywords) checked BEFORE AI call for immediate escalation",
+    "2. detect_escalation() returns reason string for matching keywords",
+    "3. send_escalation_summary() sends structured summary to STAFF_NOTIFICATION_PHONE (593999440910)",
+    "4. determine_stage() correctly transitions through all 8 stages based on collected_data",
+    "5. FIELD_ALIASES normalizes field names (email->correo, codigos->codigos_producto, etc.)",
+    "6. State machine prevents misinterpretation: dates, phones, cities, colors NOT treated as products",
+    "7. notify_staff_new_quote() sends ALERTA COTIZACION NUEVA/ACTUALIZADA when quotes created/updated",
+    "8. GPT-5.2 via emergentintegrations correctly interprets context based on current stage"
+  ],
+
+  "updated_files": [
+    "/app/backend/tests/test_iteration18_state_machine.py"
+  ],
+
+  "success_rate": {
+    "backend": "100% (29/29 tests passed)",
+    "frontend": "N/A (backend only testing)"
+  },
+
+  "test_credentials": {
+    "admin_login": "admin@gimmicks.com / admin123456",
+    "EMERGENT_LLM_KEY": "sk-emergent-d6a8d6558541aFb412",
+    "staff_phone": "593999440910",
+    "test_product_codes": ["JARPOR00391-BLA", "JARPOR00250-PLA", "HT2PR2"]
+  },
+
+  "verified_functionality": {
+    "caso1_date_not_product": "Date 'abril 15' saved as fecha_entrega, NOT product search",
+    "caso2_phone_not_code": "Phone '0999123456' NOT treated as product code",
+    "caso3_frustration_escalation": "'ya no quiero nada' -> immediate escalation to escalado_humano, staff notified",
+    "name_capture": "'Hola soy María García' -> nombre: 'María García'",
+    "color_logo_capture": "'un color' -> color_logo: 'a un color'",
+    "city_capture": "'Quito' -> ciudad: 'Quito'",
+    "catalog_link": "Full catalog request -> gimmicks.com.ec link sent",
+    "staff_notification": "ALERTA COTIZACION NUEVA sent to 593999440910 with quote details"
+  },
+
+  "seed_data_creation": "No seed data created - each test uses fresh phone number and cleans up after",
+
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+
+  "context_for_next_testing_agent": "Iteration 18 verified complete state machine overhaul: (1) 8 stages: saludo, captura_nombre, busqueda_producto, esperando_codigos, validando_codigos, recopilando_datos, revision_humana, escalado_humano, (2) ESCALATION_KEYWORDS (26) checked BEFORE AI for immediate escalation, (3) send_escalation_summary sends structured data to 593999440910, (4) FIELD_ALIASES normalizes field names, (5) determine_stage transitions correctly, (6) Dates/phones/cities/colors NOT misinterpreted as products, (7) Staff notifications work for quotes. All tests use mock_send to capture messages. GPT-5.2 via emergentintegrations is called with real EMERGENT_LLM_KEY.",
+
+  "mocked_api_note": "MOCKED: mock_send function replaces real WhatsApp sending - captures messages to a list for testing. GPT-5.2 via emergentintegrations is called with real EMERGENT_LLM_KEY (each AI call takes ~3 seconds)."
+}
