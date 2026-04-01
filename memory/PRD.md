@@ -114,6 +114,14 @@ CRM para ventas comerciales con WhatsApp Business que integra bot IA (GPT-5.2), 
   - Navegación mensual con flechas (< Mes Año >)
   - Solo visible para admin en Dashboard
   - Testing: endpoint verificado con curl + screenshot
+- [x] **Máquina de estados conversacional completa** - Abr 1, 2026:
+  - 8 estados: saludo, captura_nombre, busqueda_producto, esperando_codigos, validando_codigos, recopilando_datos, revision_humana, escalado_humano
+  - Clasificación de inputs por estado: fechas=fechas, teléfonos=teléfonos, ciudades=ciudades (NUNCA como productos)
+  - 26 keywords de escalamiento detectados ANTES del AI para respuesta inmediata
+  - Resumen estructurado al escalar: Cliente, Teléfono, Email, Productos, Cantidades, Ciudad, Fecha, Motivo
+  - Normalización de campos con FIELD_ALIASES (37 aliases)
+  - Búsqueda de productos solo en etapas apropiadas (busqueda_producto, no en captura_nombre)
+  - Testing: 29/29 tests PASS (iteration_18)
 
 ## Remaining Tasks
 1. **P1 - Generate 3 Demo WhatsApp Conversations**: Simulate with curl
