@@ -91,9 +91,18 @@ export default function Inventory() {
     }
   };
 
-  const handleExport = () => {
-    import("xlsx").then(XLSX => {
-      const data = products.map(p => ({
+  const handleExport = async () => {
+    try {
+      toast.info("Preparando descarga de todos los productos...");
+      const params = { page: 1, limit: 10000 };
+      if (search) params.search = search;
+      if (category && category !== "Todas") params.category = category;
+      if (minCost !== "") params.min_cost = parseFloat(minCost);
+      if (maxCost !== "") params.max_cost = parseFloat(maxCost);
+      const res = await axios.get(`${API_URL}/api/inventory/`, { params, headers });
+      const allProducts = res.data.products || [];
+      const XLSX = await import("xlsx");
+      const data = allProducts.map(p => ({
         "Código": p.code, "Cód. Proveedor": p.supplier_code, Nombre: p.name,
         "Descripción": p.description, Stock: p.stock, Costo: p.cost,
         PVP: p.price, Proveedor: p.supplier,
@@ -103,7 +112,10 @@ export default function Inventory() {
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "Inventario");
       XLSX.writeFile(wb, "inventario_gimmicks.xlsx");
-    });
+      toast.success(`${allProducts.length} productos exportados`);
+    } catch (e) {
+      toast.error("Error al exportar productos");
+    }
   };
 
   const getImageUrl = (url) => {
