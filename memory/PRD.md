@@ -149,13 +149,12 @@ CRM para ventas comerciales con WhatsApp Business que integra bot IA (GPT-5.2), 
   - **Testing**: 14/14 backend + todos los flujos frontend verificados (iteration_21)
 - [x] **Bug - Escritura continua en formularios de reglas** - Abr 6, 2026:
   - `RuleFormFields` definido como componente dentro de `Settings` causaba pérdida de foco. Convertido a JSX variable.
-- [x] **Feature - Mejoras al Bot: Catálogo PDF + Sin link externo** - Abr 6, 2026:
-  - Bot ya NO envía link gimmicks.com.ec
-  - Bot envía recomendaciones con códigos del inventario
-  - Si no hay coincidencias, envía catálogo PDF automáticamente por WhatsApp
-  - Nueva pestaña "Catálogo PDF" en Configuración para subir/ver/eliminar el PDF
-  - Backend: 4 endpoints (/api/catalog/upload-pdf, info, pdf, delete)
-  - Testing: 17/17 backend + todos los flujos frontend (iteration_22)
+- [x] **Feature - 4 nuevas funcionalidades** - Abr 6, 2026:
+  1. **Catálogo PDF en menú principal**: Nueva página `/catalog-pdf` para admin/asesor con upload/ver/eliminar
+  2. **Catálogo muestra quién lo subió**: Info completa (archivo, tamaño, usuario, fecha). Upload nuevo elimina el anterior
+  3. **Historial de actividad (admin)**: Nueva página `/activity-log` con filtros (usuario, acción, fecha), badges por tipo, paginación. Registra: login, catalog upload/delete, product create/delete, inventory upload/download, quote update
+  4. **Alertas de descarga de inventario**: Cada 15 días el usuario debe descargar inventario antes de poder subir productos. Banner de alerta en Inventario, bloqueo 403 en backend
+  - Testing: 21/21 backend + todos los flujos frontend (iteration_23)
 
 ## Remaining Tasks
 1. **P1 - Generate 3 Demo WhatsApp Conversations**: Simulate with curl
