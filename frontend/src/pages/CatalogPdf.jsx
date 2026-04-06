@@ -2,9 +2,10 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import { useAuth } from "../context/AuthContext";
 import { toast } from "sonner";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
-import { FileText, FileUp, Download, Trash2, Loader2, Upload, AlertTriangle } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/ui/dialog";
+import { FileText, FileUp, Download, Trash2, Loader2, Upload, AlertTriangle, Eye, X } from "lucide-react";
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -13,6 +14,7 @@ export default function CatalogPdf() {
   const [catalogInfo, setCatalogInfo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [showViewer, setShowViewer] = useState(false);
 
   const fetchInfo = async () => {
     try {
@@ -115,9 +117,12 @@ export default function CatalogPdf() {
                 </p>
               </div>
               <div className="flex gap-2 flex-shrink-0">
-                <a href={`${API_URL}/api/catalog/pdf`} target="_blank" rel="noopener noreferrer">
-                  <Button variant="outline" size="sm" className="gap-1" data-testid="catalog-view-btn">
-                    <Download className="w-4 h-4" /> Ver
+                <Button variant="outline" size="sm" className="gap-1" onClick={() => setShowViewer(true)} data-testid="catalog-view-btn">
+                  <Eye className="w-4 h-4" /> Ver
+                </Button>
+                <a href={`${API_URL}/api/catalog/pdf`} download>
+                  <Button variant="outline" size="sm" className="gap-1" data-testid="catalog-download-btn">
+                    <Download className="w-4 h-4" /> Descargar
                   </Button>
                 </a>
                 <Button variant="destructive" size="sm" className="gap-1" onClick={handleDelete} data-testid="catalog-delete-btn">
@@ -173,6 +178,28 @@ export default function CatalogPdf() {
           </CardContent>
         </Card>
       )}
+
+      {/* PDF Viewer Modal */}
+      <Dialog open={showViewer} onOpenChange={setShowViewer}>
+        <DialogContent className="max-w-5xl w-[95vw] h-[90vh] flex flex-col p-0" data-testid="pdf-viewer-modal">
+          <DialogHeader className="px-6 py-4 border-b flex-shrink-0">
+            <div className="flex items-center justify-between">
+              <DialogTitle className="font-['Manrope'] flex items-center gap-2">
+                <FileText className="w-5 h-5 text-emerald-600" />
+                {catalogInfo?.original_name || "Catálogo PDF"}
+              </DialogTitle>
+            </div>
+          </DialogHeader>
+          <div className="flex-1 min-h-0">
+            <iframe
+              src={`${API_URL}/api/catalog/pdf`}
+              className="w-full h-full border-0"
+              title="Visor de catálogo PDF"
+              data-testid="pdf-viewer-iframe"
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
