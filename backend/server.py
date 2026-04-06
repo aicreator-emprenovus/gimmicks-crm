@@ -106,8 +106,8 @@ api_router = APIRouter(prefix="/api")
 
 # --- Import and configure new modular routes (Proyecto B) ---
 from routes.inventory_routes import router as inventory_router, set_db as set_inv_db
-from routes.quotes_routes import router as quotes_v2_router, set_db as set_quotes_db, set_jwt_secret as set_quotes_jwt
-from routes.clients_routes import router as clients_router, set_db as set_clients_db, set_auth_helper as set_clients_auth
+from routes.quotes_routes import router as quotes_v2_router, set_db as set_quotes_db, set_jwt_secret as set_quotes_jwt, set_logger as set_quotes_logger
+from routes.clients_routes import router as clients_router, set_db as set_clients_db, set_auth_helper as set_clients_auth, set_logger as set_clients_logger
 from routes.dashboard_routes import router as dashboard_v2_router, set_db as set_dash_db, set_jwt_secret as set_dash_jwt
 
 # Inject DB and JWT into B routers
@@ -149,6 +149,10 @@ async def log_activity(user_email: str, user_name: str, action: str, details: st
         await db.activity_log.insert_one(doc)
     except Exception as e:
         logger.warning(f"Failed to log activity: {e}")
+
+
+set_quotes_logger(log_activity)
+set_clients_logger(log_activity)
 
 
 # ============== MODELS ==============
@@ -797,8 +801,13 @@ async def login(credentials: UserLogin, request: Request):
 
 
 @api_router.post("/auth/logout")
-async def logout_user():
+async def logout_user(request: Request, credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer(auto_error=False))):
     from fastapi.responses import JSONResponse as JR
+    try:
+        user = await get_current_user(request, credentials)
+        await log_activity(user.get("email", ""), user.get("name", ""), "logout", "Cierre de sesion")
+    except Exception:
+        pass
     resp = JR(content={"message": "Sesión cerrada"})
     resp.delete_cookie(key="auth_token", path="/api")
     return resp
@@ -887,7 +896,10 @@ async def create_user_by_admin(user_data: UserCreateByAdmin, current_user: dict 
     }
     
     await db.users.insert_one(user_doc)
-    
+
+    await log_activity(current_user.get("email", ""), current_user.get("name", ""),
+                       "user_create", f"Usuario creado: {user_data.name} ({user_data.email}) - Rol: {user_data.role}")
+
     return UserResponse(
         id=user_id,
         email=user_data.email,
@@ -917,6 +929,12 @@ async def update_user_by_admin(user_id: str, update_data: UserUpdateByAdmin, cur
     if update_dict:
         await db.users.update_one({"id": user_id}, {"$set": update_dict})
     
+    changes = ", ".join(f"{k}" for k in update_dict if k != "password")
+    if "password" in update_dict:
+        changes = (changes + ", contraseña") if changes else "contraseña"
+    await log_activity(current_user.get("email", ""), current_user.get("name", ""),
+                       "user_update", f"Usuario actualizado: {user.get('name', '')} ({user.get('email', '')}) - Cambios: {changes}")
+
     updated_user = await db.users.find_one({"id": user_id}, {"_id": 0, "password": 0})
     
     created_at = updated_user.get("created_at")
@@ -943,6 +961,8 @@ async def delete_user_by_admin(user_id: str, current_user: dict = Depends(requir
     result = await db.users.delete_one({"id": user_id})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    await log_activity(current_user.get("email", ""), current_user.get("name", ""),
+                       "user_delete", f"Usuario eliminado: {target.get('name', '')} ({target.get('email', '')})")
     return {"message": "Usuario eliminado exitosamente"}
 
 def build_lead_response(lead: dict) -> LeadResponse:
@@ -1002,7 +1022,8 @@ async def create_lead(lead_data: LeadCreate, current_user: dict = Depends(get_cu
     }
     
     await db.leads.insert_one(lead_doc)
-    
+    await log_activity(current_user.get("email", ""), current_user.get("name", ""),
+                       "lead_create", f"Lead creado: {lead_data.name} ({lead_data.phone_number})")
     return build_lead_response(lead_doc)
 
 @api_router.get("/leads", response_model=List[LeadResponse])
@@ -1133,14 +1154,20 @@ async def update_lead(lead_id: str, update_data: LeadUpdate, current_user: dict 
     if update_dict.get("funnel_stage") == "entregado" and lead.get("funnel_stage") != "entregado":
         await _create_client_from_lead(lead_id, lead, update_dict)
     
+    changes = ", ".join(k for k in update_dict if k != "updated_at")
+    await log_activity(current_user.get("email", ""), current_user.get("name", ""),
+                       "lead_update", f"Lead actualizado: {lead.get('name', '')} - Cambios: {changes}")
     updated_lead = await db.leads.find_one({"id": lead_id}, {"_id": 0})
     return build_lead_response(updated_lead)
 
 @api_router.delete("/leads/{lead_id}")
 async def delete_lead(lead_id: str, current_user: dict = Depends(get_current_user)):
+    lead = await db.leads.find_one({"id": lead_id}, {"_id": 0, "name": 1, "phone_number": 1})
     result = await db.leads.delete_one({"id": lead_id})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Lead no encontrado")
+    await log_activity(current_user.get("email", ""), current_user.get("name", ""),
+                       "lead_delete", f"Lead eliminado: {lead.get('name', '') if lead else lead_id}")
     return {"message": "Lead eliminado exitosamente"}
 
 # ============== CONVERSATIONS ROUTES ==============
@@ -1238,7 +1265,8 @@ async def delete_conversation(
     
     # Delete all messages in conversation
     await db.messages.delete_many({"conversation_id": conversation_id})
-    
+    await log_activity(current_user.get("email", ""), current_user.get("name", ""),
+                       "conversation_delete", f"Conversacion eliminada: {conversation_id}")
     return {"message": "Conversación eliminada exitosamente"}
 
 # Clear messages from conversation (keep conversation)
@@ -1282,7 +1310,9 @@ async def toggle_star_conversation(
         {"id": conversation_id},
         {"$set": {"is_starred": new_starred}}
     )
-    
+    action = "conversation_star" if new_starred else "conversation_unstar"
+    await log_activity(current_user.get("email", ""), current_user.get("name", ""),
+                       action, f"Conversacion {'guardada' if new_starred else 'quitada de guardados'}: {conv.get('contact_name', conversation_id)}")
     return {"is_starred": new_starred, "message": "Conversación guardada" if new_starred else "Conversación quitada de guardados"}
 
 @api_router.get("/conversations/{conversation_id}/messages", response_model=List[MessageResponse])
@@ -1358,7 +1388,10 @@ async def send_message(
     }
     
     await db.messages.insert_one(message_doc)
-    
+
+    await log_activity(current_user.get("email", ""), current_user.get("name", ""),
+                       "message_send", f"Mensaje enviado a {conv.get('contact_name', conv['phone_number'])}")
+
     # Update conversation
     await db.conversations.update_one(
         {"id": conversation_id},
@@ -1657,7 +1690,8 @@ async def create_automation_rule(rule_data: AutomationRuleCreate, current_user: 
     }
     
     await db.automation_rules.insert_one(rule_doc)
-    
+    await log_activity(current_user.get("email", ""), current_user.get("name", ""),
+                       "rule_create", f"Regla creada: {rule_data.name}")
     return AutomationRuleResponse(
         id=rule_id,
         name=rule_data.name,
@@ -1696,13 +1730,18 @@ async def update_automation_rule(
     )
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Regla no encontrada")
+    await log_activity(current_user.get("email", ""), current_user.get("name", ""),
+                       "rule_update", f"Regla actualizada: {rule_id}")
     return {"message": "Regla actualizada"}
 
 @api_router.delete("/automation-rules/{rule_id}")
 async def delete_automation_rule(rule_id: str, current_user: dict = Depends(get_current_user)):
+    rule = await db.automation_rules.find_one({"id": rule_id}, {"_id": 0, "name": 1})
     result = await db.automation_rules.delete_one({"id": rule_id})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Regla no encontrada")
+    await log_activity(current_user.get("email", ""), current_user.get("name", ""),
+                       "rule_delete", f"Regla eliminada: {rule.get('name', '') if rule else rule_id}")
     return {"message": "Regla eliminada exitosamente"}
 
 # ============== DASHBOARD ROUTES ==============

@@ -32,6 +32,12 @@ def set_jwt_secret(secret):
     global JWT_SECRET
     JWT_SECRET = secret
 
+_log_activity = None
+def set_logger(fn):
+    global _log_activity
+    _log_activity = fn
+
+
 async def get_user_from_token(authorization: str = None, request=None):
     token = None
     if authorization and authorization.startswith("Bearer "):
@@ -119,6 +125,9 @@ async def create_quote(request: Request, quote: Quote, authorization: str = Head
     action_type = "Orden de Compra" if quote.doc_type == "PO" else "Cotización"
     await log_client_activity(quote.client_id, "quote_created", f"{action_type} generada #{quote.quote_number}")
     await log_document_activity(quote.id, quote.quote_number, quote.doc_type, "created", user, f"Creado para {quote.client_name}")
+    if _log_activity and user:
+        await _log_activity(user.get("email", ""), user.get("name", ""),
+                            "quote_create", f"{action_type} creada #{quote.quote_number} para {quote.client_name}")
     return quote
 
 @router.get("/activities/all")
@@ -175,6 +184,9 @@ async def update_quote(id: str, request: Request, quote: Quote, authorization: s
     action_type = "Orden de Compra" if quote.doc_type == "PO" else "Cotización"
     await log_client_activity(quote.client_id, "quote_updated", f"{action_type} actualizada #{quote.quote_number}")
     await log_document_activity(id, quote.quote_number, quote.doc_type, "edited", user, f"Editado - Cliente: {quote.client_name}")
+    if _log_activity and user:
+        await _log_activity(user.get("email", ""), user.get("name", ""),
+                            "quote_update", f"{action_type} actualizada #{quote.quote_number} - {quote.client_name}")
     return quote
 
 @router.delete("/{id}")
@@ -195,13 +207,20 @@ async def delete_quote(id: str, request: Request, permanent: bool = False, autho
     user = await get_user_from_token(authorization, request)
     doc_number = existing.get("quote_number", "")
     doc_type = existing.get("doc_type", "QUOTE")
+    doc_label = "Orden de Compra" if doc_type == "PO" else "Cotización"
     if permanent:
         await db.quotes_v2.delete_one(query)
         await log_document_activity(id, doc_number, doc_type, "deleted_permanent", user, "Eliminado permanentemente")
+        if _log_activity and user:
+            await _log_activity(user.get("email", ""), user.get("name", ""),
+                                "quote_delete", f"{doc_label} #{doc_number} eliminada permanentemente")
         return {"message": "Quote permanently deleted"}
     else:
         await db.quotes_v2.update_one(query, {"$set": {"is_deleted": True, "deleted_at": datetime.now(timezone.utc)}})
         await log_document_activity(id, doc_number, doc_type, "deleted", user, "Movido a papelera")
+        if _log_activity and user:
+            await _log_activity(user.get("email", ""), user.get("name", ""),
+                                "quote_trash", f"{doc_label} #{doc_number} movida a papelera")
         return {"message": "Quote moved to trash"}
 
 @router.post("/{id}/restore")
@@ -221,6 +240,10 @@ async def restore_quote(id: str, request: Request, authorization: str = Header(N
     doc_number = existing.get("quote_number", "")
     doc_type = existing.get("doc_type", "QUOTE")
     await log_document_activity(id, doc_number, doc_type, "restored", user, "Restaurado de papelera")
+    if _log_activity and user:
+        doc_label = "Orden de Compra" if doc_type == "PO" else "Cotización"
+        await _log_activity(user.get("email", ""), user.get("name", ""),
+                            "quote_restore", f"{doc_label} #{doc_number} restaurada de papelera")
     return {"message": "Quote restored"}
 
 def format_currency_ecuador(value):
@@ -618,6 +641,8 @@ async def send_purchase_order(id: str, background_tasks: BackgroundTasks, payloa
     for email in emails:
         background_tasks.add_task(send_po_email, email, subject, html_content, pdf_bytes, filename)
     await log_client_activity(quote.client_id, "po_sent", f"Orden de Compra enviada #{quote.quote_number} a {', '.join(emails)}")
+    if _log_activity:
+        await _log_activity("sistema", "Sistema", "order_send", f"Orden de Compra #{quote.quote_number} enviada a {', '.join(emails)}")
     return {"message": f"Orden de compra enviada a {', '.join(emails)}"}
 
 @router.post("/{id}/send-quote")
@@ -644,4 +669,6 @@ async def send_quote_email(id: str, background_tasks: BackgroundTasks, payload: 
     for email in emails:
         background_tasks.add_task(send_po_email, email, subject, html_content, pdf_bytes, filename)
     await log_client_activity(quote.client_id, "quote_sent", f"Cotización enviada #{quote.quote_number} a {', '.join(emails)}")
+    if _log_activity:
+        await _log_activity("sistema", "Sistema", "quote_send", f"Cotización #{quote.quote_number} enviada a {', '.join(emails)}")
     return {"message": f"Cotización enviada a {', '.join(emails)}"}
