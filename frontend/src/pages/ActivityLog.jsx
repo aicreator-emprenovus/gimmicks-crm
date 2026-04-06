@@ -81,7 +81,7 @@ export default function ActivityLog() {
     setLoading(true);
     try {
       const params = new URLSearchParams({ page: p, limit: 30 });
-      if (filterUser) params.set("user_email", filterUser);
+      if (filterUser && filterUser !== "all") params.set("user_email", filterUser);
       if (filterAction && filterAction !== "all") params.set("action", filterAction);
       if (filterDateFrom) params.set("date_from", filterDateFrom);
       if (filterDateTo) params.set("date_to", filterDateTo);
