@@ -140,6 +140,14 @@ CRM para ventas comerciales con WhatsApp Business que integra bot IA (GPT-5.2), 
   - **CORS**: Actualizado para allow_credentials con orígenes específicos
   - Testing: 13/13 backend + frontend completo 100% (iteration_20)
 
+## Resolved Issues (Latest)
+- [x] **P0 - Fix "error de autenticación" en producción** - Abr 6, 2026:
+  - **Causa raíz**: `static_frontend/` (build del 18-Mar) usaba `localStorage` para auth, pero el backend fue migrado a httpOnly cookies
+  - **Fix**: Reconstruido `static_frontend/` con el código actualizado (cookies, withCredentials, sin localStorage)
+  - **Fix adicional**: CORS middleware mejorado con orígenes dinámicos desde env vars
+  - **Fix adicional**: `start.py` ahora detecta builds desactualizados y reconstruye automáticamente
+  - **Testing**: 14/14 backend + todos los flujos frontend verificados (iteration_21)
+
 ## Remaining Tasks
 1. **P1 - Generate 3 Demo WhatsApp Conversations**: Simulate with curl
 2. **P2 - Refactor bot_service.py**: Split into smaller modules
