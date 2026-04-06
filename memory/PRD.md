@@ -128,8 +128,17 @@ CRM para ventas comerciales con WhatsApp Business que integra bot IA (GPT-5.2), 
   - Mantenido: anti-duplicación, auto-creación de clientes, pipeline tracking, escalamiento, notificaciones staff
   - Normalización mejorada de cantidades_por_producto y codigos_producto (maneja dict/list del AI)
   - Testing: 8/8 backend + bot flow 100% (iteration_19)
-- [x] **Fix exportación de productos** - Abr 6, 2026:
-  - handleExport en Inventory.jsx ahora descarga TODOS los productos (limit=10000), no solo los 50 de la página
+- [x] **Code Quality Review Fixes** - Abr 6, 2026:
+  - **httpOnly Cookies**: Auth tokens migrados de localStorage a httpOnly cookies (secure, samesite=lax, path=/api)
+    - Backend: login/register setean cookie, get_current_user lee cookie, /auth/logout limpia cookie
+    - Frontend: axios.defaults.withCredentials=true, CERO localStorage para tokens
+    - Dashboard, Inventory, Clients, Quotes routes actualizados para soportar cookies
+  - **Empty Catch Blocks**: 8 catch {} vacíos reemplazados con console.error() en QuoteHistory, QuoteBuilder, Inventory
+  - **React Key Anti-patterns**: 8 usos de key={i} reemplazados con IDs únicos en Quotes, QuoteHistory, Dashboard, Inventory
+  - **Test File Secrets**: 6 archivos de test actualizados para cargar credenciales de variables de entorno
+  - **Bot Service Refactoring**: Extraídas 4 funciones helper (_build_stage_context, _merge_extracted_data, _determine_next_stage, _is_quote_ready) para reducir complejidad
+  - **CORS**: Actualizado para allow_credentials con orígenes específicos
+  - Testing: 13/13 backend + frontend completo 100% (iteration_20)
 
 ## Remaining Tasks
 1. **P1 - Generate 3 Demo WhatsApp Conversations**: Simulate with curl
