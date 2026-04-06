@@ -16,7 +16,7 @@ import time
 
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
 if not BASE_URL:
-    BASE_URL = "https://crm-prod-deploy.preview.emergentagent.com"
+    BASE_URL = "https://catalog-pdf-fix.preview.emergentagent.com"
 
 # Test credentials
 TEST_EMAIL = os.environ.get("TEST_EMAIL", "admin@gimmicks.com")
