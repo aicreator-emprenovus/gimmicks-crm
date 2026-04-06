@@ -83,7 +83,7 @@ export default function CatalogPdf() {
   }
 
   return (
-    <div className="space-y-6" data-testid="catalog-pdf-page">
+    <div className="p-4 lg:p-6 space-y-6" data-testid="catalog-pdf-page">
       <div>
         <h1 className="text-2xl font-bold font-['Manrope'] text-zinc-900">Catálogo PDF</h1>
         <p className="text-zinc-500 text-sm mt-1">

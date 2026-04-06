@@ -21,6 +21,12 @@ const ACTION_LABELS = {
   quote_send: { label: "Cotización enviada", icon: FileText, color: "bg-indigo-100 text-indigo-700" },
 };
 
+const ROLE_LABELS = {
+  admin: "Administrador",
+  asesor: "Asesor",
+  desarrollador: "Desarrollador",
+};
+
 function ActionBadge({ action }) {
   const info = ACTION_LABELS[action] || { label: action, icon: FileText, color: "bg-zinc-100 text-zinc-700" };
   const Icon = info.icon;
@@ -44,13 +50,14 @@ export default function ActivityLog() {
   const [filterDateFrom, setFilterDateFrom] = useState("");
   const [filterDateTo, setFilterDateTo] = useState("");
   const [actions, setActions] = useState([]);
+  const [users, setUsers] = useState([]);
 
   const fetchLogs = useCallback(async (p = 1) => {
     setLoading(true);
     try {
       const params = new URLSearchParams({ page: p, limit: 30 });
       if (filterUser) params.set("user_email", filterUser);
-      if (filterAction) params.set("action", filterAction);
+      if (filterAction && filterAction !== "all") params.set("action", filterAction);
       if (filterDateFrom) params.set("date_from", filterDateFrom);
       if (filterDateTo) params.set("date_to", filterDateTo);
 
@@ -73,10 +80,16 @@ export default function ActivityLog() {
     } catch { /* ignore */ }
   };
 
-  useEffect(() => { fetchActions(); }, []);
+  const fetchUsers = async () => {
+    try {
+      const res = await axios.get(`${API_URL}/api/users`, { headers: getAuthHeaders() });
+      setUsers(res.data || []);
+    } catch { /* ignore */ }
+  };
+
+  useEffect(() => { fetchActions(); fetchUsers(); }, []);
   useEffect(() => { fetchLogs(1); }, [fetchLogs]);
 
-  const handleSearch = () => fetchLogs(1);
   const clearFilters = () => {
     setFilterUser("");
     setFilterAction("");
@@ -85,7 +98,7 @@ export default function ActivityLog() {
   };
 
   return (
-    <div className="space-y-6" data-testid="activity-log-page">
+    <div className="p-4 lg:p-6 space-y-6" data-testid="activity-log-page">
       <div>
         <h1 className="text-2xl font-bold font-['Manrope'] text-zinc-900">Historial de Actividad</h1>
         <p className="text-zinc-500 text-sm mt-1">Registro de cada movimiento del sistema por usuario y fecha.</p>
@@ -95,14 +108,24 @@ export default function ActivityLog() {
       <Card className="border border-zinc-200">
         <CardContent className="pt-4 pb-3">
           <div className="flex flex-wrap items-end gap-3">
-            <div className="flex-1 min-w-[180px]">
+            <div className="min-w-[220px]">
               <label className="text-xs font-medium text-zinc-500 mb-1 block">Usuario</label>
-              <Input
-                placeholder="Buscar por email..."
-                value={filterUser}
-                onChange={(e) => setFilterUser(e.target.value)}
-                data-testid="filter-user"
-              />
+              <Select value={filterUser} onValueChange={setFilterUser}>
+                <SelectTrigger data-testid="filter-user">
+                  <SelectValue placeholder="Todos los usuarios" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos los usuarios</SelectItem>
+                  {users.map(u => (
+                    <SelectItem key={u.id} value={u.email}>
+                      <div className="flex items-center gap-2">
+                        <span>{u.name}</span>
+                        <span className="text-xs text-zinc-400">({ROLE_LABELS[u.role] || u.role})</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="min-w-[180px]">
               <label className="text-xs font-medium text-zinc-500 mb-1 block">Acción</label>
@@ -128,7 +151,7 @@ export default function ActivityLog() {
               <label className="text-xs font-medium text-zinc-500 mb-1 block">Hasta</label>
               <Input type="date" value={filterDateTo} onChange={(e) => setFilterDateTo(e.target.value)} data-testid="filter-date-to" />
             </div>
-            <Button onClick={handleSearch} className="gap-1 bg-[#63AC9A] hover:bg-[#5a9d8c]" data-testid="filter-search-btn">
+            <Button onClick={() => fetchLogs(1)} className="gap-1 bg-[#63AC9A] hover:bg-[#5a9d8c]" data-testid="filter-search-btn">
               <Search className="w-4 h-4" /> Buscar
             </Button>
             <Button variant="outline" onClick={clearFilters} data-testid="filter-clear-btn">Limpiar</Button>
