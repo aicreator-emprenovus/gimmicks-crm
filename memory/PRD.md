@@ -141,6 +141,14 @@ CRM para ventas comerciales con WhatsApp Business que integra bot IA (GPT-5.2), 
   - Testing: 13/13 backend + frontend completo 100% (iteration_20)
 
 ## Resolved Issues (Latest)
+- [x] **P0 - Bot envía URL del catálogo en texto en lugar de adjuntar PDF** - Abr 6, 2026:
+  - **Causa raíz**: `send_document_fn` fallaba porque la URL del catálogo no era accesible públicamente para los servidores de WhatsApp
+  - **Fix**: Eliminado el intento de adjuntar documento. El bot ahora incluye la URL del catálogo directamente en el texto del mensaje
+  - **Cambios**: 3 modificaciones en `bot_service.py`:
+    1. System prompt actualizado para instruir al AI que incluya URL_CATALOGO en su respuesta
+    2. `catalog_pdf_context` ahora pasa la URL real al AI para que la use
+    3. Lógica de envío de documento reemplazada por append de URL al texto como fallback
+  - **Testing**: 11/11 tests PASS (iteration_24)
 - [x] **P0 - Fix "error de autenticación" en producción** - Abr 6, 2026:
   - **Causa raíz**: `static_frontend/` (build del 18-Mar) usaba `localStorage` para auth, pero el backend fue migrado a httpOnly cookies
   - **Fix**: Reconstruido `static_frontend/` con el código actualizado (cookies, withCredentials, sin localStorage)
@@ -158,10 +166,11 @@ CRM para ventas comerciales con WhatsApp Business que integra bot IA (GPT-5.2), 
 
 ## Remaining Tasks
 1. **P1 - Generate 3 Demo WhatsApp Conversations**: Simulate with curl
-2. **P2 - Refactor bot_service.py**: Split into smaller modules
-3. **P2 - Refactor large frontend components**: Extract modals
-4. **P3 - Asesor permission audit**: Full audit of role permissions
-5. **P3 - Deploy to Railway**: Save to GitHub → triggers Railway redeploy
+2. **P1 - Re-upload ~700 valid products**: Restore from /app/backups/products_backup_production.json
+3. **P2 - Refactor bot_service.py**: Split into smaller modules
+4. **P2 - Refactor large frontend components**: Extract modals
+5. **P3 - Asesor permission audit**: Full audit of role permissions
+6. **P3 - Deploy to Railway**: Save to GitHub → triggers Railway redeploy
 
 ## Resolved Issues
 - [x] **P0 - Investigación y limpieza de 5,412 productos en producción** - Abr 6, 2026:
