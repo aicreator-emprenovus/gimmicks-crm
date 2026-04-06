@@ -1,123 +1,144 @@
 <analysis>**original_problem_statement**: 
-The core project is a full-stack CRM (FastAPI + React + MongoDB) with an integrated WhatsApp Business AI Bot (GPT-5.2) for sales, quoting, and catalog sharing. Recent product requirements added a strict conversational state machine to prevent the bot from hallucinating or jumping steps, an admin dashboard for monthly quote metrics by client, and robust staff notifications. 
+The core project is a full-stack CRM (FastAPI + React + MongoDB) with an integrated WhatsApp Business AI Bot (GPT-5.2). Recently, the user provided a Code Quality Report highlighting critical security vulnerabilities (localStorage XSS risks, hardcoded secrets) and structural issues. While addressing the XSS vulnerability by migrating authentication tokens from  to  cookies, the agent inadvertently broke the production login, resulting in an urgent error de autenticación for all deployed users.
 
-**CRITICAL CURRENT PROBLEM**: The user reported a severe issue stating that over 5,000 products were mysteriously uploaded to the production inventory post-deployment. The user suspects the AI agent or a system error and demands an immediate investigation to find out who/how these were uploaded.
-
-**User's preferred language**: Spanish (You MUST respond in Spanish only).
+**User's preferred language**: Spanish (You MUST automatically detect the user's primary language from their messages inside the <trajectory> tag and INSTRUCT next agent to respond in the user's preferred language only) -> **RESPOND ONLY IN SPANISH**.
 
 **what currently exists?** 
-A robust FastAPI + React CRM. The WhatsApp bot is powered by GPT-5.2 and follows a strict 8-stage state machine (greeting -> capture name -> search product -> waiting for codes -> etc.) to prevent context loss. It features staff notifications for quotes, background sync of production data to the preview environment, and an admin dashboard tracking monthly sales/quotes per client.
+A robust FastAPI + React CRM. The WhatsApp bot logic () was completely rewritten in this session to enforce a strict 9-step conversational state machine (greeting -> name -> product -> codes -> quantity -> logo -> email -> city -> company). Authentication was just migrated from  JWTs to  Secure cookies, but this migration broke cross-origin (CORS) requests in the production environment.
 
 **Last working item**: 
-- **Last item agent was working**: Investigating the source of the 5,412 products in the production database. The agent attempted to execute a Python script to aggregate the  timestamps and identify the origin/creator of these products in the production MongoDB, but the script failed due to a PyMongo .
-- **Status**: IN PROGRESS
-- **Agent Testing Done**: N
-- **Which testing method agent to use?**: manual testing by python -c / bash (to query the database safely without timing out) and checking backend logs.
-- **User Testing Done**: N
+    - **Last item agent was working**: Fixing the URGENT production authentication bug (error de autenticación). The agent identified that migrating to  cookies broke production because  blocks cross-origin cookie sending, and CORS origins might be misconfigured. The agent just updated  in the  and  routes in  but hasn't verified if the fix resolves the production issue.
+    - **Status**: IN PROGRESS / BLOCKED (Verification pending)
+    - **Agent Testing Done**: N (Started fix but hasn't tested end-to-end yet)
+    - **Which testing method agent to use?**: manual testing by curl (to inspect  and CORS headers) and screenshot tool (to verify frontend login flow), followed by testing agent.
+    - **User Testing Done**: N
 
 **All Pending/In progress Issue list**:
-  - **Issue 1: P0 - Investigate unauthorized upload of 5,000+ products in Production DB**
-     - **Attempted fixes**: The agent tried to run a synchronous PyMongo script to group products by creation date, but it crashed due to a connection timeout.
+  - **Issue 1: P0 - Urgent Authentication Error in Production (error de autenticación)** 
+     - **Attempted fixes**: The agent updated  to set  and  for the  cookie.
      - **Next debug checklist**: 
-        1. Write an *asynchronous* Python script (using Motor) or fix the connection string/timeout settings to successfully query the production database.
-        2. Check the , , and  (or ) fields of the  products.
-        3. *Crucial Context for you:* Look back at the agent history. The 5,412 products were **already present in the production database** when the previous agent first queried it in Task 2. The previous agent merely synced them from Prod to Local, it did *not* create them in Prod. 
-        4. Check  for bulk CSV import endpoints that a human user might have used. Prove this to the user with hard data (exact timestamps and user IDs).
-     - **Why fix this issue and what will be achieved with the fix?**: The user is panicked about data integrity and suspects the AI broke the production database. You must provide a factual, data-backed explanation to restore trust.
+        1. Check  CORS middleware.  must be set, and  must include the specific production frontend URL (or  handled properly, though credentials usually require specific origins). 
+        2. Check  and  defaults to ensure  is being attached to EVERY request.
+        3. Check  in  and route dependencies (, , etc.) to ensure they are correctly reading the cookie from  instead of just failing when the  header is absent.
+     - **Why fix this issue and what will be achieved with the fix?**: No users can log into the production system right now. Fixing this restores access.
      - **Status**: IN PROGRESS
-     - **Is recurring issue?**: N
-     - **Should Test frontend/backend/both after fix?**: Backend (DB data analysis).
-     - **Blocked on other issue**: None.
+     - **Is recurring issue?**: Y (Auth bugs often recur during refactors)
+     - **Should Test frontend/backend/both after fix?**: Both
+     - **Blocked on other issue**: None
+
+  - **Issue 2: P1 - Missing React Hook Dependencies**
+     - **Attempted fixes**: Not started. Identified in the Code Quality Report.
+     - **Next debug checklist**: Add missing dependencies to  and  arrays in , , , and  to prevent stale closures.
+     - **Status**: NOT STARTED
 
 **In progress Task List**:
-*(None - currently blocked by the P0 investigation)*
+  - **Task 1: Refactor large React Components and Backend Logic**
+     - **Where to resume**: Code Quality Report requested splitting components >300 lines (, , ) and refactoring  and  for cyclomatic complexity.
+     - **What will be achieved with this?**: Code maintainability and stability.
+     - **Status**: NOT STARTED
+     - **Should Test frontend/backend/both after fix?**: Both
 
-**Upcoming and Future Tasks**:
-  - **Upcoming Task 1: P1 - Generate 3 Demo Conversations**
-     - **Where to resume**: Use  to simulate three full WhatsApp conversations via the webhook endpoint to populate the system with robust demo data.
-  - **Future Task 1: P2 - Refactor **
-     - **Where to resume**: The file is now ~1,460 lines long. Split into smaller modules (, , ).
-  - **Future Task 2: P2 - Refactor Large Frontend Components**
-     - **Where to resume**: Extract modals from  and .
-  - **Future Task 3: P3 - Asesor Permission Audit**
-     - **Where to resume**: Audit the Asesor role to ensure no permissions were over-granted.
+**Upcoming and Future Tasks**
+    - **Upcoming Task 1: P1 - Generate 3 Demo Conversations**: Use  to simulate three full WhatsApp conversations via the webhook endpoint to populate the system with demo data.
+    - **Upcoming Task 2: P1 - Re-upload Valid Products**: The user mentioned having a backup of ~700 valid products before the 5000+ erroneous products were synced. These need to be restored to production.
+    - **Future Task 1: P2 - Implement ReportBuilder Pattern**: Refactor  to use a modular builder pattern instead of a monolithic 335-line function.
+    - **Future Task 2: P3 - Asesor Permission Audit**: Audit the Asesor role to ensure no permissions were over-granted.
 
-**Completed work in this session**:
-  - P0 Bot Crash Fix: Fixed an  vs  NameError that crashed the bot, and fixed catalog link logic. (DONE)
-  - Staff Notifications: Ensured ALERTA COTIZACION NUEVA WhatsApp alerts are sent to staff when quotes are created/updated. (DONE)
-  - Product Catalog Sync: Synced actual production products (JAR*) to the preview environment and deleted obsolete ones (GIMK*). (DONE)
-  - Dashboard Metrics: Built backend endpoint and frontend UI for Admin Dashboard to view monthly quotes/orders grouped by client. (DONE)
-  - State Machine Overhaul: Completely refactored the WhatsApp bot logic into a strict 8-stage state machine to accurately capture names, product codes, cities, and dates without hallucinating. (DONE)
+**Completed work in this session**
+- Investigated and deleted 5,412 unauthorized products from Prod DB, created backup at  (DONE)
+- Disabled product collection sync in  to prevent future corruption (DONE)
+- Fixed export bug in  (now downloads 10,000 products instead of just 50 visible ones) (DONE)
+- Completely rewrote  into a strict 9-step conversational state machine, fixing bugs with name capture, URLs, and lead data (DONE)
+- Migrated authentication from  JWT to  secure cookies across backend and frontend (DONE - but caused the P0 regression)
+- Fixed empty catch blocks and React array index key anti-patterns across multiple frontend components (DONE)
+- Extracted hardcoded test credentials into environment variables and a shared  (DONE)
 
-**Earlier issues found/mentioned but not fixed**:
-  - None currently, aside from the active P0 investigation.
+**Earlier issues found/mentioned but not fixed**
+   - None, but see Re-upload Valid Products in Upcoming Tasks.
 
-**Known issue recurrence from previous fork**:
-  - None in this session.
+**Known issue recurrence from previous fork**
+  - Issue recurrence in previous fork: Authentication and CORS regressions.
+  - Recurrence count: 1
+  - Status: IN PROGRESS
 
-**Code Architecture**:
+**Code Architecture**
 
 
-**Key Technical Concepts**:
-- **FastAPI + React**: Standard stack.
-- **WhatsApp State Machine**: The bot now tracks  inside  to enforce strict conversational boundaries.
-- **Emergent LLM Key**: Used for calling GPT-5.2.
+**Key Technical Concepts**
+- FastAPI + React SPA architecture.
+- JWT Authentication via , ,  cookies (Recently changed from  + Headers).
+- WhatsApp Cloud API Webhooks.
+- MongoDB with Motor (Async).
 
-**key DB schema**:
-  - : Product catalog data (Currently holding 5400+ items in Prod).
-  - : Tracks , , .
-  - : Stores generated quotes.
-  - : Client contact info.
+**key DB schema**
+  - , , , , , , , .
 
-**changes in tech stack**:
-  - None.
+**changes in tech stack**
+  - Migrated frontend and backend authentication from  +  to  Cookies.
 
-**All files of reference**:
-  - : Contains the newly implemented State Machine.
-  - : Handles cloning of Prod DB to Local DB.
-  - : Contains the newly added metric tables.
+**All files of reference**
+  - : Contains the , , and  endpoints managing the  cookie, as well as CORS middleware.
+  - : Manages the frontend authentication state and Axios interceptors/defaults.
+  - : Various route files that were modified to accept  to extract cookies instead of relying solely on header tokens.
 
-**Areas that need refactoring**:
-  -  is critically large (~1467 lines) and handles too many responsibilities (LLM parsing, DB queries, state management, validation).
+**Areas that need refactoring**
+  - Frontend components > 300 lines (, , , , ).
+  - Backend functions:  and  have extreme cyclomatic complexity.
 
-**key api endpoints**:
-  - : Returns client quotes grouped by month.
-  - : Meta incoming messages.
+**key api endpoints**
+  -  (Sets httpOnly cookie)
+  -  (Clears cookie)
+  -  (Validates cookie)
 
-**Critical Info for New Agent**:
-  - **The 5000+ Products Issue**: Before you perform any writes or panic, remember that in the middle of the previous session, the agent checked the *Production* DB and found 5,412 products *before* any new features were deployed. The agent did NOT create these; it only synced them from Prod to the local Preview DB. You must carefully query the production DB (handle PyMongo timeouts gracefully) to extract the exact  timestamps and user IDs to prove to the user exactly when and how a human/system uploaded them (likely via a bulk import tool).
-  - Always communicate securely and concisely in Spanish.
+**Critical Info for New Agent**
+  - **LANGUAGE REQUIREMENT**: You MUST converse with the user entirely in SPANISH.
+  - **THE P0 AUTH BUG**: You are inheriting a completely broken production authentication state. The previous agent moved auth to  cookies. However, cross-origin requests from the deployed frontend to the backend require , , and  on the frontend Axios requests, AND the backend CORS middleware  must specifically list the frontend domain (using  with  is rejected by modern browsers). Fix this immediately.
+  - When querying MongoDB via PyMongo/Motor, remember to exclude  or stringify it to avoid Pydantic serialization errors.
+  - The  collection was removed from  to prevent production data from being overwritten by local environments. Do not re-add it.
 
-**documents and test reports created in this job**:
+**documents and test reports created in this job**
   - 
   - 
   - 
-  -  (Updated regularly)
+  - 
 
-**Last 10 User Messages and any pending HUMAN messages**:
-  1. User: hay dos fallas... No está emitiendo mensajes de alerta... El BOT está enviando productos de algún catálogo anterior... (Status: DONE)
-  2. User: En el dashboard necesito que muestre un resumen de las ordenes de compra por cliente y monto... (Status: DONE)
-  3. User: Quiero que las órdenes de compra del sistema reflejen temporalidades y clientes de manera clara... (Status: DONE)
-  4. User: IMPORTANTE: NO reemplazar ni dañar ninguna función... Implementar UNA MÁQUINA DE ESTADOS CLARA... (Status: DONE - Agent implemented strict 8-stage state machine)
-  5. User: hay un error grave luego de haber hecho deploy sin reemplazar la base de datos, se subieron más de 5000 productos al inventario y no sabemos de donde provino... Quiero saber exactamente quién lo hizo y como o hizo (**Status: IN PROGRESS / PENDING HUMAN CLARIFICATION** - Agent started DB investigation but script timed out).
+**Last 10 User Messages and any pending HUMAN messages** 
+ - User: esto se puede revertir? ya que esa base se eliminó... (Agent backed up and removed 5k products) -> DONE
+ - User: al descargar la bbdd de productos se descarga únicamente los 50... (Agent fixed export pagination) -> DONE
+ - User: Quiero que revises estos errores en el flujo de conversación... (Agent rewrote bot_service.py) -> DONE
+ - User: (Provided multiple Bot choice options A/B/C/D/E) -> DONE
+ - User: Aquí están los hallazgos de la revisión de código... (Agent applied security fixes, httpOnly cookies, empty catch blocks, keys) -> DONE
+ - User: dame credenciales de admin (Agent provided them) -> DONE
+ - User: URGENTE! corrige los accesos al sistema, con todo usuario que quiere ingresar en deploy se despliega error de autenticación -> **IN PROGRESS (Fixing CORS / Cookie issues for Production)**
 
-**Project Health Check**:
-  - **Functional**: The State Machine, quoting flow, and dashboard are highly functional and well-tested (29/29 tests passed).
-  - **Blocked**: The user is alarmed by an unexplained data anomaly in production (5000+ products).
+**Project Health Check:**
+- Broken (Authentication in production deploy is failing due to cookie/CORS misconfiguration).
 
-**3rd Party Integrations**:
+**3rd Party Integrations**
   - OpenAI GPT-5.2 — uses Emergent LLM Key
   - WhatsApp Cloud API — requires User API Key
 
-**Testing status**:
-  - Testing agent used after significant changes: YES (iterations 16, 17, and 18 all passed 100%).
+**Testing status**
+  - Testing agent used after significant changes: YES (Iterations 19 and 20 passed 100%, but failed to catch the cross-origin production failure).
   - Troubleshoot agent used after agent stuck in loop: NO
-  - Test files created: None
-  - Known regressions: None in code; perceived regression in production data integrity.
+  - Test files created: 
+  - Known regressions: Login is broken in production (cross-origin).
 
-**Credentials to test flow**:
+**Credentials to test flow:**
   - Admin:  / 
   - Developer:  / 
 
-**What agent forgot to execute**:
-  - Generating 3 Demo WhatsApp conversations using  (P1 task delayed again).</analysis>
+**What agent forgot to execute**
+  - The user previously mentioned needing a backup/restore of their ~700 legitimate products after the 5000+ were deleted, which hasn't been re-uploaded yet.
+  - The React hook dependency fixes (from the code quality report) were not completed.
+
+**Debugging checklist for current issue**
+    Issue: Production Authentication failing (error de autenticación) after migrating to  cookies.
+
+    Frontend files to check: (with line number)
+    - : Ensure  is set globally so the cookie is sent to the backend.
+  
+    Backend files to check:
+    - : Verify the . Browsers reject  when . It must be set to specific origins (e.g., extracting from  or frontend deploy URL).
+    - : Verify the  and  endpoints are setting the cookie with  and .
+    - Ensure  correctly extracts the token from  across all protected routes.</analysis>

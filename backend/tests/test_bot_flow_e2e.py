@@ -8,7 +8,7 @@ from pymongo import MongoClient
 import requests
 import json
 
-API_URL = "https://timestamp-forensics.preview.emergentagent.com"
+API_URL = "https://crm-prod-deploy.preview.emergentagent.com"
 TEST_PHONE = "593999888777"
 
 client = MongoClient("mongodb://localhost:27017")

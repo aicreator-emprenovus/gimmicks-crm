@@ -472,7 +472,7 @@ async def register(user_data: UserCreate):
         value=token,
         httponly=True,
         secure=True,
-        samesite="lax",
+        samesite="none",
         max_age=86400,
         path="/api"
     )
@@ -517,7 +517,7 @@ async def login(credentials: UserLogin, request: Request):
         value=token,
         httponly=True,
         secure=True,
-        samesite="lax",
+        samesite="none",
         max_age=86400,
         path="/api"
     )
@@ -3622,7 +3622,7 @@ async def seed_system_automation_rules():
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=os.environ.get('CORS_ORIGINS', 'http://localhost:3000').split(','),
+    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
