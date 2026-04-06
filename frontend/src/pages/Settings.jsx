@@ -113,10 +113,6 @@ export default function Settings() {
       toast.error("Solo se permiten archivos PDF");
       return;
     }
-    if (file.size > 20 * 1024 * 1024) {
-      toast.error("El archivo excede 20MB");
-      return;
-    }
     setUploadingPdf(true);
     try {
       const formData = new FormData();
@@ -711,7 +707,7 @@ export default function Settings() {
                     <FileUp className="w-10 h-10 text-zinc-400 mx-auto mb-3" />
                     <p className="font-medium text-zinc-700">No hay catálogo PDF configurado</p>
                     <p className="text-sm text-zinc-500 mt-1 mb-4">
-                      Sube un archivo PDF (máx. 20MB) con el catálogo completo de productos.
+                      Sube un archivo PDF con el catálogo completo de productos.
                     </p>
                     <label className="inline-flex cursor-pointer">
                       <input

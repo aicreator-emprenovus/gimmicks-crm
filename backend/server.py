@@ -86,9 +86,13 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
 
 class RequestSizeLimitMiddleware(BaseHTTPMiddleware):
-    MAX_BODY_SIZE = 25 * 1024 * 1024  # 25MB to accommodate image uploads
+    MAX_BODY_SIZE = 25 * 1024 * 1024  # 25MB default
+    UNLIMITED_PATHS = ["/api/catalog/upload-pdf"]
 
     async def dispatch(self, request: Request, call_next):
+        # Skip size check for catalog PDF uploads
+        if any(request.url.path.startswith(p) for p in self.UNLIMITED_PATHS):
+            return await call_next(request)
         content_length = request.headers.get("content-length")
         if content_length and int(content_length) > self.MAX_BODY_SIZE:
             return JSONResponse(status_code=413, content={"detail": "Request demasiado grande"})
@@ -511,9 +515,6 @@ async def upload_catalog_pdf(request: Request, file: UploadFile = File(...)):
         raise HTTPException(status_code=400, detail="Solo se permiten archivos PDF")
 
     contents = await file.read()
-    max_size = 20 * 1024 * 1024  # 20MB
-    if len(contents) > max_size:
-        raise HTTPException(status_code=400, detail="El archivo excede 20MB")
 
     pdf_filename = "catalogo_gimmicks.pdf"
     pdf_path = os.path.join(CATALOG_PDF_DIR, pdf_filename)
