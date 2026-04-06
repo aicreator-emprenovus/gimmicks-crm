@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { formatCurrency } from "@/utils/currency";
 import {
   Search, Upload, Plus, Trash2, Edit, ChevronLeft, ChevronRight,
-  X, Package, Download, Image as ImageIcon, Loader2, ChevronDown, ChevronUp, Lightbulb, Tags
+  X, Package, Download, Image as ImageIcon, Loader2, ChevronDown, ChevronUp, Lightbulb, Tags, AlertTriangle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,6 +27,7 @@ export default function Inventory() {
   const [minCost, setMinCost] = useState("");
   const [maxCost, setMaxCost] = useState("");
   const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [downloadStatus, setDownloadStatus] = useState(null);
   const fileInputRef = useRef(null);
   const headers = {};
 
@@ -56,11 +57,26 @@ export default function Inventory() {
   };
 
   useEffect(() => { fetchProducts(); }, [fetchProducts]);
-  useEffect(() => { fetchCategories(); }, []);
+  useEffect(() => { fetchCategories(); checkDownloadStatus(); }, []);
+
+  const checkDownloadStatus = async () => {
+    try {
+      const res = await axios.get(`${API_URL}/api/inventory/download-status`, { headers });
+      setDownloadStatus(res.data);
+    } catch { /* ignore */ }
+  };
 
   const handleUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    // Check download requirement
+    if (downloadStatus && !downloadStatus.can_upload) {
+      toast.error(`Debes descargar una copia del inventario antes de subir productos. No has descargado en los últimos ${downloadStatus.interval_days} días.`);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      return;
+    }
+
     setUploading(true);
     const formData = new FormData();
     formData.append("file", file);
@@ -112,6 +128,12 @@ export default function Inventory() {
       XLSX.utils.book_append_sheet(wb, ws, "Inventario");
       XLSX.writeFile(wb, "inventario_gimmicks.xlsx");
       toast.success(`${allProducts.length} productos exportados`);
+
+      // Record the download
+      try {
+        await axios.post(`${API_URL}/api/inventory/record-download`, {}, { headers });
+        checkDownloadStatus();
+      } catch { /* ignore */ }
     } catch (e) {
       toast.error("Error al exportar productos");
     }
@@ -161,6 +183,27 @@ export default function Inventory() {
           </Button>
         </div>
       </div>
+
+      {/* Download alert banner */}
+      {downloadStatus && !downloadStatus.can_upload && (
+        <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-3 flex-shrink-0" data-testid="download-alert">
+          <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="text-sm font-medium text-amber-800">
+              Descarga de inventario requerida
+            </p>
+            <p className="text-xs text-amber-700 mt-0.5">
+              Debes descargar una copia del inventario cada {downloadStatus.interval_days} días antes de poder subir nuevos productos.
+              {downloadStatus.last_download
+                ? ` Última descarga: ${new Date(downloadStatus.last_download).toLocaleDateString("es-EC")}`
+                : " No tienes descargas registradas."}
+            </p>
+          </div>
+          <Button size="sm" variant="outline" className="flex-shrink-0 border-amber-300 text-amber-800 hover:bg-amber-100" onClick={handleExport}>
+            <Download className="w-4 h-4 mr-1" /> Descargar ahora
+          </Button>
+        </div>
+      )}
 
       {/* Filters - all in one line */}
       <div className="flex items-center gap-2 mb-4">

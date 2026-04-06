@@ -127,6 +127,26 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+
+# ============== ACTIVITY LOG HELPER ==============
+
+async def log_activity(user_email: str, user_name: str, action: str, details: str, metadata: dict = None):
+    """Log a system activity for the historial."""
+    doc = {
+        "id": str(uuid.uuid4()),
+        "user_email": user_email,
+        "user_name": user_name,
+        "action": action,
+        "details": details,
+        "metadata": metadata or {},
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
+    try:
+        await db.activity_log.insert_one(doc)
+    except Exception as e:
+        logger.warning(f"Failed to log activity: {e}")
+
+
 # ============== MODELS ==============
 
 class UserCreate(BaseModel):
@@ -514,6 +534,9 @@ async def upload_catalog_pdf(request: Request, file: UploadFile = File(...)):
         upsert=True
     )
 
+    await log_activity(user.get("email", ""), user.get("name", ""), "catalog_upload",
+                       f"Catalogo PDF subido: {file.filename} ({len(contents)} bytes)")
+
     return JSONResponse(content={
         "message": "Catalogo PDF subido correctamente",
         "filename": file.filename,
@@ -571,7 +594,109 @@ async def delete_catalog_pdf(request: Request, credentials: HTTPAuthorizationCre
             os.remove(pdf_path)
 
     await db.catalog_config.delete_one({"type": "catalog_pdf"})
+    await log_activity(user.get("email", ""), user.get("name", ""), "catalog_delete", "Catalogo PDF eliminado")
     return JSONResponse(content={"message": "Catalogo PDF eliminado"})
+
+
+# ============== ACTIVITY LOG ROUTES ==============
+
+@api_router.get("/activity-log")
+async def get_activity_log(
+    request: Request,
+    credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer(auto_error=False)),
+    page: int = Query(1, ge=1),
+    limit: int = Query(50, ge=1, le=200),
+    user_email: str = Query(None),
+    action: str = Query(None),
+    date_from: str = Query(None),
+    date_to: str = Query(None),
+):
+    """Get system activity log (admin only)."""
+    current_user = await get_current_user(request, credentials)
+    if current_user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Solo administradores")
+
+    query = {}
+    if user_email:
+        query["user_email"] = {"$regex": user_email, "$options": "i"}
+    if action:
+        query["action"] = action
+    if date_from or date_to:
+        ts_filter = {}
+        if date_from:
+            ts_filter["$gte"] = date_from
+        if date_to:
+            ts_filter["$lte"] = date_to + "T23:59:59"
+        query["timestamp"] = ts_filter
+
+    total = await db.activity_log.count_documents(query)
+    skip = (page - 1) * limit
+    logs = await db.activity_log.find(query, {"_id": 0}).sort("timestamp", -1).skip(skip).limit(limit).to_list(limit)
+
+    return JSONResponse(content={
+        "logs": logs,
+        "total": total,
+        "page": page,
+        "pages": (total + limit - 1) // limit if total > 0 else 1
+    })
+
+
+@api_router.get("/activity-log/actions")
+async def get_activity_actions(
+    request: Request,
+    credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer(auto_error=False)),
+):
+    """Get distinct activity action types."""
+    current_user = await get_current_user(request, credentials)
+    if current_user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Solo administradores")
+    actions = await db.activity_log.distinct("action")
+    return JSONResponse(content={"actions": sorted(actions)})
+
+
+# ============== INVENTORY DOWNLOAD CONTROL ==============
+
+INVENTORY_DOWNLOAD_INTERVAL_DAYS = 15
+
+@api_router.get("/inventory/download-status")
+async def get_inventory_download_status(
+    request: Request,
+    credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer(auto_error=False)),
+):
+    """Check if current user has downloaded inventory in the last 15 days."""
+    current_user = await get_current_user(request, credentials)
+    email = current_user.get("email", "")
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=INVENTORY_DOWNLOAD_INTERVAL_DAYS)).isoformat()
+
+    last_download = await db.activity_log.find_one(
+        {"user_email": email, "action": "inventory_download", "timestamp": {"$gte": cutoff}},
+        {"_id": 0, "timestamp": 1},
+        sort=[("timestamp", -1)]
+    )
+
+    return JSONResponse(content={
+        "has_recent_download": last_download is not None,
+        "last_download": last_download["timestamp"] if last_download else None,
+        "interval_days": INVENTORY_DOWNLOAD_INTERVAL_DAYS,
+        "can_upload": last_download is not None
+    })
+
+
+@api_router.post("/inventory/record-download")
+async def record_inventory_download(
+    request: Request,
+    credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer(auto_error=False)),
+):
+    """Record that the user downloaded the inventory."""
+    current_user = await get_current_user(request, credentials)
+    await log_activity(
+        current_user.get("email", ""),
+        current_user.get("name", ""),
+        "inventory_download",
+        "Descarga de inventario completo"
+    )
+    return JSONResponse(content={"message": "Descarga registrada"})
+
 
 
 # ============== AUTH ROUTES ==============
@@ -666,6 +791,7 @@ async def login(credentials: UserLogin, request: Request):
         max_age=86400,
         path="/api"
     )
+    await log_activity(user["email"], user["name"], "login", "Inicio de sesion")
     return resp
 
 
@@ -1321,7 +1447,10 @@ async def create_product(product_data: ProductCreate, current_user: dict = Depen
     }
     
     await db.products.insert_one(product_doc)
-    
+
+    await log_activity(current_user.get("email", ""), current_user.get("name", ""),
+                       "product_create", f"Producto creado: {product_data.code} - {product_data.name}")
+
     return ProductResponse(
         id=product_id,
         code=product_data.code,
@@ -1345,7 +1474,20 @@ async def upload_products_excel(
     
     if not file.filename.endswith(('.xlsx', '.xls')):
         raise HTTPException(status_code=400, detail="El archivo debe ser Excel (.xlsx o .xls)")
-    
+
+    # Check if user has downloaded inventory in last 15 days
+    email = current_user.get("email", "")
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=INVENTORY_DOWNLOAD_INTERVAL_DAYS)).isoformat()
+    last_download = await db.activity_log.find_one(
+        {"user_email": email, "action": "inventory_download", "timestamp": {"$gte": cutoff}},
+        {"_id": 0}
+    )
+    if not last_download:
+        raise HTTPException(
+            status_code=403,
+            detail=f"Debes descargar una copia del inventario antes de subir productos. No has descargado en los ultimos {INVENTORY_DOWNLOAD_INTERVAL_DAYS} dias."
+        )
+
     contents = await file.read()
     
     try:
@@ -1449,6 +1591,8 @@ async def upload_products_excel(
                 await db.products.insert_one(product_doc)
                 products_created += 1
         
+        await log_activity(current_user.get("email", ""), current_user.get("name", ""),
+                           "inventory_upload", f"Subida masiva: {file.filename} ({products_created} nuevos, {products_updated} actualizados)")
         return {
             "message": "Productos cargados exitosamente",
             "created": products_created,
@@ -1461,9 +1605,13 @@ async def upload_products_excel(
 
 @api_router.delete("/products/{product_id}")
 async def delete_product(product_id: str, current_user: dict = Depends(get_current_user)):
+    product = await db.products.find_one({"id": product_id}, {"_id": 0, "code": 1, "name": 1})
     result = await db.products.delete_one({"id": product_id})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Producto no encontrado")
+    pname = f"{product.get('code', '')} - {product.get('name', '')}" if product else product_id
+    await log_activity(current_user.get("email", ""), current_user.get("name", ""),
+                       "product_delete", f"Producto eliminado: {pname}")
     return {"message": "Producto eliminado exitosamente"}
 
 # ============== AUTOMATION RULES ROUTES ==============
@@ -3047,6 +3195,8 @@ async def update_quote(quote_id: str, data: QuoteUpdate, current_user: dict = De
     update["updated_at"] = datetime.now(timezone.utc).isoformat()
     await db.quotes.update_one({"id": quote_id}, {"$set": update})
     updated = await db.quotes.find_one({"id": quote_id}, {"_id": 0})
+    await log_activity(current_user.get("email", ""), current_user.get("name", ""),
+                       "quote_update", f"Cotizacion actualizada: {quote_id}")
     return build_quote_response(updated)
 
 @api_router.post("/quotes/{quote_id}/send")
