@@ -102,10 +102,11 @@ INFORMACIÓN DE GIMMICKS:
 - Pedido mínimo: generalmente desde 50 unidades
 - Entrega: 7-15 días hábiles
 
-REGLA CRITICA: NUNCA menciones links ni URLs externas como gimmicks.com.ec.
-- Si no encuentras productos en inventario para lo que busca el cliente: el sistema enviara automaticamente el catalogo PDF. Tu solo informa que no encontraste el producto especifico pero que le compartes el catalogo completo para que revise opciones.
-- Si el cliente pide ver el catalogo completo o todos los productos: el sistema enviara automaticamente el catalogo PDF. Tu solo informa que le compartes el catalogo completo.
-- NUNCA digas "te envio un link" o "visita nuestra pagina". El PDF se envia automaticamente, tu solo menciona que le compartes el catalogo.
+REGLA CRITICA SOBRE CATALOGO:
+- NUNCA menciones URLs externas como gimmicks.com.ec ni inventes links.
+- Si el sistema te proporciona una URL_CATALOGO, incluyela EXACTAMENTE como te la dan en tu respuesta para que el cliente pueda ver el catalogo.
+- Si no encuentras productos en inventario: informa que no encontraste el producto especifico pero le compartes el enlace al catalogo completo.
+- Si el cliente pide ver el catalogo completo: comparte el enlace al catalogo que el sistema te proporciona.
 
 Solo menciona productos que aparezcan en PRODUCTOS ENCONTRADOS. NUNCA inventes nombres ni códigos.
 
@@ -1001,13 +1002,15 @@ async def _process_ai_conversation_inner(
         # ===== BUILD USER PROMPT =====
         # If sending catalog PDF, add context to the prompt
         catalog_pdf_context = ""
+        catalog_pdf_url_to_append = None
         if should_send_catalog_pdf:
             catalog_pdf_url = await get_catalog_pdf_url(db)
             if catalog_pdf_url:
+                catalog_pdf_url_to_append = catalog_pdf_url
                 if is_full_catalog_request:
-                    catalog_pdf_context = "\n\nEL CATALOGO PDF COMPLETO SERA ENVIADO AUTOMATICAMENTE al cliente. Responde confirmando que le compartes el catalogo completo para que revise todas las opciones disponibles. NO menciones links ni URLs."
+                    catalog_pdf_context = f"\n\nURL_CATALOGO: {catalog_pdf_url}\nComparte este enlace al cliente para que pueda ver el catalogo completo en PDF. Incluye la URL exacta en tu respuesta de forma natural, por ejemplo: 'Aqui te comparto nuestro catalogo completo: {catalog_pdf_url}'. NO inventes otras URLs."
                 else:
-                    catalog_pdf_context = "\n\nNO SE ENCONTRARON PRODUCTOS para la busqueda. EL CATALOGO PDF COMPLETO SERA ENVIADO AUTOMATICAMENTE. Informa que no encontraste ese producto especifico pero le compartes el catalogo completo en PDF. Pregunta si necesita algo mas."
+                    catalog_pdf_context = f"\n\nURL_CATALOGO: {catalog_pdf_url}\nNo se encontraron productos para la busqueda. Comparte este enlace al catalogo completo para que el cliente revise opciones. Incluye la URL exacta en tu respuesta, por ejemplo: 'No encontre ese producto especifico, pero te comparto nuestro catalogo completo para que revises: {catalog_pdf_url}'. Pregunta si necesita algo mas. NO inventes otras URLs."
 
         user_prompt = f"""{stage_instruction}
 
@@ -1137,22 +1140,13 @@ MENSAJE DEL CLIENTE: {message_text}"""
             await send_message_fn(phone_number, conversation_id, response_text)
             message_sent = True
 
-            # Send catalog PDF if needed (after the text message)
-            if should_send_catalog_pdf:
-                catalog_pdf_url = await get_catalog_pdf_url(db)
-                if catalog_pdf_url and hasattr(send_message_fn, '_send_document_fn'):
-                    try:
-                        await send_message_fn._send_document_fn(
-                            phone_number, conversation_id, catalog_pdf_url,
-                            "Catalogo completo Gimmicks", "catalogo_gimmicks.pdf"
-                        )
-                        logger.info(f"Catalog PDF sent to {phone_number} (reason: {'full_catalog_request' if is_full_catalog_request else 'no_products_found'})")
-                    except Exception as e:
-                        logger.warning(f"Failed to send catalog PDF to {phone_number}: {e}")
-                elif catalog_pdf_url:
-                    logger.warning(f"Cannot send catalog PDF: send_document_fn not available")
+            # Append catalog PDF URL to response if needed and AI didn't include it
+            if should_send_catalog_pdf and catalog_pdf_url_to_append:
+                if catalog_pdf_url_to_append not in (response_text or ""):
+                    response_text = f"{response_text}\n\n{catalog_pdf_url_to_append}"
+                    logger.info(f"Catalog PDF URL appended to message for {phone_number}")
                 else:
-                    logger.info(f"Catalog PDF requested but no PDF uploaded in system")
+                    logger.info(f"Catalog PDF URL already in AI response for {phone_number}")
 
         # ===== GENERATE QUOTE IF READY =====
         if will_generate_quote:
