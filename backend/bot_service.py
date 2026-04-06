@@ -102,6 +102,8 @@ INFORMACIÓN DE GIMMICKS:
 - Pedido mínimo: generalmente desde 50 unidades
 - Entrega: 7-15 días hábiles
 
+REGLA CRITICA: NUNCA menciones links ni URLs externas como gimmicks.com.ec. Si no hay productos, el sistema enviará automaticamente el catalogo PDF.
+
 Solo menciona productos que aparezcan en PRODUCTOS ENCONTRADOS. NUNCA inventes nombres ni códigos.
 
 Responde SIEMPRE en JSON válido:
@@ -121,7 +123,17 @@ Responde SIEMPRE en JSON válido:
 }"""
 
 
-EXTERNAL_CATALOG_URL = "https://gimmicks.com.ec/"
+# Catalog PDF helper — loads the public URL for the uploaded catalog PDF
+async def get_catalog_pdf_url(db: AsyncIOMotorDatabase) -> Optional[str]:
+    """Return the public URL for the catalog PDF, or None if not uploaded."""
+    config = await db.catalog_config.find_one({"type": "catalog_pdf"}, {"_id": 0})
+    if config and config.get("filename"):
+        base_url = os.environ.get("CATALOG_BASE_URL", "").rstrip("/")
+        if not base_url:
+            base_url = os.environ.get("REACT_APP_BACKEND_URL", "").rstrip("/")
+        if base_url:
+            return f"{base_url}/api/catalog/pdf"
+    return None
 
 # Escalation trigger keywords — detected before AI to ensure immediate escalation
 ESCALATION_KEYWORDS = [
@@ -701,15 +713,26 @@ async def _build_stage_context(db, current_stage, collected_data, message_text):
                 desc_short = f" - {desc[:60]}" if desc else ""
                 prod_lines.append(f"Codigo: {code} | {name}{desc_short}")
             catalog_availability = "\nPRODUCTOS ENCONTRADOS EN INVENTARIO:\n" + "\n".join(prod_lines)
-            catalog_availability += "\n\nMuestra estos productos al cliente y pidele que comparta los codigos que le interesen."
+            catalog_availability += "\n\nMuestra estos productos al cliente con sus codigos y pidele que comparta los codigos que le interesen."
             stage_instruction = "ESTADO: busqueda_producto. Hay productos disponibles. Muestralos al cliente con sus codigos y pide que elija. next_stage='esperando_codigos'."
         else:
-            catalog_availability = "\nNO HAY PRODUCTOS en inventario para esa busqueda."
-            stage_instruction = (
-                f"ESTADO: busqueda_producto. No se encontraron productos. "
-                f"Informa al cliente y compartele este link del catalogo completo: {EXTERNAL_CATALOG_URL} "
-                f"Pregunta si busca algo mas especifico. next_stage='esperando_codigos'."
-            )
+            catalog_pdf_url = await get_catalog_pdf_url(db)
+            if catalog_pdf_url:
+                catalog_availability = "\nNO HAY PRODUCTOS en inventario para esa busqueda. HAY UN CATALOGO PDF DISPONIBLE que sera enviado automaticamente."
+                stage_instruction = (
+                    "ESTADO: busqueda_producto. No se encontraron productos para esa busqueda. "
+                    "Informa al cliente que no encontraste ese producto especifico pero le compartes el catalogo completo en PDF para que revise todas las opciones. "
+                    "NO menciones ningun link ni URL. El PDF se enviara automaticamente. "
+                    "Pregunta si busca algo mas especifico. next_stage='esperando_codigos'."
+                )
+            else:
+                catalog_availability = "\nNO HAY PRODUCTOS en inventario para esa busqueda. NO hay catalogo PDF disponible."
+                stage_instruction = (
+                    "ESTADO: busqueda_producto. No se encontraron productos. "
+                    "Informa al cliente que no encontraste ese articulo en el inventario. "
+                    "NO menciones ningun link ni URL externa. "
+                    "Pregunta si busca algo diferente o mas especifico. next_stage='esperando_codigos'."
+                )
 
     elif current_stage == "esperando_codigos":
         stage_instruction = (
@@ -943,6 +966,14 @@ async def _process_ai_conversation_inner(
         msg_lower = message_text.lower()
         catalog_keywords = ["catalogo", "catálogo", "catlogo", "catalog"]
         is_catalog_request = any(w in msg_lower for w in catalog_keywords)
+        should_send_catalog_pdf = False
+
+        # Detect if no products were found in busqueda_producto stage
+        if current_stage == "busqueda_producto" and "NO HAY PRODUCTOS" in catalog_availability:
+            should_send_catalog_pdf = True
+
+        if is_catalog_request and current_stage in ("busqueda_producto", "esperando_codigos"):
+            should_send_catalog_pdf = True
 
         # ===== BUILD USER PROMPT =====
         user_prompt = f"""{stage_instruction}
@@ -1043,36 +1074,46 @@ MENSAJE DEL CLIENTE: {message_text}"""
 
         # ===== SEND RESPONSE =====
         if not will_generate_quote:
-            # Handle catalog request: append external URL
-            if is_catalog_request and current_stage in ("busqueda_producto", "esperando_codigos"):
-                clean_response = response_text.replace("https://gimmicks.com.ec/", "").replace("https://gimmicks.com.ec", "").strip()
-                catalog_msg = f"{clean_response}\n\nRevisa nuestro catalogo completo: {EXTERNAL_CATALOG_URL}"
-                await send_message_fn(phone_number, conversation_id, catalog_msg)
-                message_sent = True
-            else:
-                # Anti-duplication check
-                last_bot_msg = await db.messages.find_one(
-                    {"conversation_id": conversation_id, "sender": {"$in": ["bot", "business"]}},
-                    {"_id": 0, "content": 1},
-                    sort=[("timestamp", -1)]
-                )
-                if last_bot_msg:
-                    last_text = last_bot_msg.get("content", {}).get("text", "")
-                    if last_text and response_text:
-                        last_words = set(last_text.lower().split())
-                        new_words = set(response_text.lower().split())
-                        if last_words and new_words:
-                            overlap = len(last_words & new_words) / max(len(last_words), len(new_words))
-                            if overlap > 0.6:
-                                rephrase_result = await call_llm(
-                                    "Eres un asistente que reformula mensajes. Devuelve SOLO un JSON con el campo 'response'.",
-                                    f"Reformula este mensaje con palabras COMPLETAMENTE DIFERENTES, mas corto y directo. Mensaje: \"{response_text}\"",
-                                )
-                                if rephrase_result and rephrase_result.get("response"):
-                                    response_text = rephrase_result["response"]
+            # Remove any external URLs the AI might have included
+            if response_text:
+                response_text = re.sub(r'https?://gimmicks\.com\.ec\S*', '', response_text).strip()
+                response_text = re.sub(r'\s{2,}', ' ', response_text).strip()
 
-                await send_message_fn(phone_number, conversation_id, response_text)
-                message_sent = True
+            # Anti-duplication check
+            last_bot_msg = await db.messages.find_one(
+                {"conversation_id": conversation_id, "sender": {"$in": ["bot", "business"]}},
+                {"_id": 0, "content": 1},
+                sort=[("timestamp", -1)]
+            )
+            if last_bot_msg:
+                last_text = last_bot_msg.get("content", {}).get("text", "")
+                if last_text and response_text:
+                    last_words = set(last_text.lower().split())
+                    new_words = set(response_text.lower().split())
+                    if last_words and new_words:
+                        overlap = len(last_words & new_words) / max(len(last_words), len(new_words))
+                        if overlap > 0.6:
+                            rephrase_result = await call_llm(
+                                "Eres un asistente que reformula mensajes. Devuelve SOLO un JSON con el campo 'response'.",
+                                f"Reformula este mensaje con palabras COMPLETAMENTE DIFERENTES, mas corto y directo. Mensaje: \"{response_text}\"",
+                            )
+                            if rephrase_result and rephrase_result.get("response"):
+                                response_text = rephrase_result["response"]
+
+            await send_message_fn(phone_number, conversation_id, response_text)
+            message_sent = True
+
+            # Send catalog PDF if needed (after the text message)
+            if should_send_catalog_pdf:
+                catalog_pdf_url = await get_catalog_pdf_url(db)
+                if catalog_pdf_url and hasattr(send_message_fn, '_send_document_fn'):
+                    try:
+                        await send_message_fn._send_document_fn(
+                            phone_number, conversation_id, catalog_pdf_url,
+                            "Catalogo completo Gimmicks", "catalogo_gimmicks.pdf"
+                        )
+                    except Exception as e:
+                        logger.warning(f"Failed to send catalog PDF: {e}")
 
         # ===== GENERATE QUOTE IF READY =====
         if will_generate_quote:

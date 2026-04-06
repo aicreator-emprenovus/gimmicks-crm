@@ -429,6 +429,151 @@ async def send_whatsapp_message(to_phone: str, message_text: str) -> str:
             message_id = result.get("messages", [{}])[0].get("id")
             return message_id
 
+
+async def send_whatsapp_document(to_phone: str, document_url: str, caption: str, filename: str) -> str:
+    """Send a document (PDF) via WhatsApp Business API"""
+    import aiohttp
+
+    phone_number_id = os.environ.get("WHATSAPP_PHONE_NUMBER_ID")
+    access_token = os.environ.get("WHATSAPP_ACCESS_TOKEN")
+
+    if not phone_number_id or not access_token:
+        raise Exception("WhatsApp credentials not configured")
+
+    clean_phone = ''.join(c for c in to_phone if c.isdigit())
+    url = f"https://graph.facebook.com/v18.0/{phone_number_id}/messages"
+
+    headers = {
+        "Authorization": f"Bearer {access_token}",
+        "Content-Type": "application/json"
+    }
+
+    payload = {
+        "messaging_product": "whatsapp",
+        "recipient_type": "individual",
+        "to": clean_phone,
+        "type": "document",
+        "document": {
+            "link": document_url,
+            "caption": caption,
+            "filename": filename
+        }
+    }
+
+    async with aiohttp.ClientSession() as session:
+        async with session.post(url, headers=headers, json=payload) as response:
+            result = await response.json()
+            if response.status != 200:
+                error_msg = result.get("error", {}).get("message", "Unknown error")
+                logger.error(f"WhatsApp document API error: {result}")
+                raise Exception(f"WhatsApp document API error: {error_msg}")
+            message_id = result.get("messages", [{}])[0].get("id")
+            return message_id
+
+
+# ============== CATALOG PDF ROUTES ==============
+
+CATALOG_PDF_DIR = os.path.join(os.path.dirname(__file__), "catalog_uploads")
+os.makedirs(CATALOG_PDF_DIR, exist_ok=True)
+
+
+@api_router.post("/catalog/upload-pdf")
+async def upload_catalog_pdf(request: Request, file: UploadFile = File(...)):
+    """Upload a catalog PDF file."""
+    from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+    credentials_scheme = HTTPBearer(auto_error=False)
+    credentials = await credentials_scheme(request)
+    user = await get_current_user(request, credentials)
+    if user.get("role") not in ("admin", "desarrollador"):
+        raise HTTPException(status_code=403, detail="No tienes permiso")
+
+    if not file.filename.lower().endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="Solo se permiten archivos PDF")
+
+    contents = await file.read()
+    max_size = 20 * 1024 * 1024  # 20MB
+    if len(contents) > max_size:
+        raise HTTPException(status_code=400, detail="El archivo excede 20MB")
+
+    pdf_filename = "catalogo_gimmicks.pdf"
+    pdf_path = os.path.join(CATALOG_PDF_DIR, pdf_filename)
+    with open(pdf_path, "wb") as f:
+        f.write(contents)
+
+    now = datetime.now(timezone.utc)
+    await db.catalog_config.update_one(
+        {"type": "catalog_pdf"},
+        {"$set": {
+            "type": "catalog_pdf",
+            "filename": pdf_filename,
+            "original_name": file.filename,
+            "size_bytes": len(contents),
+            "uploaded_by": user.get("email", ""),
+            "uploaded_at": now.isoformat(),
+        }},
+        upsert=True
+    )
+
+    return JSONResponse(content={
+        "message": "Catalogo PDF subido correctamente",
+        "filename": file.filename,
+        "size_bytes": len(contents)
+    })
+
+
+@api_router.get("/catalog/pdf")
+async def serve_catalog_pdf():
+    """Serve the catalog PDF file (public — no auth needed for WhatsApp)."""
+    config = await db.catalog_config.find_one({"type": "catalog_pdf"}, {"_id": 0})
+    if not config or not config.get("filename"):
+        raise HTTPException(status_code=404, detail="No hay catalogo PDF configurado")
+
+    pdf_path = os.path.join(CATALOG_PDF_DIR, config["filename"])
+    if not os.path.exists(pdf_path):
+        raise HTTPException(status_code=404, detail="Archivo PDF no encontrado")
+
+    from starlette.responses import FileResponse
+    return FileResponse(
+        pdf_path,
+        media_type="application/pdf",
+        filename=config.get("original_name", "catalogo_gimmicks.pdf")
+    )
+
+
+@api_router.get("/catalog/info")
+async def get_catalog_info(request: Request, credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer(auto_error=False))):
+    """Get catalog PDF metadata."""
+    await get_current_user(request, credentials)
+    config = await db.catalog_config.find_one({"type": "catalog_pdf"}, {"_id": 0})
+    if not config or not config.get("filename"):
+        return JSONResponse(content={"has_catalog": False})
+
+    return JSONResponse(content={
+        "has_catalog": True,
+        "original_name": config.get("original_name", ""),
+        "size_bytes": config.get("size_bytes", 0),
+        "uploaded_by": config.get("uploaded_by", ""),
+        "uploaded_at": config.get("uploaded_at", ""),
+    })
+
+
+@api_router.delete("/catalog/pdf")
+async def delete_catalog_pdf(request: Request, credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer(auto_error=False))):
+    """Delete the catalog PDF."""
+    user = await get_current_user(request, credentials)
+    if user.get("role") not in ("admin", "desarrollador"):
+        raise HTTPException(status_code=403, detail="No tienes permiso")
+
+    config = await db.catalog_config.find_one({"type": "catalog_pdf"}, {"_id": 0})
+    if config and config.get("filename"):
+        pdf_path = os.path.join(CATALOG_PDF_DIR, config["filename"])
+        if os.path.exists(pdf_path):
+            os.remove(pdf_path)
+
+    await db.catalog_config.delete_one({"type": "catalog_pdf"})
+    return JSONResponse(content={"message": "Catalogo PDF eliminado"})
+
+
 # ============== AUTH ROUTES ==============
 
 @api_router.post("/auth/register")
@@ -1962,6 +2107,44 @@ async def send_bot_message(phone_number: str, conversation_id: str, message: str
         logger.info(f"Bot message sent to {phone_number}: {message[:60]}...")
     except Exception as e:
         logger.warning(f"WhatsApp send failed for {phone_number}: {e}")
+
+
+async def send_bot_document(phone_number: str, conversation_id: str, document_url: str, caption: str, filename: str):
+    """Send a document from the bot and save it to DB"""
+    now = datetime.now(timezone.utc)
+
+    msg_doc = {
+        "id": str(uuid.uuid4()),
+        "conversation_id": conversation_id,
+        "phone_number": phone_number,
+        "sender": "business",
+        "message_type": "document",
+        "content": {"text": f"[PDF] {caption}", "document_url": document_url, "filename": filename},
+        "status": "sent",
+        "is_automated": True,
+        "timestamp": now.isoformat()
+    }
+    try:
+        await db.messages.insert_one(msg_doc)
+        await db.conversations.update_one(
+            {"id": conversation_id},
+            {"$set": {
+                "last_message": f"[PDF] {caption}"[:100],
+                "last_message_time": now.isoformat()
+            }}
+        )
+    except Exception as e:
+        logger.error(f"Error saving bot document to DB: {e}")
+
+    try:
+        await send_whatsapp_document(phone_number, document_url, caption, filename)
+        logger.info(f"Bot document sent to {phone_number}: {filename}")
+    except Exception as e:
+        logger.warning(f"WhatsApp document send failed for {phone_number}: {e}")
+
+
+# Attach send_document_fn to send_bot_message so bot_service can use it
+send_bot_message._send_document_fn = send_bot_document
 
 async def process_intelligent_conversation(phone_number: str, message_text: str, conversation_id: str, is_new_lead: bool = False):
     """Main intelligent conversation handler - single entry point for all bot logic"""

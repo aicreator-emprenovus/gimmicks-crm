@@ -34,7 +34,11 @@ import {
   Webhook,
   Key,
   AlertTriangle,
-  Pencil
+  Pencil,
+  FileUp,
+  FileText,
+  Download,
+  Upload
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -71,6 +75,9 @@ export default function Settings() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingRule, setEditingRule] = useState(null);
   const [formData, setFormData] = useState({ ...EMPTY_FORM });
+  const [catalogInfo, setCatalogInfo] = useState(null);
+  const [catalogLoading, setCatalogLoading] = useState(false);
+  const [uploadingPdf, setUploadingPdf] = useState(false);
 
   const fetchRules = async () => {
     try {
@@ -83,6 +90,68 @@ export default function Settings() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchCatalogInfo = async () => {
+    setCatalogLoading(true);
+    try {
+      const response = await axios.get(`${API_URL}/api/catalog/info`, {
+        headers: getAuthHeaders()
+      });
+      setCatalogInfo(response.data);
+    } catch {
+      setCatalogInfo(null);
+    } finally {
+      setCatalogLoading(false);
+    }
+  };
+
+  const handleUploadPdf = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.name.toLowerCase().endsWith(".pdf")) {
+      toast.error("Solo se permiten archivos PDF");
+      return;
+    }
+    if (file.size > 20 * 1024 * 1024) {
+      toast.error("El archivo excede 20MB");
+      return;
+    }
+    setUploadingPdf(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      await axios.post(`${API_URL}/api/catalog/upload-pdf`, formData, {
+        headers: { ...getAuthHeaders(), "Content-Type": "multipart/form-data" }
+      });
+      toast.success("Catálogo PDF subido correctamente");
+      fetchCatalogInfo();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Error al subir el PDF");
+    } finally {
+      setUploadingPdf(false);
+      e.target.value = "";
+    }
+  };
+
+  const handleDeletePdf = async () => {
+    try {
+      await axios.delete(`${API_URL}/api/catalog/pdf`, {
+        headers: getAuthHeaders()
+      });
+      toast.success("Catálogo PDF eliminado");
+      setCatalogInfo({ has_catalog: false });
+    } catch {
+      toast.error("Error al eliminar el PDF");
+    }
+  };
+
+  const formatFileSize = (bytes) => {
+    if (!bytes) return "0 B";
+    const k = 1024;
+    const sizes = ["B", "KB", "MB", "GB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i];
   };
 
   const createRule = async () => {
@@ -165,6 +234,7 @@ export default function Settings() {
 
   useEffect(() => {
     fetchRules();
+    fetchCatalogInfo();
   }, []);
 
   const ruleFormFields = (
@@ -292,6 +362,10 @@ export default function Settings() {
           <TabsTrigger value="ai" className="gap-2" data-testid="tab-ai">
             <Bot className="w-4 h-4" />
             IA
+          </TabsTrigger>
+          <TabsTrigger value="catalog" className="gap-2" data-testid="tab-catalog">
+            <FileText className="w-4 h-4" />
+            Catálogo PDF
           </TabsTrigger>
         </TabsList>
 
@@ -547,6 +621,126 @@ export default function Settings() {
                   <Switch defaultChecked />
                 </div>
               </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Catalog PDF Tab */}
+        <TabsContent value="catalog" className="space-y-6">
+          <Card className="border border-zinc-200">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 font-['Manrope']">
+                <FileText className="w-5 h-5" />
+                Catálogo PDF
+              </CardTitle>
+              <CardDescription>
+                Sube el catálogo completo en PDF. El bot lo enviará automáticamente cuando no encuentre productos específicos en el inventario.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {catalogLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="w-6 h-6 animate-spin text-zinc-400" />
+                </div>
+              ) : catalogInfo?.has_catalog ? (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-4 p-4 bg-emerald-50 border border-emerald-200 rounded-lg">
+                    <div className="w-12 h-12 bg-emerald-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <FileText className="w-6 h-6 text-emerald-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-emerald-900 truncate" data-testid="catalog-filename">
+                        {catalogInfo.original_name}
+                      </p>
+                      <p className="text-sm text-emerald-700">
+                        {formatFileSize(catalogInfo.size_bytes)} — Subido por {catalogInfo.uploaded_by}
+                      </p>
+                      <p className="text-xs text-emerald-600">
+                        {catalogInfo.uploaded_at ? new Date(catalogInfo.uploaded_at).toLocaleString("es-EC") : ""}
+                      </p>
+                    </div>
+                    <div className="flex gap-2 flex-shrink-0">
+                      <a
+                        href={`${API_URL}/api/catalog/pdf`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        data-testid="catalog-download-btn"
+                      >
+                        <Button variant="outline" size="sm" className="gap-1">
+                          <Download className="w-4 h-4" />
+                          Ver
+                        </Button>
+                      </a>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        className="gap-1"
+                        onClick={handleDeletePdf}
+                        data-testid="catalog-delete-btn"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        Eliminar
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="p-3 bg-zinc-50 border border-zinc-200 rounded-lg">
+                    <p className="text-sm text-zinc-600">
+                      <strong>Reemplazar catálogo:</strong> Sube un nuevo archivo para actualizar.
+                    </p>
+                    <label className="mt-2 inline-flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="file"
+                        accept=".pdf"
+                        className="hidden"
+                        onChange={handleUploadPdf}
+                        data-testid="catalog-replace-input"
+                      />
+                      <Button variant="outline" size="sm" className="gap-1" disabled={uploadingPdf} asChild>
+                        <span>
+                          {uploadingPdf ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                          {uploadingPdf ? "Subiendo..." : "Reemplazar PDF"}
+                        </span>
+                      </Button>
+                    </label>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="p-6 border-2 border-dashed border-zinc-300 rounded-lg text-center">
+                    <FileUp className="w-10 h-10 text-zinc-400 mx-auto mb-3" />
+                    <p className="font-medium text-zinc-700">No hay catálogo PDF configurado</p>
+                    <p className="text-sm text-zinc-500 mt-1 mb-4">
+                      Sube un archivo PDF (máx. 20MB) con el catálogo completo de productos.
+                    </p>
+                    <label className="inline-flex cursor-pointer">
+                      <input
+                        type="file"
+                        accept=".pdf"
+                        className="hidden"
+                        onChange={handleUploadPdf}
+                        data-testid="catalog-upload-input"
+                      />
+                      <Button className="gap-2 bg-[#63AC9A] hover:bg-[#5a9d8c]" disabled={uploadingPdf} asChild>
+                        <span>
+                          {uploadingPdf ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileUp className="w-4 h-4" />}
+                          {uploadingPdf ? "Subiendo..." : "Subir Catálogo PDF"}
+                        </span>
+                      </Button>
+                    </label>
+                  </div>
+
+                  <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg flex items-start gap-3">
+                    <AlertTriangle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm text-yellow-700">
+                        Sin catálogo PDF, cuando el bot no encuentre productos en el inventario, solo informará al cliente que no hay coincidencias.
+                        Con el PDF, lo enviará automáticamente por WhatsApp.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
