@@ -147,6 +147,15 @@ CRM para ventas comerciales con WhatsApp Business que integra bot IA (GPT-5.2), 
   - **Fix adicional**: CORS middleware mejorado con orígenes dinámicos desde env vars
   - **Fix adicional**: `start.py` ahora detecta builds desactualizados y reconstruye automáticamente
   - **Testing**: 14/14 backend + todos los flujos frontend verificados (iteration_21)
+- [x] **Bug - Escritura continua en formularios de reglas** - Abr 6, 2026:
+  - `RuleFormFields` definido como componente dentro de `Settings` causaba pérdida de foco. Convertido a JSX variable.
+- [x] **Feature - Mejoras al Bot: Catálogo PDF + Sin link externo** - Abr 6, 2026:
+  - Bot ya NO envía link gimmicks.com.ec
+  - Bot envía recomendaciones con códigos del inventario
+  - Si no hay coincidencias, envía catálogo PDF automáticamente por WhatsApp
+  - Nueva pestaña "Catálogo PDF" en Configuración para subir/ver/eliminar el PDF
+  - Backend: 4 endpoints (/api/catalog/upload-pdf, info, pdf, delete)
+  - Testing: 17/17 backend + todos los flujos frontend (iteration_22)
 
 ## Remaining Tasks
 1. **P1 - Generate 3 Demo WhatsApp Conversations**: Simulate with curl
