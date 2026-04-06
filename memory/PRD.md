@@ -114,14 +114,22 @@ CRM para ventas comerciales con WhatsApp Business que integra bot IA (GPT-5.2), 
   - Navegación mensual con flechas (< Mes Año >)
   - Solo visible para admin en Dashboard
   - Testing: endpoint verificado con curl + screenshot
-- [x] **Máquina de estados conversacional completa** - Abr 1, 2026:
-  - 8 estados: saludo, captura_nombre, busqueda_producto, esperando_codigos, validando_codigos, recopilando_datos, revision_humana, escalado_humano
-  - Clasificación de inputs por estado: fechas=fechas, teléfonos=teléfonos, ciudades=ciudades (NUNCA como productos)
-  - 26 keywords de escalamiento detectados ANTES del AI para respuesta inmediata
-  - Resumen estructurado al escalar: Cliente, Teléfono, Email, Productos, Cantidades, Ciudad, Fecha, Motivo
-  - Normalización de campos con FIELD_ALIASES (37 aliases)
-  - Búsqueda de productos solo en etapas apropiadas (busqueda_producto, no en captura_nombre)
-  - Testing: 29/29 tests PASS (iteration_18)
+- [x] **Máquina de estados conversacional v2 (reescritura completa)** - Abr 6, 2026:
+  - Reescritura completa de bot_service.py con 9 estados estrictos:
+    saludo → captura_nombre → busqueda_producto → esperando_codigos → validando_codigos → tipo_logo → recopilando_datos → confirmacion → escalado_humano
+  - BUGS CORREGIDOS:
+    1. Bot ahora SIEMPRE saluda y pide nombre primero
+    2. Nombre del cliente NUNCA se confunde con producto (búsqueda de productos solo en estado busqueda_producto)
+    3. Links inválidos (railway.app) ELIMINADOS - productos se muestran inline, gimmicks.com.ec como fallback
+    4. Datos de leads COMPLETOS: nombre, email, ciudad, empresa obligatorios antes de generar cotización
+  - Nuevo estado "tipo_logo": pregunta tipo de logo antes de datos personales
+  - Orden de recopilación: códigos → cantidades → logo → email → ciudad → empresa
+  - Eliminado: build_catalog_url (links internos), load_automation_rules (reglas inyectadas), determine_stage (recálculo automático), reanudación de conversación por inactividad
+  - Mantenido: anti-duplicación, auto-creación de clientes, pipeline tracking, escalamiento, notificaciones staff
+  - Normalización mejorada de cantidades_por_producto y codigos_producto (maneja dict/list del AI)
+  - Testing: 8/8 backend + bot flow 100% (iteration_19)
+- [x] **Fix exportación de productos** - Abr 6, 2026:
+  - handleExport en Inventory.jsx ahora descarga TODOS los productos (limit=10000), no solo los 50 de la página
 
 ## Remaining Tasks
 1. **P1 - Generate 3 Demo WhatsApp Conversations**: Simulate with curl
