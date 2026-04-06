@@ -102,7 +102,10 @@ INFORMACIÓN DE GIMMICKS:
 - Pedido mínimo: generalmente desde 50 unidades
 - Entrega: 7-15 días hábiles
 
-REGLA CRITICA: NUNCA menciones links ni URLs externas como gimmicks.com.ec. Si no hay productos, el sistema enviará automaticamente el catalogo PDF.
+REGLA CRITICA: NUNCA menciones links ni URLs externas como gimmicks.com.ec.
+- Si no encuentras productos en inventario para lo que busca el cliente: el sistema enviara automaticamente el catalogo PDF. Tu solo informa que no encontraste el producto especifico pero que le compartes el catalogo completo para que revise opciones.
+- Si el cliente pide ver el catalogo completo o todos los productos: el sistema enviara automaticamente el catalogo PDF. Tu solo informa que le compartes el catalogo completo.
+- NUNCA digas "te envio un link" o "visita nuestra pagina". El PDF se envia automaticamente, tu solo menciona que le compartes el catalogo.
 
 Solo menciona productos que aparezcan en PRODUCTOS ENCONTRADOS. NUNCA inventes nombres ni códigos.
 
@@ -962,20 +965,50 @@ async def _process_ai_conversation_inner(
             db, current_stage, collected_data, message_text
         )
 
-        # ===== Handle full catalog request =====
+        # ===== CATALOG PDF DETECTION =====
         msg_lower = message_text.lower()
-        catalog_keywords = ["catalogo", "catálogo", "catlogo", "catalog"]
-        is_catalog_request = any(w in msg_lower for w in catalog_keywords)
         should_send_catalog_pdf = False
 
-        # Detect if no products were found in busqueda_producto stage
+        # Case 1: Client explicitly asks for the full catalog / all products
+        catalog_full_phrases = [
+            "catalogo completo", "catálogo completo", "catalogo entero", "catálogo entero",
+            "todo el catalogo", "todo el catálogo", "todos los productos", "todos sus productos",
+            "ver todo", "ver todos", "todo lo que tienen", "todo lo que manejan",
+            "quiero ver el catalogo", "quiero ver el catálogo", "me envias el catalogo",
+            "me envías el catálogo", "pasame el catalogo", "pásame el catálogo",
+            "mandame el catalogo", "mándame el catálogo", "comparteme el catalogo",
+            "compárteme el catálogo", "enviame el catalogo", "envíame el catálogo",
+            "dame el catalogo", "dame el catálogo",
+        ]
+        is_full_catalog_request = any(phrase in msg_lower for phrase in catalog_full_phrases)
+
+        # Also detect simpler "catalogo" keyword only in product-related stages
+        catalog_simple_keywords = ["catalogo", "catálogo", "catlogo", "catalog"]
+        is_simple_catalog_mention = any(w in msg_lower for w in catalog_simple_keywords)
+
+        if is_full_catalog_request:
+            # Direct full catalog request — send PDF regardless of stage
+            should_send_catalog_pdf = True
+
+        # Case 2: No products found after search in busqueda_producto stage
         if current_stage == "busqueda_producto" and "NO HAY PRODUCTOS" in catalog_availability:
             should_send_catalog_pdf = True
 
-        if is_catalog_request and current_stage in ("busqueda_producto", "esperando_codigos"):
+        # Case 3: Simple "catalogo" mention while in product stages
+        if is_simple_catalog_mention and current_stage in ("busqueda_producto", "esperando_codigos"):
             should_send_catalog_pdf = True
 
         # ===== BUILD USER PROMPT =====
+        # If sending catalog PDF, add context to the prompt
+        catalog_pdf_context = ""
+        if should_send_catalog_pdf:
+            catalog_pdf_url = await get_catalog_pdf_url(db)
+            if catalog_pdf_url:
+                if is_full_catalog_request:
+                    catalog_pdf_context = "\n\nEL CATALOGO PDF COMPLETO SERA ENVIADO AUTOMATICAMENTE al cliente. Responde confirmando que le compartes el catalogo completo para que revise todas las opciones disponibles. NO menciones links ni URLs."
+                else:
+                    catalog_pdf_context = "\n\nNO SE ENCONTRARON PRODUCTOS para la busqueda. EL CATALOGO PDF COMPLETO SERA ENVIADO AUTOMATICAMENTE. Informa que no encontraste ese producto especifico pero le compartes el catalogo completo en PDF. Pregunta si necesita algo mas."
+
         user_prompt = f"""{stage_instruction}
 
 Revisa historial y datos recopilados. NO pidas nada que ya tengas. UNA pregunta por mensaje.
@@ -983,6 +1016,7 @@ En extracted_data.codigos_producto siempre la lista COMPLETA ACUMULADA.
 PROHIBIDO repetir tu mensaje anterior.
 {catalog_availability}
 {codes_context}
+{catalog_pdf_context}
 
 === HISTORIAL ===
 {history_text}
@@ -1112,8 +1146,13 @@ MENSAJE DEL CLIENTE: {message_text}"""
                             phone_number, conversation_id, catalog_pdf_url,
                             "Catalogo completo Gimmicks", "catalogo_gimmicks.pdf"
                         )
+                        logger.info(f"Catalog PDF sent to {phone_number} (reason: {'full_catalog_request' if is_full_catalog_request else 'no_products_found'})")
                     except Exception as e:
-                        logger.warning(f"Failed to send catalog PDF: {e}")
+                        logger.warning(f"Failed to send catalog PDF to {phone_number}: {e}")
+                elif catalog_pdf_url:
+                    logger.warning(f"Cannot send catalog PDF: send_document_fn not available")
+                else:
+                    logger.info(f"Catalog PDF requested but no PDF uploaded in system")
 
         # ===== GENERATE QUOTE IF READY =====
         if will_generate_quote:
