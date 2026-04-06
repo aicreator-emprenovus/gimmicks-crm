@@ -29,7 +29,7 @@
     ],
     "product_search_filtered_link": [
       "✓ 'Quiero ver tazas' returns filtered catalog link",
-      "✓ URL: https://gimmicks-chat-flow.preview.emergentagent.com/catalog?q=taza"
+      "✓ URL: https://timestamp-forensics.preview.emergentagent.com/catalog?q=taza"
     ],
     "no_error_fallback_messages": [
       "✓ No 'en un momento atenderemos' in responses",
@@ -55,7 +55,7 @@
       "✓ Does NOT return product fields: codigos_producto, producto_interes, cantidad_estimada"
     ],
     "build_catalog_url": [
-      "✓ URL for 'taza': https://gimmicks-chat-flow.preview.emergentagent.com/catalog?q=taza",
+      "✓ URL for 'taza': https://timestamp-forensics.preview.emergentagent.com/catalog?q=taza",
       "✓ URL for 'taza, jarro': uses first keyword before comma"
     ]
   },

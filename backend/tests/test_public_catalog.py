@@ -6,7 +6,7 @@ import pytest
 import requests
 import os
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://gimmicks-chat-flow.preview.emergentagent.com')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://timestamp-forensics.preview.emergentagent.com')
 
 
 class TestPublicCatalogEndpoint:
@@ -118,7 +118,7 @@ class TestCatalogUrlBuilder:
         from urllib.parse import quote
         
         keywords = ["jarro", "termo", "gorra", "usb"]
-        base_url = "https://gimmicks-chat-flow.preview.emergentagent.com"
+        base_url = "https://timestamp-forensics.preview.emergentagent.com"
         
         for keyword in keywords:
             expected_url = f"{base_url}/catalog?q={quote(keyword)}"

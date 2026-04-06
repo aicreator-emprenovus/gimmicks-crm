@@ -21,7 +21,7 @@ import os
 import time
 import base64
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://gimmicks-chat-flow.preview.emergentagent.com')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://timestamp-forensics.preview.emergentagent.com')
 
 # Test credentials
 ADMIN_EMAIL = "admin@gimmicks.com"
