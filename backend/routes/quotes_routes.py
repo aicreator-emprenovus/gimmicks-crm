@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Body, BackgroundTasks, Header
+from fastapi import APIRouter, HTTPException, Body, BackgroundTasks, Header, Request
 from typing import List, Optional
 from pydantic import BaseModel as PydanticBaseModel
 from models_b import Quote
@@ -32,10 +32,14 @@ def set_jwt_secret(secret):
     global JWT_SECRET
     JWT_SECRET = secret
 
-async def get_user_from_token(authorization: str = None):
-    if not authorization or not authorization.startswith("Bearer "):
+async def get_user_from_token(authorization: str = None, request=None):
+    token = None
+    if authorization and authorization.startswith("Bearer "):
+        token = authorization.split(" ")[1]
+    if not token and request:
+        token = getattr(request, 'cookies', {}).get("auth_token")
+    if not token:
         return None
-    token = authorization.split(" ")[1]
     try:
         payload = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
         user_id = payload.get("sub") or payload.get("user_id")
@@ -99,7 +103,7 @@ async def get_next_po_number():
     return str(result["seq"])
 
 @router.post("/", response_model=Quote)
-async def create_quote(quote: Quote, authorization: str = Header(None)):
+async def create_quote(request: Request, quote: Quote, authorization: str = Header(None)):
     if quote.doc_type == "PO":
         quote.quote_number = await get_next_po_number()
     else:
@@ -107,7 +111,7 @@ async def create_quote(quote: Quote, authorization: str = Header(None)):
         quote.quote_number = str(4698 + count)
     if not quote.doc_type:
         quote.doc_type = "QUOTE"
-    user = await get_user_from_token(authorization)
+    user = await get_user_from_token(authorization, request)
     if user:
         quote.created_by_id = user["id"]
         quote.created_by_name = user["name"]
@@ -118,8 +122,8 @@ async def create_quote(quote: Quote, authorization: str = Header(None)):
     return quote
 
 @router.get("/activities/all")
-async def get_all_activities(limit: int = 100, authorization: str = Header(None)):
-    user = await get_user_from_token(authorization)
+async def get_all_activities(request: Request, limit: int = 100, authorization: str = Header(None)):
+    user = await get_user_from_token(authorization, request)
     if not user:
         raise HTTPException(status_code=401, detail="No autorizado")
     activities = await db.document_activities.find({}, {"_id": 0}).sort("timestamp", -1).to_list(limit)
@@ -150,7 +154,7 @@ async def get_quote_by_id(id: str):
     return Quote(**quote_data)
 
 @router.put("/{id}", response_model=Quote)
-async def update_quote(id: str, quote: Quote, authorization: str = Header(None)):
+async def update_quote(id: str, request: Request, quote: Quote, authorization: str = Header(None)):
     query = {"id": id}
     existing = await db.quotes_v2.find_one(query)
     if not existing:
@@ -161,7 +165,7 @@ async def update_quote(id: str, quote: Quote, authorization: str = Header(None))
             pass
     if not existing:
         raise HTTPException(status_code=404, detail="Quote not found")
-    user = await get_user_from_token(authorization)
+    user = await get_user_from_token(authorization, request)
     if not quote.quote_number:
         quote.quote_number = existing.get('quote_number')
     quote_dict = quote.model_dump()
@@ -174,8 +178,8 @@ async def update_quote(id: str, quote: Quote, authorization: str = Header(None))
     return quote
 
 @router.delete("/{id}")
-async def delete_quote(id: str, permanent: bool = False, authorization: str = Header(None)):
-    user = await get_user_from_token(authorization)
+async def delete_quote(id: str, request: Request, permanent: bool = False, authorization: str = Header(None)):
+    user = await get_user_from_token(authorization, request)
     if user.get("role") not in ("admin", "desarrollador"):
         raise HTTPException(status_code=403, detail="Solo administradores pueden eliminar")
     query = {"id": id}
@@ -188,7 +192,7 @@ async def delete_quote(id: str, permanent: bool = False, authorization: str = He
             pass
     if not existing:
         raise HTTPException(status_code=404, detail="Quote not found")
-    user = await get_user_from_token(authorization)
+    user = await get_user_from_token(authorization, request)
     doc_number = existing.get("quote_number", "")
     doc_type = existing.get("doc_type", "QUOTE")
     if permanent:
@@ -201,7 +205,7 @@ async def delete_quote(id: str, permanent: bool = False, authorization: str = He
         return {"message": "Quote moved to trash"}
 
 @router.post("/{id}/restore")
-async def restore_quote(id: str, authorization: str = Header(None)):
+async def restore_quote(id: str, request: Request, authorization: str = Header(None)):
     query = {"id": id}
     existing = await db.quotes_v2.find_one(query)
     if not existing:
@@ -212,7 +216,7 @@ async def restore_quote(id: str, authorization: str = Header(None)):
             pass
     if not existing:
         raise HTTPException(status_code=404, detail="Quote not found")
-    user = await get_user_from_token(authorization)
+    user = await get_user_from_token(authorization, request)
     await db.quotes_v2.update_one(query, {"$set": {"is_deleted": False, "deleted_at": None}})
     doc_number = existing.get("quote_number", "")
     doc_type = existing.get("doc_type", "QUOTE")

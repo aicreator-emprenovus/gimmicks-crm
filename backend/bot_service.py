@@ -670,6 +670,154 @@ def detect_escalation(message_text: str) -> str:
     return ""
 
 
+async def _build_stage_context(db, current_stage, collected_data, message_text):
+    """Build stage-specific instructions and catalog context for AI prompt."""
+    stage_instruction = ""
+    catalog_availability = ""
+    codes_context = ""
+
+    if current_stage == "saludo":
+        if collected_data.get("nombre"):
+            stage_instruction = f"ESTADO: saludo. Cliente recurrente: {collected_data['nombre']}. Saluda por nombre y pregunta en que te puede ayudar. next_stage='busqueda_producto'."
+        else:
+            stage_instruction = "ESTADO: saludo. Presentate como Ana de Gimmicks Marketing Services y pregunta el nombre del cliente. next_stage='captura_nombre'."
+
+    elif current_stage == "captura_nombre":
+        stage_instruction = (
+            "ESTADO: captura_nombre. Lo que el cliente diga ES su nombre. "
+            "NO lo interpretes como producto. Guardalo en extracted_data.nombre. "
+            "Agradece y pregunta que producto o articulo promocional necesita. "
+            "next_stage='busqueda_producto'."
+        )
+
+    elif current_stage == "busqueda_producto":
+        products_found = await search_products_by_keyword(db, message_text.strip(), limit=8)
+        if products_found:
+            prod_lines = []
+            for p in products_found:
+                code = p.get("code", "S/C")
+                name = p.get("name", "Producto")
+                desc = p.get("description", "")
+                desc_short = f" - {desc[:60]}" if desc else ""
+                prod_lines.append(f"Codigo: {code} | {name}{desc_short}")
+            catalog_availability = "\nPRODUCTOS ENCONTRADOS EN INVENTARIO:\n" + "\n".join(prod_lines)
+            catalog_availability += "\n\nMuestra estos productos al cliente y pidele que comparta los codigos que le interesen."
+            stage_instruction = "ESTADO: busqueda_producto. Hay productos disponibles. Muestralos al cliente con sus codigos y pide que elija. next_stage='esperando_codigos'."
+        else:
+            catalog_availability = "\nNO HAY PRODUCTOS en inventario para esa busqueda."
+            stage_instruction = (
+                f"ESTADO: busqueda_producto. No se encontraron productos. "
+                f"Informa al cliente y compartele este link del catalogo completo: {EXTERNAL_CATALOG_URL} "
+                f"Pregunta si busca algo mas especifico. next_stage='esperando_codigos'."
+            )
+
+    elif current_stage == "esperando_codigos":
+        stage_instruction = (
+            "ESTADO: esperando_codigos. Espera CODIGOS de producto (alfanumericos tipo JARPOR00391, HT2PR2). "
+            "Si el cliente pide mas opciones u otro producto: next_stage='busqueda_producto'. "
+            "Si pide catalogo completo: marca intent='solicitud_catalogo'. "
+            "Cuando recibas codigos validos: guarda en extracted_data.codigos_producto. next_stage='validando_codigos'."
+        )
+
+    elif current_stage == "validando_codigos":
+        codes_raw = collected_data.get("codigos_producto", "")
+        if codes_raw:
+            clean = str(codes_raw).replace("[", "").replace("]", "").replace("'", "").replace('"', '')
+            code_list = [c.strip() for c in re.split(r'[,\s]+', clean) if c.strip()]
+            validated = await validate_product_codes(db, code_list)
+            if validated:
+                codes_context = "\nPRODUCTOS CONFIRMADOS: " + ", ".join([f"{p.get('name', '')} ({p.get('code', '')})" for p in validated])
+        stage_instruction = (
+            "ESTADO: validando_codigos. Ya tienes codigos. Pregunta SOLO cuantas unidades de cada producto. "
+            "Guarda en extracted_data.cantidades_por_producto (formato CODIGO:cantidad). "
+            "next_stage='tipo_logo'."
+        )
+
+    elif current_stage == "tipo_logo":
+        stage_instruction = (
+            "ESTADO: tipo_logo. Pregunta: El logotipo sera a un color o full color? "
+            "Guarda la respuesta en extracted_data.color_logo. "
+            "next_stage='recopilando_datos'."
+        )
+
+    elif current_stage == "recopilando_datos":
+        missing = []
+        for field, label in [("correo", "correo electronico"), ("ciudad", "ciudad"), ("empresa", "nombre de empresa")]:
+            if not collected_data.get(field):
+                missing.append((field, label))
+        if missing:
+            next_field, next_label = missing[0]
+            stage_instruction = (
+                f"ESTADO: recopilando_datos. Pregunta SOLO: {next_label}. "
+                f"Interpreta la respuesta del cliente como {next_label}, NO como codigo de producto. "
+            )
+            if len(missing) == 1:
+                stage_instruction += "Cuando tengas este dato: marca needs_quote=true. next_stage='confirmacion'."
+            else:
+                stage_instruction += "Quedan mas datos por pedir despues de este."
+        else:
+            stage_instruction = "ESTADO: recopilando_datos. Ya tienes todos los datos. Marca needs_quote=true. next_stage='confirmacion'."
+
+    elif current_stage == "confirmacion":
+        stage_instruction = (
+            "ESTADO: confirmacion. La cotizacion fue generada. Agradece al cliente. "
+            "Informa que sera enviada al email registrado. NO hagas mas preguntas."
+        )
+
+    return stage_instruction, catalog_availability, codes_context
+
+
+def _merge_extracted_data(extracted: Dict, collected_data: Dict) -> Dict:
+    """Merge and normalize AI extracted data into collected_data."""
+    for key, value in extracted.items():
+        if value and str(value).strip() and str(value).lower() not in ["null", "none", "n/a", ""]:
+            normalized_key = FIELD_ALIASES.get(key, key)
+            if normalized_key == "cantidades_por_producto" and isinstance(value, dict):
+                parts = []
+                for k, v in value.items():
+                    if ":" in str(k):
+                        parts.append(str(k))
+                    else:
+                        parts.append(f"{k}:{v}")
+                collected_data[normalized_key] = ", ".join(parts)
+            elif normalized_key == "codigos_producto" and isinstance(value, list):
+                collected_data[normalized_key] = ", ".join(str(v) for v in value)
+            else:
+                collected_data[normalized_key] = str(value).strip()
+    return collected_data
+
+
+def _determine_next_stage(current_stage: str, ai_next_stage: str, collected_data: Dict) -> str:
+    """Determine next stage with strict progression and safety net."""
+    new_stage = current_stage
+
+    if ai_next_stage and ai_next_stage in VALID_STAGES:
+        new_stage = ai_next_stage
+
+    # Safety net: force progression based on collected data
+    if current_stage == "saludo":
+        new_stage = "busqueda_producto" if collected_data.get("nombre") else "captura_nombre"
+    elif current_stage == "captura_nombre" and collected_data.get("nombre"):
+        new_stage = "busqueda_producto"
+    elif current_stage == "validando_codigos" and (collected_data.get("cantidades_por_producto") or collected_data.get("cantidad")):
+        new_stage = "tipo_logo"
+    elif current_stage == "tipo_logo" and collected_data.get("color_logo"):
+        new_stage = "recopilando_datos"
+
+    return new_stage
+
+
+def _is_quote_ready(collected_data: Dict) -> bool:
+    """Check if all required data for quote generation is present."""
+    has_codes = bool(collected_data.get("codigos_producto") or collected_data.get("producto"))
+    has_qty = bool(collected_data.get("cantidad") or collected_data.get("cantidades_por_producto"))
+    has_logo = bool(collected_data.get("color_logo"))
+    has_email = bool(collected_data.get("correo"))
+    has_city = bool(collected_data.get("ciudad"))
+    has_empresa = bool(collected_data.get("empresa"))
+    return has_codes and has_qty and has_logo and has_email and has_city and has_empresa
+
+
 async def process_ai_conversation(
     db: AsyncIOMotorDatabase,
     phone_number: str,
@@ -787,99 +935,9 @@ async def _process_ai_conversation_inner(
                 collected_summary = "\n".join(parts)
 
         # ===== BUILD STAGE-SPECIFIC CONTEXT =====
-        stage_instruction = ""
-        catalog_availability = ""
-        codes_context = ""
-
-        if current_stage == "saludo":
-            if collected_data.get("nombre"):
-                stage_instruction = f"ESTADO: saludo. Cliente recurrente: {collected_data['nombre']}. Saluda por nombre y pregunta en que te puede ayudar. next_stage='busqueda_producto'."
-            else:
-                stage_instruction = "ESTADO: saludo. Presentate como Ana de Gimmicks Marketing Services y pregunta el nombre del cliente. next_stage='captura_nombre'."
-
-        elif current_stage == "captura_nombre":
-            stage_instruction = (
-                "ESTADO: captura_nombre. Lo que el cliente diga ES su nombre. "
-                "NO lo interpretes como producto. Guardalo en extracted_data.nombre. "
-                "Agradece y pregunta que producto o articulo promocional necesita. "
-                "next_stage='busqueda_producto'."
-            )
-
-        elif current_stage == "busqueda_producto":
-            # Search products based on client message
-            search_term = message_text.strip()
-            products_found = await search_products_by_keyword(db, search_term, limit=8)
-            if products_found:
-                prod_lines = []
-                for p in products_found:
-                    code = p.get("code", "S/C")
-                    name = p.get("name", "Producto")
-                    desc = p.get("description", "")
-                    desc_short = f" - {desc[:60]}" if desc else ""
-                    prod_lines.append(f"Codigo: {code} | {name}{desc_short}")
-                catalog_availability = "\nPRODUCTOS ENCONTRADOS EN INVENTARIO:\n" + "\n".join(prod_lines)
-                catalog_availability += "\n\nMuestra estos productos al cliente y pidele que comparta los codigos que le interesen."
-                stage_instruction = "ESTADO: busqueda_producto. Hay productos disponibles. Muestralos al cliente con sus codigos y pide que elija. next_stage='esperando_codigos'."
-            else:
-                catalog_availability = f"\nNO HAY PRODUCTOS en inventario para esa busqueda."
-                stage_instruction = (
-                    f"ESTADO: busqueda_producto. No se encontraron productos. "
-                    f"Informa al cliente y compartele este link del catalogo completo: {EXTERNAL_CATALOG_URL} "
-                    f"Pregunta si busca algo mas especifico. next_stage='esperando_codigos'."
-                )
-
-        elif current_stage == "esperando_codigos":
-            stage_instruction = (
-                "ESTADO: esperando_codigos. Espera CODIGOS de producto (alfanumericos tipo JARPOR00391, HT2PR2). "
-                "Si el cliente pide mas opciones u otro producto: next_stage='busqueda_producto'. "
-                "Si pide catalogo completo: marca intent='solicitud_catalogo'. "
-                "Cuando recibas codigos validos: guarda en extracted_data.codigos_producto. next_stage='validando_codigos'."
-            )
-
-        elif current_stage == "validando_codigos":
-            codes_raw = collected_data.get("codigos_producto", "")
-            if codes_raw:
-                clean = str(codes_raw).replace("[", "").replace("]", "").replace("'", "").replace('"', '')
-                code_list = [c.strip() for c in re.split(r'[,\s]+', clean) if c.strip()]
-                validated = await validate_product_codes(db, code_list)
-                if validated:
-                    codes_context = "\nPRODUCTOS CONFIRMADOS: " + ", ".join([f"{p.get('name', '')} ({p.get('code', '')})" for p in validated])
-            stage_instruction = (
-                "ESTADO: validando_codigos. Ya tienes codigos. Pregunta SOLO cuantas unidades de cada producto. "
-                "Guarda en extracted_data.cantidades_por_producto (formato CODIGO:cantidad). "
-                "next_stage='tipo_logo'."
-            )
-
-        elif current_stage == "tipo_logo":
-            stage_instruction = (
-                "ESTADO: tipo_logo. Pregunta: El logotipo sera a un color o full color? "
-                "Guarda la respuesta en extracted_data.color_logo. "
-                "next_stage='recopilando_datos'."
-            )
-
-        elif current_stage == "recopilando_datos":
-            missing = []
-            for field, label in [("correo", "correo electronico"), ("ciudad", "ciudad"), ("empresa", "nombre de empresa")]:
-                if not collected_data.get(field):
-                    missing.append((field, label))
-            if missing:
-                next_field, next_label = missing[0]
-                stage_instruction = (
-                    f"ESTADO: recopilando_datos. Pregunta SOLO: {next_label}. "
-                    f"Interpreta la respuesta del cliente como {next_label}, NO como codigo de producto. "
-                )
-                if len(missing) == 1:
-                    stage_instruction += "Cuando tengas este dato: marca needs_quote=true. next_stage='confirmacion'."
-                else:
-                    stage_instruction += "Quedan mas datos por pedir despues de este."
-            else:
-                stage_instruction = "ESTADO: recopilando_datos. Ya tienes todos los datos. Marca needs_quote=true. next_stage='confirmacion'."
-
-        elif current_stage == "confirmacion":
-            stage_instruction = (
-                "ESTADO: confirmacion. La cotizacion fue generada. Agradece al cliente. "
-                "Informa que sera enviada al email registrado. NO hagas mas preguntas."
-            )
+        stage_instruction, catalog_availability, codes_context = await _build_stage_context(
+            db, current_stage, collected_data, message_text
+        )
 
         # ===== Handle full catalog request =====
         msg_lower = message_text.lower()
@@ -972,57 +1030,16 @@ MENSAJE DEL CLIENTE: {message_text}"""
             return
 
         # ===== MERGE EXTRACTED DATA =====
-        for key, value in extracted.items():
-            if value and str(value).strip() and str(value).lower() not in ["null", "none", "n/a", ""]:
-                normalized_key = FIELD_ALIASES.get(key, key)
-                # Normalize cantidades_por_producto if AI returns dict
-                if normalized_key == "cantidades_por_producto" and isinstance(value, dict):
-                    parts = []
-                    for k, v in value.items():
-                        if ":" in str(k):
-                            parts.append(str(k))
-                        else:
-                            parts.append(f"{k}:{v}")
-                    collected_data[normalized_key] = ", ".join(parts)
-                # Normalize codigos_producto if AI returns list
-                elif normalized_key == "codigos_producto" and isinstance(value, list):
-                    collected_data[normalized_key] = ", ".join(str(v) for v in value)
-                else:
-                    collected_data[normalized_key] = str(value).strip()
+        collected_data = _merge_extracted_data(extracted, collected_data)
 
         # ===== DETERMINE NEXT STAGE (strict progression) =====
-        new_stage = current_stage
-
-        # Trust AI's next_stage if valid
-        if ai_next_stage and ai_next_stage in VALID_STAGES:
-            new_stage = ai_next_stage
-
-        # Force stage progression based on collected data as safety net
-        if current_stage == "saludo":
-            if collected_data.get("nombre"):
-                new_stage = "busqueda_producto"
-            else:
-                new_stage = "captura_nombre"
-        elif current_stage == "captura_nombre" and collected_data.get("nombre"):
-            new_stage = "busqueda_producto"
-        elif current_stage == "validando_codigos" and (collected_data.get("cantidades_por_producto") or collected_data.get("cantidad")):
-            new_stage = "tipo_logo"
-        elif current_stage == "tipo_logo" and collected_data.get("color_logo"):
-            new_stage = "recopilando_datos"
+        new_stage = _determine_next_stage(current_stage, ai_next_stage, collected_data)
 
         # ===== CHECK IF READY TO GENERATE QUOTE =====
         will_generate_quote = False
-        has_codes = bool(collected_data.get("codigos_producto") or collected_data.get("producto"))
-        has_qty = bool(collected_data.get("cantidad") or collected_data.get("cantidades_por_producto"))
-        has_logo = bool(collected_data.get("color_logo"))
-        has_email = bool(collected_data.get("correo"))
-        has_city = bool(collected_data.get("ciudad"))
-        has_empresa = bool(collected_data.get("empresa"))
-
-        if needs_quote or (has_codes and has_qty and has_logo and has_email and has_city and has_empresa):
-            if not state.get("quote_generated", False):
-                will_generate_quote = True
-                new_stage = "confirmacion"
+        if (needs_quote or _is_quote_ready(collected_data)) and not state.get("quote_generated", False):
+            will_generate_quote = True
+            new_stage = "confirmacion"
 
         # ===== SEND RESPONSE =====
         if not will_generate_quote:

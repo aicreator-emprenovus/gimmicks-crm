@@ -47,8 +47,7 @@ export default function QuoteBuilder() {
   const [detailProduct, setDetailProduct] = useState(null);
   const [detailIndex, setDetailIndex] = useState(-1);
 
-  const token = localStorage.getItem("token");
-  const headers = { Authorization: `Bearer ${token}` };
+  const headers = {};
   const isEdit = !!editId;
   const backPath = isPORoute ? "/purchase-orders" : "/quotes";
 
@@ -72,14 +71,14 @@ export default function QuoteBuilder() {
     try {
       const res = await axios.get(`${API_URL}/api/clients/`, { headers });
       setClients(res.data || []);
-    } catch {}
+    } catch (e) { console.error("Load clients failed:", e); }
   };
 
   const fetchCategories = async () => {
     try {
       const res = await axios.get(`${API_URL}/api/inventory/categories`, { headers });
       setCategories(res.data || []);
-    } catch {}
+    } catch (e) { console.error("Failed to load categories:", e); }
   };
 
   const loadExisting = async () => {
@@ -119,7 +118,7 @@ export default function QuoteBuilder() {
       setProducts(res.data.products || []);
       setTotalProducts(res.data.total || 0);
       setProdPages(res.data.pages || 1);
-    } catch {}
+    } catch (e) { console.error("Load products failed:", e); }
     setLoadingProducts(false);
   }, [prodPage, productSearch, selectedCategory, minPrice, maxPrice]);
 

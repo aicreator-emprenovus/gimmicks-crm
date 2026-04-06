@@ -19,7 +19,7 @@ const API_URL = process.env.REACT_APP_BACKEND_URL;
 const COLORS = ["#63AC9A", "#3b82f6", "#f59e0b", "#8b5cf6", "#ec4899", "#10b981", "#ef4444", "#6366f1"];
 
 export default function Dashboard() {
-  const { getAuthHeaders, user: authUser } = useAuth();
+  const { user: authUser } = useAuth();
   const [stats, setStats] = useState(null);
   const [activityChart, setActivityChart] = useState([]);
   const [topProducts, setTopProducts] = useState([]);
@@ -31,8 +31,7 @@ export default function Dashboard() {
     return { month: now.getMonth() + 1, year: now.getFullYear() };
   });
   const [ordersLoading, setOrdersLoading] = useState(false);
-  const token = localStorage.getItem("token");
-  const headers = { Authorization: `Bearer ${token}`, ...getAuthHeaders() };
+  const headers = {};
   const isAdmin = authUser?.role === "admin";
 
   const fetchAll = useCallback(async () => {
@@ -125,7 +124,7 @@ export default function Dashboard() {
       {/* Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {statCards.map((s, i) => (
-          <Card key={i} className="bg-white border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+          <Card key={s.label} className="bg-white border-gray-200 shadow-sm hover:shadow-md transition-shadow">
             <CardContent className="p-5">
               <div className="flex items-center justify-between">
                 <div>
@@ -216,7 +215,7 @@ export default function Dashboard() {
                 </thead>
                 <tbody>
                   {topClients.map((c, i) => (
-                    <tr key={i} className="border-b last:border-0">
+                    <tr key={c.client_name || `client-${i}`} className="border-b last:border-0">
                       <td className="py-2.5"><span className="w-5 h-5 rounded-full inline-flex items-center justify-center text-xs font-bold text-white" style={{ backgroundColor: COLORS[i % COLORS.length] }}>{i + 1}</span></td>
                       <td className="py-2.5 font-medium text-gray-800">{c.client_name || "Sin nombre"}</td>
                       <td className="py-2.5 text-right text-gray-600">{c.total_quotes}</td>
@@ -272,7 +271,7 @@ export default function Dashboard() {
                   </thead>
                   <tbody>
                     {ordersSummary.clients.map((c, i) => (
-                      <tr key={i} className="border-b last:border-0">
+                      <tr key={c.client_name || `order-${i}`} className="border-b last:border-0">
                         <td className="py-2.5">
                           <p className="font-medium text-gray-800">{c.client_name}</p>
                           {c.phone && <p className="text-xs text-gray-400">{c.phone}</p>}

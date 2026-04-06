@@ -28,8 +28,7 @@ export default function Inventory() {
   const [maxCost, setMaxCost] = useState("");
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const fileInputRef = useRef(null);
-  const token = localStorage.getItem("token");
-  const headers = { Authorization: `Bearer ${token}` };
+  const headers = {};
 
   const fetchProducts = useCallback(async () => {
     setLoading(true);
@@ -53,7 +52,7 @@ export default function Inventory() {
     try {
       const res = await axios.get(`${API_URL}/api/inventory/categories`, { headers });
       setCategories(res.data || []);
-    } catch {}
+    } catch (e) { console.error("Load categories failed:", e); }
   };
 
   useEffect(() => { fetchProducts(); }, [fetchProducts]);
@@ -299,8 +298,7 @@ function CategoryManagerModal({ onClose }) {
   const [editValue, setEditValue] = useState("");
   const [newCat, setNewCat] = useState("");
   const [search, setSearch] = useState("");
-  const token = localStorage.getItem("token");
-  const headers = { Authorization: `Bearer ${token}` };
+  const headers = {};
 
   const fetchCats = async () => {
     try {
@@ -422,7 +420,7 @@ function CategoryCell({ categories }) {
     <div className="flex items-center gap-1 max-w-[220px]">
       <div className="flex flex-wrap gap-0.5">
         {visible.map((c, i) => (
-          <span key={i} className="bg-[#63AC9A] text-white text-[10px] leading-tight px-1.5 py-[1px] rounded font-medium whitespace-nowrap">{c}</span>
+          <span key={`cat-${c}`} className="bg-[#63AC9A] text-white text-[10px] leading-tight px-1.5 py-[1px] rounded font-medium whitespace-nowrap">{c}</span>
         ))}
       </div>
       {hasMore && (
@@ -452,8 +450,7 @@ function ProductModal({ product, onClose, onSave, allCategories = [] }) {
   const [uploadingImg, setUploadingImg] = useState(false);
   const [imagePreview, setImagePreview] = useState(null);
   const imageInputRef = useRef(null);
-  const token = localStorage.getItem("token");
-  const headers = { Authorization: `Bearer ${token}` };
+  const headers = {};
   const isEdit = !!product;
 
   const resolveImageUrl = (url) => {

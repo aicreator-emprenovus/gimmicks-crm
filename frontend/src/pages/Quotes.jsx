@@ -172,7 +172,7 @@ export default function Quotes() {
 
                   <div className="text-xs text-zinc-500 space-y-0.5">
                     {q.items?.map((item, i) => (
-                      <span key={i} className="flex items-center gap-1">
+                      <span key={item.item_id || item.code || `item-${i}`} className="flex items-center gap-1">
                         <Package className="w-3 h-3 shrink-0" />
                         <span className="font-mono text-[#63AC9A]">{item.code}</span>
                         <span className="truncate">{item.product_name}</span>
@@ -258,7 +258,7 @@ export default function Quotes() {
                 <span className="text-zinc-400 text-xs">Productos</span>
                 <div className="mt-1 space-y-2">
                   {selectedQuote.items?.map((item, i) => (
-                    <div key={i} className="bg-zinc-50 p-2 rounded text-xs flex items-start justify-between gap-2">
+                    <div key={item.item_id || item.code || `detail-${i}`} className="bg-zinc-50 p-2 rounded text-xs flex items-start justify-between gap-2">
                       <div className="flex-1">
                         <span className="font-mono text-[#63AC9A]">{item.code || item.product_id}</span>
                         <span className="ml-2 font-medium">{item.product_name}</span>

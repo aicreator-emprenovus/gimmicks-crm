@@ -338,14 +338,19 @@ def create_token(user_id: str, email: str) -> str:
     }
     return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
 
-async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
-    try:
+async def get_current_user(request: Request, credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer(auto_error=False))):
+    token = None
+    if credentials:
         token = credentials.credentials
+    if not token:
+        token = request.cookies.get("auth_token")
+    if not token:
+        raise HTTPException(status_code=401, detail="Token requerido")
+    try:
         payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
         user_id = payload.get("sub")
         if not user_id:
             raise HTTPException(status_code=401, detail="Token inválido")
-        
         user = await db.users.find_one({"id": user_id}, {"_id": 0, "password": 0})
         if not user:
             raise HTTPException(status_code=401, detail="Usuario no encontrado")
@@ -355,11 +360,15 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
     except jwt.InvalidTokenError:
         raise HTTPException(status_code=401, detail="Token inválido")
 
-async def get_user_from_bearer(authorization: str):
-    """Extract user from raw Authorization header string"""
-    if not authorization or not authorization.startswith("Bearer "):
+async def get_user_from_bearer(authorization: str, request: Request = None):
+    """Extract user from Authorization header or cookie."""
+    token = None
+    if authorization and authorization.startswith("Bearer "):
+        token = authorization.replace("Bearer ", "")
+    if not token and request:
+        token = request.cookies.get("auth_token")
+    if not token:
         raise HTTPException(status_code=401, detail="Token requerido")
-    token = authorization.replace("Bearer ", "")
     payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
     user = await db.users.find_one({"id": payload.get("sub")}, {"_id": 0})
     if not user:
@@ -422,14 +431,12 @@ async def send_whatsapp_message(to_phone: str, message_text: str) -> str:
 
 # ============== AUTH ROUTES ==============
 
-@api_router.post("/auth/register", response_model=TokenResponse)
+@api_router.post("/auth/register")
 async def register(user_data: UserCreate):
-    # Validate password strength
     pwd_error = validate_password_strength(user_data.password)
     if pwd_error:
         raise HTTPException(status_code=400, detail=pwd_error)
 
-    # Check if user exists
     existing = await db.users.find_one({"email": sanitize_input(user_data.email)})
     if existing:
         raise HTTPException(status_code=400, detail="El email ya está registrado")
@@ -448,18 +455,30 @@ async def register(user_data: UserCreate):
     
     token = create_token(user_id, user_data.email)
     
-    return TokenResponse(
-        access_token=token,
-        user=UserResponse(
-            id=user_id,
-            email=user_data.email,
-            name=user_data.name,
-            role="admin",
-            created_at=datetime.now(timezone.utc)
-        )
+    from fastapi.responses import JSONResponse as JR
+    response_data = {
+        "access_token": token,
+        "user": {
+            "id": user_id,
+            "email": user_data.email,
+            "name": user_data.name,
+            "role": "admin",
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+    }
+    resp = JR(content=response_data)
+    resp.set_cookie(
+        key="auth_token",
+        value=token,
+        httponly=True,
+        secure=True,
+        samesite="lax",
+        max_age=86400,
+        path="/api"
     )
+    return resp
 
-@api_router.post("/auth/login", response_model=TokenResponse)
+@api_router.post("/auth/login")
 async def login(credentials: UserLogin, request: Request):
     client_ip = request.client.host if request.client else "unknown"
 
@@ -480,16 +499,37 @@ async def login(credentials: UserLogin, request: Request):
     if isinstance(created_at, str):
         created_at = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
     
-    return TokenResponse(
-        access_token=token,
-        user=UserResponse(
-            id=user["id"],
-            email=user["email"],
-            name=user["name"],
-            role=user.get("role", "user"),
-            created_at=created_at
-        )
+    response_data = {
+        "access_token": token,
+        "user": {
+            "id": user["id"],
+            "email": user["email"],
+            "name": user["name"],
+            "role": user.get("role", "user"),
+            "created_at": str(created_at) if created_at else None
+        }
+    }
+    
+    from fastapi.responses import JSONResponse as JR
+    resp = JR(content=response_data)
+    resp.set_cookie(
+        key="auth_token",
+        value=token,
+        httponly=True,
+        secure=True,
+        samesite="lax",
+        max_age=86400,
+        path="/api"
     )
+    return resp
+
+
+@api_router.post("/auth/logout")
+async def logout_user():
+    from fastapi.responses import JSONResponse as JR
+    resp = JR(content={"message": "Sesión cerrada"})
+    resp.delete_cookie(key="auth_token", path="/api")
+    return resp
 
 @api_router.get("/auth/me", response_model=UserResponse)
 async def get_me(current_user: dict = Depends(get_current_user)):
@@ -3582,7 +3622,7 @@ async def seed_system_automation_rules():
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
+    allow_origins=os.environ.get('CORS_ORIGINS', 'http://localhost:3000').split(','),
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )

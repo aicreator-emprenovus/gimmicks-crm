@@ -30,8 +30,7 @@ export default function Clients() {
   const [selectedClient, setSelectedClient] = useState(null);
   const [detailClient, setDetailClient] = useState(null);
   const [importing, setImporting] = useState(false);
-  const token = localStorage.getItem("token");
-  const headers = { Authorization: `Bearer ${token}` };
+  const headers = {};
 
   const handleImport = async (e) => {
     const file = e.target.files?.[0];
@@ -244,8 +243,7 @@ function ClientModal({ client, onClose, onSave }) {
     notes: client?.notes || ""
   });
   const [saving, setSaving] = useState(false);
-  const token = localStorage.getItem("token");
-  const headers = { Authorization: `Bearer ${token}` };
+  const headers = {};
 
   const handleSave = async () => {
     if (!form.name || !form.email) { toast.error("Nombre y email son requeridos"); return; }
@@ -338,8 +336,7 @@ function ClientModal({ client, onClose, onSave }) {
 function ClientHistoryModal({ client, onClose }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const token = localStorage.getItem("token");
-  const headers = { Authorization: `Bearer ${token}` };
+  const headers = {};
 
   useEffect(() => {
     (async () => {

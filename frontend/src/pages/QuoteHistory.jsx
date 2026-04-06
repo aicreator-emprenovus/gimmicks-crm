@@ -52,7 +52,7 @@ export default function QuoteHistory() {
       if (res.data.po_header_data && Object.keys(res.data.po_header_data).length > 0) {
         savedData = res.data.po_header_data;
       }
-    } catch {}
+    } catch (e) { console.error("Load PO header failed:", e); }
 
     if (savedData && savedData.cliente) {
       // Use saved data
@@ -65,7 +65,7 @@ export default function QuoteHistory() {
           const res = await axios.get(`${API_URL}/api/clients/`, { headers });
           const client = res.data.find(c => c.id === q.client_id);
           if (client) clientData = client;
-        } catch {}
+        } catch (e) { console.error("Load client data failed:", e); }
       }
       const months = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
       const d = q.created_at ? new Date(q.created_at) : new Date();
@@ -94,8 +94,7 @@ export default function QuoteHistory() {
     } catch { toast.error("Error al guardar"); }
     setSavingPOHeader(false);
   };
-  const token = localStorage.getItem("token");
-  const headers = { Authorization: `Bearer ${token}` };
+  const headers = {};
   const newPath = isPO ? "/purchase-orders/new" : "/quotes/new";
 
   const handleExportExcel = () => {
@@ -168,7 +167,7 @@ export default function QuoteHistory() {
       try {
         const res = await axios.get(`${API_URL}/api/clients/`, { headers });
         setClients(res.data || []);
-      } catch {}
+      } catch (e) { console.error("Load clients failed:", e); }
     };
     fetchClients();
   }, []);
@@ -493,7 +492,7 @@ export default function QuoteHistory() {
               {activities.length === 0 ? (
                 <p className="text-center text-gray-400 py-4">Sin actividad registrada</p>
               ) : activities.map((a, i) => (
-                <div key={i} className="flex items-start gap-2 py-2 border-b last:border-0">
+                <div key={a.id || `activity-${i}`} className="flex items-start gap-2 py-2 border-b last:border-0">
                   <div className="w-1.5 h-1.5 rounded-full bg-[#63AC9A] mt-2 flex-shrink-0" />
                   <div className="text-sm">
                     <p className="text-gray-700"><span className="font-medium">{a.user_name}</span> {a.action} #{a.document_number}</p>
@@ -514,8 +513,7 @@ function SendEmailModal({ quote, onClose, onSent }) {
   const [emails, setEmails] = useState([]);
   const [newEmail, setNewEmail] = useState("");
   const [sending, setSending] = useState(false);
-  const token = localStorage.getItem("token");
-  const headers = { Authorization: `Bearer ${token}` };
+  const headers = {};
 
   useEffect(() => {
     const initial = [];
@@ -573,7 +571,7 @@ function SendEmailModal({ quote, onClose, onSent }) {
           </div>
           <div className="space-y-1">
             {emails.map((e, i) => (
-              <div key={i} className="flex items-center justify-between bg-gray-50 rounded px-3 py-1.5 text-sm">
+              <div key={`email-${e}`} className="flex items-center justify-between bg-gray-50 rounded px-3 py-1.5 text-sm">
                 <span>{e}</span>
                 <button onClick={() => setEmails(emails.filter((_, j) => j !== i))} className="text-red-400 hover:text-red-600"><X size={14} /></button>
               </div>

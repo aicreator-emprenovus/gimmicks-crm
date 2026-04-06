@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Body, Header
+from fastapi import APIRouter, HTTPException, Body, Header, Request
 from typing import List, Any, Dict
 from models_b import Client, ClientActivity
 from datetime import datetime, timezone
@@ -54,9 +54,9 @@ async def update_client(id: str, client: Client):
     return client
 
 @router.delete("/{id}")
-async def delete_client(id: str, permanent: bool = False, authorization: str = Header(None)):
+async def delete_client(id: str, request: Request, permanent: bool = False, authorization: str = Header(None)):
     if get_user_from_token:
-        user = await get_user_from_token(authorization)
+        user = await get_user_from_token(authorization, request)
         if user.get("role") not in ("admin", "desarrollador"):
             raise HTTPException(status_code=403, detail="Solo administradores pueden eliminar")
     query = {"id": id}

@@ -24,8 +24,8 @@ import base64
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://timestamp-forensics.preview.emergentagent.com')
 
 # Test credentials
-ADMIN_EMAIL = "admin@gimmicks.com"
-ADMIN_PASSWORD = "admin123456"
+ADMIN_EMAIL = os.environ.get("TEST_EMAIL", "admin@gimmicks.com")
+ADMIN_PASSWORD = os.environ.get("TEST_PASSWORD", "admin123456")
 
 # Image test ID from requirement
 TEST_IMAGE_ID = "d8630e10-b663-49aa-aa3d-f423f376315c"

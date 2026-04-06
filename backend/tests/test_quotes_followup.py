@@ -13,8 +13,8 @@ if not BASE_URL:
     BASE_URL = "http://localhost:8001"
 
 # Test credentials
-TEST_EMAIL = "admin@gimmicks.com"
-TEST_PASSWORD = "admin123456"
+TEST_EMAIL = os.environ.get("TEST_EMAIL", "admin@gimmicks.com")
+TEST_PASSWORD = os.environ.get("TEST_PASSWORD", "admin123456")
 
 
 @pytest.fixture(scope="session")

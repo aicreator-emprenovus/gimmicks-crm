@@ -19,8 +19,7 @@ export default function Interesados() {
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
   const [detailClient, setDetailClient] = useState(null);
-  const token = localStorage.getItem("token");
-  const headers = { Authorization: `Bearer ${token}` };
+  const headers = {};
 
   const fetchInteresados = useCallback(async () => {
     setLoading(true);

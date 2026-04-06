@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Header
+from fastapi import APIRouter, HTTPException, Header, Request
 from datetime import datetime, timezone, timedelta
 import jwt
 import os
@@ -15,10 +15,14 @@ def set_jwt_secret(secret):
     global JWT_SECRET
     JWT_SECRET = secret
 
-async def get_user_from_token(authorization: str = None):
-    if not authorization or not authorization.startswith("Bearer "):
+async def get_user_from_token(authorization: str = None, request: Request = None):
+    token = None
+    if authorization and authorization.startswith("Bearer "):
+        token = authorization.split(" ")[1]
+    if not token and request:
+        token = request.cookies.get("auth_token")
+    if not token:
         return None
-    token = authorization.split(" ")[1]
     try:
         payload = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
         user_id = payload.get("sub") or payload.get("user_id")
@@ -31,8 +35,8 @@ async def get_user_from_token(authorization: str = None):
     return None
 
 @router.get("/stats")
-async def get_dashboard_stats(authorization: str = Header(None)):
-    user = await get_user_from_token(authorization)
+async def get_dashboard_stats(request: Request, authorization: str = Header(None)):
+    user = await get_user_from_token(authorization, request)
     if not user:
         raise HTTPException(status_code=401, detail="No autorizado")
     now = datetime.now(timezone.utc)
@@ -69,8 +73,8 @@ async def get_dashboard_stats(authorization: str = Header(None)):
     }
 
 @router.get("/activity-chart")
-async def get_activity_chart(days: int = 30, authorization: str = Header(None)):
-    user = await get_user_from_token(authorization)
+async def get_activity_chart(request: Request, days: int = 30, authorization: str = Header(None)):
+    user = await get_user_from_token(authorization, request)
     if not user:
         raise HTTPException(status_code=401, detail="No autorizado")
     now = datetime.now(timezone.utc)
@@ -101,8 +105,8 @@ async def get_activity_chart(days: int = 30, authorization: str = Header(None)):
     return chart_data
 
 @router.get("/top-products")
-async def get_top_products(limit: int = 10, authorization: str = Header(None)):
-    user = await get_user_from_token(authorization)
+async def get_top_products(request: Request, limit: int = 10, authorization: str = Header(None)):
+    user = await get_user_from_token(authorization, request)
     if not user:
         raise HTTPException(status_code=401, detail="No autorizado")
     pipeline = [
@@ -118,8 +122,8 @@ async def get_top_products(limit: int = 10, authorization: str = Header(None)):
     return results
 
 @router.get("/top-clients")
-async def get_top_clients(limit: int = 10, authorization: str = Header(None)):
-    user = await get_user_from_token(authorization)
+async def get_top_clients(request: Request, limit: int = 10, authorization: str = Header(None)):
+    user = await get_user_from_token(authorization, request)
     if not user:
         raise HTTPException(status_code=401, detail="No autorizado")
     pipeline = [
@@ -136,10 +140,10 @@ async def get_top_clients(limit: int = 10, authorization: str = Header(None)):
 
 
 @router.get("/orders-by-client")
-async def get_orders_by_client(month: int = None, year: int = None, authorization: str = Header(None)):
+async def get_orders_by_client(request: Request, month: int = None, year: int = None, authorization: str = Header(None)):
     """Purchase orders summary grouped by client for a given month.
     Admin only. Returns clients with their order count and total amount."""
-    user = await get_user_from_token(authorization)
+    user = await get_user_from_token(authorization, request)
     if not user:
         raise HTTPException(status_code=401, detail="No autorizado")
     # Check admin role

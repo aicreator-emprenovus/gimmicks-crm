@@ -19,8 +19,8 @@ if not BASE_URL:
     BASE_URL = "https://timestamp-forensics.preview.emergentagent.com"
 
 # Test credentials
-TEST_EMAIL = "admin@gimmicks.com"
-TEST_PASSWORD = "admin123456"
+TEST_EMAIL = os.environ.get("TEST_EMAIL", "admin@gimmicks.com")
+TEST_PASSWORD = os.environ.get("TEST_PASSWORD", "admin123456")
 
 
 class TestAuthAndBasicAPIs:
