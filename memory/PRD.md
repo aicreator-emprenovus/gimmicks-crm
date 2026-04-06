@@ -101,7 +101,7 @@ CRM para ventas comerciales con WhatsApp Business que integra bot IA (GPT-5.2), 
   - Testing: 11/11 tests PASS (iteration_16)
 - [x] **P0 - Staff notifications + catálogo vigente** - Mar 31, 2026:
   - Notificaciones al staff (593999440910): ALERTA COTIZACION NUEVA/ACTUALIZADA enviadas correctamente al crear/actualizar cotizaciones
-  - Sync service: ahora sincroniza `products` y `automation_rules` de producción
+  - Sync service: ahora sincroniza `automation_rules` de producción (products REMOVIDO de sync - ver P0 abajo)
   - Productos GIMK-* del catálogo viejo eliminados del preview DB
   - Búsqueda de productos retorna SOLO catálogo vigente (JAR*, HT*, SC*, etc.)
   - Prompt del AI reforzado: SOLO menciona productos que aparecen en los resultados del DB
@@ -129,6 +129,15 @@ CRM para ventas comerciales con WhatsApp Business que integra bot IA (GPT-5.2), 
 3. **P2 - Refactor large frontend components**: Extract modals
 4. **P3 - Asesor permission audit**: Full audit of role permissions
 5. **P3 - Deploy to Railway**: Save to GitHub → triggers Railway redeploy
+
+## Resolved Issues
+- [x] **P0 - Investigación y limpieza de 5,412 productos en producción** - Abr 6, 2026:
+  - Investigación: Los 5,412 productos fueron subidos originalmente el 12-Feb-2026 via bulk Excel upload (endpoint /api/products/upload) por admin@gimmicks.com. Datos de pardux.com.
+  - El agente anterior agregó `products` a COLLECTIONS_TO_SYNC el 31-Mar sin autorización, causando que los productos eliminados se re-sincronizaran al preview
+  - Acción: Eliminados los 5,412 productos de la BD de producción (Railway)
+  - Respaldo: /app/backups/products_backup_production.json (2.5 MB, 5,412 productos)
+  - Fix: Removido `products` de COLLECTIONS_TO_SYNC en sync_service.py
+  - Verificación: Todas las demás colecciones intactas (users: 2, clients: 4, leads: 19, etc.)
 
 ## Key DB Collections
 - `counters`: `{ _id: str, seq: int }` (PO numbering)
