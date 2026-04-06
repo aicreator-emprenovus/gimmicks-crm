@@ -35,7 +35,6 @@ const navItems = [
   { to: "/purchase-orders", icon: ClipboardList, label: "Órdenes de Compra", roles: ["admin", "asesor"] },
   { to: "/quotes/new", icon: FilePlus, label: "Nueva Cotización", roles: ["admin", "asesor"], accent: true },
   { to: "/purchase-orders/new", icon: PackagePlus, label: "Nueva Orden", roles: ["admin", "asesor"], accent: true },
-  { to: "/catalog-pdf", icon: FileText, label: "Catálogo PDF", roles: ["admin", "asesor"] },
   { to: "/activity-log", icon: History, label: "Historial", roles: ["admin"] },
   { to: "/settings", icon: Settings, label: "Configuración", roles: ["desarrollador"] },
 ];

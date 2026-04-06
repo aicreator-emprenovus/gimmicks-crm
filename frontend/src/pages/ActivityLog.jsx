@@ -12,8 +12,6 @@ const API_URL = process.env.REACT_APP_BACKEND_URL;
 const ACTION_LABELS = {
   login: { label: "Inicio de sesión", icon: LogIn, color: "bg-blue-100 text-blue-700" },
   logout: { label: "Cierre de sesión", icon: LogIn, color: "bg-blue-50 text-blue-500" },
-  catalog_upload: { label: "Catálogo subido", icon: FileUp, color: "bg-emerald-100 text-emerald-700" },
-  catalog_delete: { label: "Catálogo eliminado", icon: Trash2, color: "bg-red-100 text-red-700" },
   inventory_upload: { label: "Subida masiva", icon: Upload, color: "bg-purple-100 text-purple-700" },
   inventory_download: { label: "Descarga inventario", icon: Download, color: "bg-cyan-100 text-cyan-700" },
   product_create: { label: "Producto creado", icon: ShoppingCart, color: "bg-green-100 text-green-700" },

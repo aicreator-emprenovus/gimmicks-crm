@@ -64,7 +64,6 @@ const CLASSIFICATIONS = [
 
 const CATEGORIES = [
   { value: "cotizacion_directa", label: "Cotización", color: "text-emerald-600 bg-emerald-50" },
-  { value: "solicitud_catalogo", label: "Catalogo", color: "text-blue-600 bg-blue-50" },
   { value: "consulta_ideas", label: "Ideas", color: "text-violet-600 bg-violet-50" },
   { value: "pedido_estacional", label: "Estacional", color: "text-orange-600 bg-orange-50" },
   { value: "otra", label: "Otra", color: "text-zinc-600 bg-zinc-50" }

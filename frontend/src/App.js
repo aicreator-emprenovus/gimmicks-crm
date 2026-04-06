@@ -15,7 +15,6 @@ import QuoteBuilder from "@/pages/QuoteBuilder";
 import Clients from "@/pages/Clients";
 import Interesados from "@/pages/Interesados";
 import PublicCatalog from "@/pages/PublicCatalog";
-import CatalogPdf from "@/pages/CatalogPdf";
 import ActivityLog from "@/pages/ActivityLog";
 import Layout from "@/components/Layout";
 
@@ -126,11 +125,6 @@ function AppRoutes() {
         <Route path="settings" element={
           <ProtectedRoute allowedRoles={["desarrollador"]}>
             <Settings />
-          </ProtectedRoute>
-        } />
-        <Route path="catalog-pdf" element={
-          <ProtectedRoute allowedRoles={["admin", "asesor"]}>
-            <CatalogPdf />
           </ProtectedRoute>
         } />
         <Route path="activity-log" element={

@@ -87,12 +87,8 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
 class RequestSizeLimitMiddleware(BaseHTTPMiddleware):
     MAX_BODY_SIZE = 25 * 1024 * 1024  # 25MB default
-    UNLIMITED_PATHS = ["/api/catalog/upload-pdf"]
 
     async def dispatch(self, request: Request, call_next):
-        # Skip size check for catalog PDF uploads
-        if any(request.url.path.startswith(p) for p in self.UNLIMITED_PATHS):
-            return await call_next(request)
         content_length = request.headers.get("content-length")
         if content_length and int(content_length) > self.MAX_BODY_SIZE:
             return JSONResponse(status_code=413, content={"detail": "Request demasiado grande"})
@@ -290,10 +286,9 @@ class AutomationRuleResponse(BaseModel):
 class ConversationState(BaseModel):
     phone_number: str
     current_step: str  # "greeting", "identify_need", "collect_name", "collect_empresa", etc.
-    request_type: Optional[str] = None  # "cotizacion", "catalogo", "ideas", "temporada", "ejecutivo", "urgente"
+    request_type: Optional[str] = None  # "cotizacion", "ideas", "temporada", "ejecutivo", "urgente"
     collected_data: Dict = {}
     products_recommended: List[str] = []
-    catalog_sent: bool = False
     quote_generated: bool = False
     transferred_to_human: bool = False
     last_interaction: datetime
@@ -497,110 +492,6 @@ async def send_whatsapp_document(to_phone: str, document_url: str, caption: str,
                 raise Exception(f"WhatsApp document API error: {error_msg}")
             message_id = result.get("messages", [{}])[0].get("id")
             return message_id
-
-
-# ============== CATALOG PDF ROUTES ==============
-
-CATALOG_PDF_DIR = os.path.join(os.path.dirname(__file__), "catalog_uploads")
-os.makedirs(CATALOG_PDF_DIR, exist_ok=True)
-
-
-@api_router.post("/catalog/upload-pdf")
-async def upload_catalog_pdf(request: Request, file: UploadFile = File(...)):
-    """Upload a catalog PDF file."""
-    from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-    credentials_scheme = HTTPBearer(auto_error=False)
-    credentials = await credentials_scheme(request)
-    user = await get_current_user(request, credentials)
-    if user.get("role") not in ("admin", "desarrollador"):
-        raise HTTPException(status_code=403, detail="No tienes permiso")
-
-    if not file.filename.lower().endswith(".pdf"):
-        raise HTTPException(status_code=400, detail="Solo se permiten archivos PDF")
-
-    contents = await file.read()
-
-    pdf_filename = "catalogo_gimmicks.pdf"
-    pdf_path = os.path.join(CATALOG_PDF_DIR, pdf_filename)
-    with open(pdf_path, "wb") as f:
-        f.write(contents)
-
-    now = datetime.now(timezone.utc)
-    await db.catalog_config.update_one(
-        {"type": "catalog_pdf"},
-        {"$set": {
-            "type": "catalog_pdf",
-            "filename": pdf_filename,
-            "original_name": file.filename,
-            "size_bytes": len(contents),
-            "uploaded_by": user.get("email", ""),
-            "uploaded_at": now.isoformat(),
-        }},
-        upsert=True
-    )
-
-    await log_activity(user.get("email", ""), user.get("name", ""), "catalog_upload",
-                       f"Catalogo PDF subido: {file.filename} ({len(contents)} bytes)")
-
-    return JSONResponse(content={
-        "message": "Catalogo PDF subido correctamente",
-        "filename": file.filename,
-        "size_bytes": len(contents)
-    })
-
-
-@api_router.get("/catalog/pdf")
-async def serve_catalog_pdf():
-    """Serve the catalog PDF file (public — no auth needed for WhatsApp)."""
-    config = await db.catalog_config.find_one({"type": "catalog_pdf"}, {"_id": 0})
-    if not config or not config.get("filename"):
-        raise HTTPException(status_code=404, detail="No hay catalogo PDF configurado")
-
-    pdf_path = os.path.join(CATALOG_PDF_DIR, config["filename"])
-    if not os.path.exists(pdf_path):
-        raise HTTPException(status_code=404, detail="Archivo PDF no encontrado")
-
-    from starlette.responses import FileResponse
-    return FileResponse(
-        pdf_path,
-        media_type="application/pdf",
-        filename=config.get("original_name", "catalogo_gimmicks.pdf")
-    )
-
-
-@api_router.get("/catalog/info")
-async def get_catalog_info(request: Request, credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer(auto_error=False))):
-    """Get catalog PDF metadata."""
-    await get_current_user(request, credentials)
-    config = await db.catalog_config.find_one({"type": "catalog_pdf"}, {"_id": 0})
-    if not config or not config.get("filename"):
-        return JSONResponse(content={"has_catalog": False})
-
-    return JSONResponse(content={
-        "has_catalog": True,
-        "original_name": config.get("original_name", ""),
-        "size_bytes": config.get("size_bytes", 0),
-        "uploaded_by": config.get("uploaded_by", ""),
-        "uploaded_at": config.get("uploaded_at", ""),
-    })
-
-
-@api_router.delete("/catalog/pdf")
-async def delete_catalog_pdf(request: Request, credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer(auto_error=False))):
-    """Delete the catalog PDF."""
-    user = await get_current_user(request, credentials)
-    if user.get("role") not in ("admin", "desarrollador"):
-        raise HTTPException(status_code=403, detail="No tienes permiso")
-
-    config = await db.catalog_config.find_one({"type": "catalog_pdf"}, {"_id": 0})
-    if config and config.get("filename"):
-        pdf_path = os.path.join(CATALOG_PDF_DIR, config["filename"])
-        if os.path.exists(pdf_path):
-            os.remove(pdf_path)
-
-    await db.catalog_config.delete_one({"type": "catalog_pdf"})
-    await log_activity(user.get("email", ""), user.get("name", ""), "catalog_delete", "Catalogo PDF eliminado")
-    return JSONResponse(content={"message": "Catalogo PDF eliminado"})
 
 
 # ============== ACTIVITY LOG ROUTES ==============
@@ -1958,7 +1849,6 @@ CONVERSATION_STEPS = [
     "collect_presupuesto",
     "collect_personalizacion",
     "confirm_data",
-    "send_catalog",
     "generate_quote",
     "transfer_human"
 ]

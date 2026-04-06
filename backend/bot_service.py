@@ -47,7 +47,7 @@ ESTADO "busqueda_producto":
 - El cliente describe qué necesita (gorras, termos, jarros, etc.)
 - Pon catalog_search con la palabra clave del producto
 - Si hay PRODUCTOS ENCONTRADOS: muéstralos mencionando nombre y código, pide que comparta los códigos que le interesen
-- Si NO hay productos: informa y sugiere revisar el catálogo completo
+- Si NO hay productos: informa que no tienes ese producto y ofrece que un asesor envie el catalogo por email. Pide su correo
 - next_stage: "esperando_codigos"
 
 ESTADO "esperando_codigos":
@@ -102,11 +102,11 @@ INFORMACIÓN DE GIMMICKS:
 - Pedido mínimo: generalmente desde 50 unidades
 - Entrega: 7-15 días hábiles
 
-REGLA CRITICA SOBRE CATALOGO:
+REGLA CRITICA:
 - NUNCA menciones URLs externas como gimmicks.com.ec ni inventes links.
-- Si el sistema te proporciona una URL_CATALOGO, incluyela EXACTAMENTE como te la dan en tu respuesta para que el cliente pueda ver el catalogo.
-- Si no encuentras productos en inventario: informa que no encontraste el producto especifico pero le compartes el enlace al catalogo completo.
-- Si el cliente pide ver el catalogo completo: comparte el enlace al catalogo que el sistema te proporciona.
+- Si no encuentras productos en inventario: informa que no tienes ese producto en stock pero que un asesor puede enviarle el catalogo completo por email. Pide su correo electronico para esto. NO marques needs_human ni escalate como true por esto.
+- Si el cliente pide ver el catalogo completo: explica que un asesor se lo puede enviar por email y pide su correo. NO marques needs_human ni escalate como true por esto.
+- Solicitar catalogo NO es motivo de escalamiento. Solo escala cuando el cliente explicitamente pide hablar con una persona o muestra frustracion.
 
 Solo menciona productos que aparezcan en PRODUCTOS ENCONTRADOS. NUNCA inventes nombres ni códigos.
 
@@ -115,9 +115,9 @@ Responde SIEMPRE en JSON válido:
   "response": "tu mensaje",
   "extracted_data": {},
   "catalog_search": null,
-  "intent": "cotizacion_directa|solicitud_catalogo|consulta_ideas|pregunta_general|escalamiento|otra",
+  "intent": "cotizacion_directa|consulta_ideas|pregunta_general|escalamiento|otra",
   "lead_quality": "tibio",
-  "category": "cotizacion_directa|solicitud_catalogo|consulta_ideas|otra",
+  "category": "cotizacion_directa|consulta_ideas|otra",
   "needs_quote": false,
   "needs_human": false,
   "escalate": false,
@@ -126,18 +126,6 @@ Responde SIEMPRE en JSON válido:
   "conversation_summary": "resumen"
 }"""
 
-
-# Catalog PDF helper — loads the public URL for the uploaded catalog PDF
-async def get_catalog_pdf_url(db: AsyncIOMotorDatabase) -> Optional[str]:
-    """Return the public URL for the catalog PDF, or None if not uploaded."""
-    config = await db.catalog_config.find_one({"type": "catalog_pdf"}, {"_id": 0})
-    if config and config.get("filename"):
-        base_url = os.environ.get("CATALOG_BASE_URL", "").rstrip("/")
-        if not base_url:
-            base_url = os.environ.get("REACT_APP_BACKEND_URL", "").rstrip("/")
-        if base_url:
-            return f"{base_url}/api/catalog/pdf"
-    return None
 
 # Escalation trigger keywords — detected before AI to ensure immediate escalation
 ESCALATION_KEYWORDS = [
@@ -600,8 +588,8 @@ def _new_state(phone_number: str, now: datetime) -> dict:
         "collected_data": {},
         "lead_quality": "frio",
         "category": None,
-        "catalog_sent": [],
         "quote_generated": False,
+        "catalog_email_notified": False,
         "transferred_to_human": False,
         "message_count": 0,
         "reminder_sent": False,
@@ -678,6 +666,29 @@ async def send_escalation_summary(db: AsyncIOMotorDatabase, phone_number: str, c
         logger.error(f"Failed to send escalation summary: {e}")
 
 
+async def notify_staff_catalog_request(db: AsyncIOMotorDatabase, phone_number: str, collected_data: Dict, product_request: str, send_message_fn):
+    """Send WhatsApp alert to staff when a client requests the catalog via email."""
+    try:
+        client_name = collected_data.get("nombre", "Cliente desconocido")
+        correo = collected_data.get("correo", "No proporcionado")
+
+        notification = (
+            f"SOLICITUD DE CATALOGO POR EMAIL\n\n"
+            f"Cliente: {client_name}\n"
+            f"Telefono: {phone_number}\n"
+            f"Email: {correo}\n"
+            f"Busqueda original: {product_request}\n\n"
+            f"Enviar catalogo PDF al correo del cliente."
+        )
+
+        staff_conv = await db.conversations.find_one({"phone_number": STAFF_NOTIFICATION_PHONE}, {"_id": 0, "id": 1})
+        staff_conv_id = staff_conv["id"] if staff_conv else "notification"
+        await send_message_fn(STAFF_NOTIFICATION_PHONE, staff_conv_id, notification)
+        logger.info(f"Catalog email request notification sent for {phone_number} to staff")
+    except Exception as e:
+        logger.error(f"Failed to send catalog request notification: {e}")
+
+
 def detect_escalation(message_text: str) -> str:
     msg_lower = message_text.lower().strip()
     for keyword in ESCALATION_KEYWORDS:
@@ -720,29 +731,21 @@ async def _build_stage_context(db, current_stage, collected_data, message_text):
             catalog_availability += "\n\nMuestra estos productos al cliente con sus codigos y pidele que comparta los codigos que le interesen."
             stage_instruction = "ESTADO: busqueda_producto. Hay productos disponibles. Muestralos al cliente con sus codigos y pide que elija. next_stage='esperando_codigos'."
         else:
-            catalog_pdf_url = await get_catalog_pdf_url(db)
-            if catalog_pdf_url:
-                catalog_availability = "\nNO HAY PRODUCTOS en inventario para esa busqueda. HAY UN CATALOGO PDF DISPONIBLE que sera enviado automaticamente."
-                stage_instruction = (
-                    "ESTADO: busqueda_producto. No se encontraron productos para esa busqueda. "
-                    "Informa al cliente que no encontraste ese producto especifico pero le compartes el catalogo completo en PDF para que revise todas las opciones. "
-                    "NO menciones ningun link ni URL. El PDF se enviara automaticamente. "
-                    "Pregunta si busca algo mas especifico. next_stage='esperando_codigos'."
-                )
-            else:
-                catalog_availability = "\nNO HAY PRODUCTOS en inventario para esa busqueda. NO hay catalogo PDF disponible."
-                stage_instruction = (
-                    "ESTADO: busqueda_producto. No se encontraron productos. "
-                    "Informa al cliente que no encontraste ese articulo en el inventario. "
-                    "NO menciones ningun link ni URL externa. "
-                    "Pregunta si busca algo diferente o mas especifico. next_stage='esperando_codigos'."
-                )
+            catalog_availability = "\nNO HAY PRODUCTOS en inventario para esa busqueda."
+            stage_instruction = (
+                "ESTADO: busqueda_producto. No se encontraron productos para esa busqueda. "
+                "Informa al cliente que no tienes ese producto en stock actualmente, pero que un asesor puede enviarle el catalogo completo por email. "
+                "Pide su correo electronico para que el asesor le envie el catalogo. "
+                "NO menciones ningun link ni URL externa. "
+                "Guarda el correo en extracted_data.correo si lo proporciona. "
+                "next_stage='esperando_codigos'."
+            )
 
     elif current_stage == "esperando_codigos":
         stage_instruction = (
             "ESTADO: esperando_codigos. Espera CODIGOS de producto (alfanumericos tipo JARPOR00391, HT2PR2). "
             "Si el cliente pide mas opciones u otro producto: next_stage='busqueda_producto'. "
-            "Si pide catalogo completo: marca intent='solicitud_catalogo'. "
+            "Si pide catalogo completo: ofrece que un asesor se lo envie por email y pide su correo. "
             "Cuando recibas codigos validos: guarda en extracted_data.codigos_producto. next_stage='validando_codigos'."
         )
 
@@ -966,11 +969,8 @@ async def _process_ai_conversation_inner(
             db, current_stage, collected_data, message_text
         )
 
-        # ===== CATALOG PDF DETECTION =====
+        # ===== CATALOG REQUEST DETECTION =====
         msg_lower = message_text.lower()
-        should_send_catalog_pdf = False
-
-        # Case 1: Client explicitly asks for the full catalog / all products
         catalog_full_phrases = [
             "catalogo completo", "catálogo completo", "catalogo entero", "catálogo entero",
             "todo el catalogo", "todo el catálogo", "todos los productos", "todos sus productos",
@@ -981,37 +981,24 @@ async def _process_ai_conversation_inner(
             "compárteme el catálogo", "enviame el catalogo", "envíame el catálogo",
             "dame el catalogo", "dame el catálogo",
         ]
-        is_full_catalog_request = any(phrase in msg_lower for phrase in catalog_full_phrases)
-
-        # Also detect simpler "catalogo" keyword only in product-related stages
         catalog_simple_keywords = ["catalogo", "catálogo", "catlogo", "catalog"]
+        is_full_catalog_request = any(phrase in msg_lower for phrase in catalog_full_phrases)
         is_simple_catalog_mention = any(w in msg_lower for w in catalog_simple_keywords)
 
-        if is_full_catalog_request:
-            # Direct full catalog request — send PDF regardless of stage
-            should_send_catalog_pdf = True
-
-        # Case 2: No products found after search in busqueda_producto stage
+        needs_catalog_email = False
+        if is_full_catalog_request or (is_simple_catalog_mention and current_stage in ("busqueda_producto", "esperando_codigos")):
+            needs_catalog_email = True
         if current_stage == "busqueda_producto" and "NO HAY PRODUCTOS" in catalog_availability:
-            should_send_catalog_pdf = True
+            needs_catalog_email = True
 
-        # Case 3: Simple "catalogo" mention while in product stages
-        if is_simple_catalog_mention and current_stage in ("busqueda_producto", "esperando_codigos"):
-            should_send_catalog_pdf = True
+        catalog_email_context = ""
+        if needs_catalog_email:
+            if collected_data.get("correo"):
+                catalog_email_context = "\n\nIMPORTANTE: El cliente ya proporciono su correo. Confirma que un asesor le enviara el catalogo completo a su correo. Pregunta si necesita algo mas. NO pongas needs_human=true ni escalate=true."
+            else:
+                catalog_email_context = "\n\nIMPORTANTE: El cliente necesita el catalogo completo. Ofrece que un asesor se lo puede enviar por email y pide su correo electronico. Guarda el correo en extracted_data.correo. NO pongas needs_human=true ni escalate=true."
 
         # ===== BUILD USER PROMPT =====
-        # If sending catalog PDF, add context to the prompt
-        catalog_pdf_context = ""
-        catalog_pdf_url_to_append = None
-        if should_send_catalog_pdf:
-            catalog_pdf_url = await get_catalog_pdf_url(db)
-            if catalog_pdf_url:
-                catalog_pdf_url_to_append = catalog_pdf_url
-                if is_full_catalog_request:
-                    catalog_pdf_context = f"\n\nURL_CATALOGO: {catalog_pdf_url}\nComparte este enlace al cliente para que pueda ver el catalogo completo en PDF. Incluye la URL exacta en tu respuesta de forma natural, por ejemplo: 'Aqui te comparto nuestro catalogo completo: {catalog_pdf_url}'. NO inventes otras URLs."
-                else:
-                    catalog_pdf_context = f"\n\nURL_CATALOGO: {catalog_pdf_url}\nNo se encontraron productos para la busqueda. Comparte este enlace al catalogo completo para que el cliente revise opciones. Incluye la URL exacta en tu respuesta, por ejemplo: 'No encontre ese producto especifico, pero te comparto nuestro catalogo completo para que revises: {catalog_pdf_url}'. Pregunta si necesita algo mas. NO inventes otras URLs."
-
         user_prompt = f"""{stage_instruction}
 
 Revisa historial y datos recopilados. NO pidas nada que ya tengas. UNA pregunta por mensaje.
@@ -1019,7 +1006,7 @@ En extracted_data.codigos_producto siempre la lista COMPLETA ACUMULADA.
 PROHIBIDO repetir tu mensaje anterior.
 {catalog_availability}
 {codes_context}
-{catalog_pdf_context}
+{catalog_email_context}
 
 === HISTORIAL ===
 {history_text}
@@ -1073,6 +1060,11 @@ MENSAJE DEL CLIENTE: {message_text}"""
         ai_next_stage = ai_result.get("next_stage", "")
         lead_quality = ai_result.get("lead_quality", state.get("lead_quality", "frio"))
         category = ai_result.get("category", state.get("category"))
+
+        # Override: catalog requests should NOT trigger escalation
+        if needs_catalog_email:
+            needs_human = False
+            ai_escalate = False
 
         # Handle AI-detected escalation
         if ai_escalate and current_stage != "escalado_humano":
@@ -1140,13 +1132,13 @@ MENSAJE DEL CLIENTE: {message_text}"""
             await send_message_fn(phone_number, conversation_id, response_text)
             message_sent = True
 
-            # Append catalog PDF URL to response if needed and AI didn't include it
-            if should_send_catalog_pdf and catalog_pdf_url_to_append:
-                if catalog_pdf_url_to_append not in (response_text or ""):
-                    response_text = f"{response_text}\n\n{catalog_pdf_url_to_append}"
-                    logger.info(f"Catalog PDF URL appended to message for {phone_number}")
-                else:
-                    logger.info(f"Catalog PDF URL already in AI response for {phone_number}")
+            # Notify staff if client provided email for catalog request
+            if needs_catalog_email and collected_data.get("correo"):
+                if not state.get("catalog_email_notified"):
+                    await notify_staff_catalog_request(
+                        db, phone_number, collected_data, message_text, send_message_fn
+                    )
+                    state["catalog_email_notified"] = True
 
         # ===== GENERATE QUOTE IF READY =====
         if will_generate_quote:
@@ -1189,7 +1181,7 @@ MENSAJE DEL CLIENTE: {message_text}"""
                 "collected_data": collected_data,
                 "lead_quality": lead_quality,
                 "category": category,
-                "catalog_sent": state.get("catalog_sent", []),
+                "catalog_email_notified": state.get("catalog_email_notified", False),
                 "quote_generated": state_quote,
                 "transferred_to_human": transferred,
                 "message_count": msg_count,
