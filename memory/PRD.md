@@ -141,6 +141,14 @@ CRM para ventas comerciales con WhatsApp Business que integra bot IA (GPT-5.2), 
   - Testing: 13/13 backend + frontend completo 100% (iteration_20)
 
 ## Resolved Issues (Latest)
+- [x] **Eliminación completa de Catálogo PDF + Nuevo flujo bot email** - Abr 6, 2026:
+  - **Eliminado**: Página CatalogPdf.jsx, ruta /catalog-pdf, menú sidebar, tab en Settings
+  - **Eliminado**: Endpoints backend: /api/catalog/upload-pdf, /api/catalog/pdf, /api/catalog/info, DELETE /api/catalog/pdf
+  - **Eliminado**: Toda lógica de detección y envío de PDF en bot_service.py (get_catalog_pdf_url, should_send_catalog_pdf)
+  - **Nuevo flujo bot**: Si no hay productos o el cliente pide catálogo → pide email → notifica al asesor por WhatsApp
+  - **Alerta staff**: `notify_staff_catalog_request()` envía WhatsApp a 593999440910 con nombre, teléfono y email
+  - **Protección**: Override de `needs_human/escalate` para solicitudes de catálogo (no se escala)
+  - **Testing**: 10/10 backend + frontend 100% (iteration_25)
 - [x] **P0 - Bot envía URL del catálogo en texto en lugar de adjuntar PDF** - Abr 6, 2026:
   - **Causa raíz**: `send_document_fn` fallaba porque la URL del catálogo no era accesible públicamente para los servidores de WhatsApp
   - **Fix**: Eliminado el intento de adjuntar documento. El bot ahora incluye la URL del catálogo directamente en el texto del mensaje
@@ -170,7 +178,6 @@ CRM para ventas comerciales con WhatsApp Business que integra bot IA (GPT-5.2), 
 3. **P2 - Refactor bot_service.py**: Split into smaller modules
 4. **P2 - Refactor large frontend components**: Extract modals
 5. **P3 - Asesor permission audit**: Full audit of role permissions
-6. **P3 - Deploy to Railway**: Save to GitHub → triggers Railway redeploy
 
 ## Resolved Issues
 - [x] **P0 - Investigación y limpieza de 5,412 productos en producción** - Abr 6, 2026:
