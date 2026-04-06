@@ -167,14 +167,14 @@ export default function Settings() {
     fetchRules();
   }, []);
 
-  const RuleFormFields = () => (
+  const ruleFormFields = (
     <div className="space-y-4 mt-4">
       <div className="space-y-2">
         <Label>Nombre de la regla *</Label>
         <Input
           placeholder="Ej: Bienvenida automática"
           value={formData.name}
-          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+          onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
           data-testid="rule-name-input"
         />
       </div>
@@ -182,7 +182,7 @@ export default function Settings() {
         <Label>Disparador (Trigger)</Label>
         <Select
           value={formData.trigger_type}
-          onValueChange={(v) => setFormData({ ...formData, trigger_type: v })}
+          onValueChange={(v) => setFormData(prev => ({ ...prev, trigger_type: v }))}
         >
           <SelectTrigger data-testid="rule-trigger-select">
             <SelectValue />
@@ -214,7 +214,7 @@ export default function Settings() {
             "Valor"
           }
           value={formData.trigger_value}
-          onChange={(e) => setFormData({ ...formData, trigger_value: e.target.value })}
+          onChange={(e) => setFormData(prev => ({ ...prev, trigger_value: e.target.value }))}
           data-testid="rule-trigger-value"
         />
       </div>
@@ -222,7 +222,7 @@ export default function Settings() {
         <Label>Acción</Label>
         <Select
           value={formData.action_type}
-          onValueChange={(v) => setFormData({ ...formData, action_type: v })}
+          onValueChange={(v) => setFormData(prev => ({ ...prev, action_type: v }))}
         >
           <SelectTrigger data-testid="rule-action-select">
             <SelectValue />
@@ -253,7 +253,7 @@ export default function Settings() {
             "Descripción de lo que hace esta regla"
           }
           value={formData.action_value}
-          onChange={(e) => setFormData({ ...formData, action_value: e.target.value })}
+          onChange={(e) => setFormData(prev => ({ ...prev, action_value: e.target.value }))}
           rows={3}
           data-testid="rule-action-value"
         />
@@ -261,7 +261,7 @@ export default function Settings() {
       <div className="flex items-center gap-2">
         <Switch
           checked={formData.is_active}
-          onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
+          onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_active: checked }))}
         />
         <Label>Regla activa</Label>
       </div>
@@ -316,7 +316,7 @@ export default function Settings() {
                 <DialogHeader>
                   <DialogTitle className="font-['Manrope']">Crear Regla de Automatización</DialogTitle>
                 </DialogHeader>
-                <RuleFormFields />
+                {ruleFormFields}
                 <Button
                   onClick={createRule}
                   className="w-full bg-[#63AC9A] hover:bg-[#6A9688]"
@@ -335,7 +335,7 @@ export default function Settings() {
               <DialogHeader>
                 <DialogTitle className="font-['Manrope']">Editar Regla</DialogTitle>
               </DialogHeader>
-              <RuleFormFields />
+              {ruleFormFields}
               <Button
                 onClick={updateRule}
                 className="w-full bg-[#63AC9A] hover:bg-[#6A9688]"
