@@ -3619,10 +3619,22 @@ async def seed_system_automation_rules():
         logger.info(f"Seeded {created} system automation rules")
 
 
+# Build CORS origins: always include the preview URL and any CORS_ORIGINS from env
+_cors_origins = []
+_env_origins = os.environ.get('CORS_ORIGINS', '').strip()
+if _env_origins:
+    _cors_origins = [o.strip() for o in _env_origins.split(',') if o.strip()]
+_frontend_url = os.environ.get('FRONTEND_URL', '').strip()
+if _frontend_url and _frontend_url not in _cors_origins:
+    _cors_origins.append(_frontend_url)
+# Fallback: allow all origins if none configured (same-origin deployments)
+if not _cors_origins:
+    _cors_origins = ["*"]
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
+    allow_origins=_cors_origins,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
