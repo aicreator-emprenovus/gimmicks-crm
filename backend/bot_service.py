@@ -63,8 +63,9 @@ PASO 3 - PRODUCTO:
 Si el cliente PIDE o MENCIONA un tipo de producto (termos, jarros, gorras, tazas, etc.):
 - Confirma brevemente que vas a buscar opciones.
 - Pon catalog_search con la palabra clave del producto.
-- NO preguntes cantidad ni nada mas. Solo presenta las opciones y pide que te compartan los codigos de los productos que les gusten.
-- Termina el mensaje pidiendo que revisen el catalogo y compartan los codigos.
+- Si el sistema te proporciona un LINK DEL CATALOGO FILTRADO, incluyelo EXACTAMENTE en tu respuesta para que el cliente pueda ver las opciones con imagenes y copiar los codigos.
+- NO preguntes cantidad ni nada mas. Solo presenta las opciones, comparte el link y pide que te compartan los codigos de los productos que les gusten.
+- Termina el mensaje pidiendo que revisen el catalogo en el link y compartan los codigos.
 
 PASO 4 - CONFIRMACION DE CODIGOS:
 Si el cliente comparte CODIGOS de productos (como GIMN06001, JARPOR00391, etc.):
@@ -760,10 +761,36 @@ async def _build_conversation_context(db, phone_number, collected_data, message_
     has_code_pattern = bool(re.search(r'[A-Z]{2,}[0-9]{2,}', message_text.upper()))
 
     no_products_found = False
+    catalog_link = ""
     should_search = has_name and not is_data_input and not has_code_pattern
     if should_search:
         products_found = await search_products_by_keyword(db, message_text.strip(), limit=8)
         if products_found:
+            # Build catalog link with search query
+            base_url = os.environ.get("CATALOG_BASE_URL", "").rstrip("/")
+            if not base_url:
+                # Read from frontend .env as fallback
+                try:
+                    fe_env = os.path.join(os.path.dirname(os.path.dirname(__file__)), "frontend", ".env")
+                    with open(fe_env) as f:
+                        for line in f:
+                            if line.startswith("REACT_APP_BACKEND_URL="):
+                                base_url = line.split("=", 1)[1].strip().rstrip("/")
+                                break
+                except Exception:
+                    pass
+            from urllib.parse import quote as url_quote
+            # Use only meaningful search terms (no stopwords) for the catalog link
+            LINK_STOPWORDS = {
+                "de", "del", "la", "las", "el", "los", "un", "una", "unos", "unas",
+                "para", "por", "con", "sin", "que", "como", "pero", "mas", "muy",
+                "necesito", "quiero", "busco", "tengo", "puede", "puedo", "favor",
+                "me", "te", "se", "le", "mi", "hola", "buenas", "buenos", "dias",
+            }
+            clean_terms = [w for w in message_text.strip().split() if w.lower() not in LINK_STOPWORDS and len(w) > 2]
+            search_term = " ".join(clean_terms) if clean_terms else message_text.strip()
+            catalog_link = f"{base_url}/catalog?q={url_quote(search_term)}" if base_url else ""
+
             prod_lines = []
             for p in products_found:
                 code = p.get("code", "S/C")
@@ -772,6 +799,12 @@ async def _build_conversation_context(db, phone_number, collected_data, message_
                 desc_short = f" - {desc[:60]}" if desc else ""
                 prod_lines.append(f"Codigo: {code} | {name}{desc_short}")
             catalog_availability = "PRODUCTOS ENCONTRADOS EN INVENTARIO:\n" + "\n".join(prod_lines)
+            if catalog_link:
+                catalog_availability += (
+                    f"\n\nLINK DEL CATALOGO FILTRADO: {catalog_link}\n"
+                    f"INSTRUCCION: Incluye este link EXACTO en tu respuesta para que el cliente revise las opciones con imagenes y pueda copiar los codigos. "
+                    f"Ejemplo: 'Aqui puedes ver las opciones: {catalog_link}'. Pide que te comparta los codigos que le gusten."
+                )
         elif len(message_text.strip()) > 3:
             no_products_found = True
             catalog_availability = (
@@ -832,7 +865,7 @@ async def _build_conversation_context(db, phone_number, collected_data, message_
     else:
         next_to_ask = "Ya tienes todos los datos. Si aun no se ha generado cotizacion y tienes codigos + cantidad + correo + empresa, marca needs_quote=true."
 
-    return catalog_info, catalog_availability, quote_context, missing_fields, next_to_ask, no_products_found
+    return catalog_info, catalog_availability, quote_context, missing_fields, next_to_ask, no_products_found, catalog_link
 
 
 def _merge_extracted_data(extracted: Dict, collected_data: Dict) -> Dict:
@@ -969,7 +1002,7 @@ async def _process_ai_conversation_inner(
                 collected_summary = "\n".join(parts)
 
         # ===== BUILD CONVERSATION CONTEXT =====
-        catalog_info, catalog_availability, quote_context, missing_fields, next_to_ask, no_products_found = \
+        catalog_info, catalog_availability, quote_context, missing_fields, next_to_ask, no_products_found, catalog_link = \
             await _build_conversation_context(db, phone_number, collected_data, message_text, conversation_id)
 
         # ===== BUILD USER PROMPT (new template) =====
@@ -1051,10 +1084,22 @@ MENSAJE ACTUAL DEL CLIENTE: {message_text}"""
 
         # ===== SEND RESPONSE =====
         if not will_generate_quote:
-            # Remove any external URLs the AI might have included
+            # Remove any external/invented URLs (keep only our catalog link)
             if response_text:
-                response_text = re.sub(r'https?://gimmicks\.com\.ec\S*', '', response_text).strip()
+                if catalog_link:
+                    # Temporarily replace our link to preserve it
+                    placeholder = "___CATALOG_LINK___"
+                    response_text = response_text.replace(catalog_link, placeholder)
+                    response_text = re.sub(r'https?://\S+', '', response_text)
+                    response_text = response_text.replace(placeholder, catalog_link)
+                else:
+                    response_text = re.sub(r'https?://\S+', '', response_text)
                 response_text = re.sub(r'\s{2,}', ' ', response_text).strip()
+
+            # Append catalog link if AI didn't include it
+            if catalog_link and response_text and catalog_link not in response_text:
+                response_text = f"{response_text}\n\n{catalog_link}"
+                logger.info(f"Catalog link appended for {phone_number}: {catalog_link}")
 
             # Anti-duplication check
             last_bot_msg = await db.messages.find_one(
