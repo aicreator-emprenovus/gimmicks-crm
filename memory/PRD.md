@@ -141,7 +141,16 @@ CRM para ventas comerciales con WhatsApp Business que integra bot IA (GPT-5.2), 
   - Testing: 13/13 backend + frontend completo 100% (iteration_20)
 
 ## Resolved Issues (Latest)
-- [x] **Eliminación completa de Catálogo PDF + Nuevo flujo bot email** - Abr 6, 2026:
+- [x] **Reemplazo completo del flujo conversacional del bot WhatsApp** - Abr 8, 2026:
+  - **Nuevo flujo de 5 pasos**: 1) Saludo, 2) Nombre, 3) Producto (busqueda), 4) Codigos + cantidades, 5) Datos adicionales uno a uno (personalizacion, email, empresa, ciudad, fecha entrega)
+  - **Cotizacion automatica**: Se genera cuando tiene codigos + cantidad + email + empresa
+  - **Eliminado**: State machine de etapas rigidas, reemplazada por flujo secuencial inteligente
+  - **Eliminado**: campos `escalate`, `escalate_reason`, `next_stage` del JSON de respuesta AI
+  - **Renombrado**: `color_logo` → `personalizacion` en todo el sistema
+  - **Preservado**: Todas las funciones existentes (notificaciones, cotizaciones, escalamiento, anti-duplicacion)
+  - **Testing**: 14/14 backend + frontend 100% (iteration_26)
+  - **Nota**: GPT-5.2 tiene errores temporales de conexion; el flujo fue validado con gpt-4o
+- [x] **Eliminacion completa de Catalogo PDF + Nuevo flujo bot email** - Abr 6, 2026:
   - **Eliminado**: Página CatalogPdf.jsx, ruta /catalog-pdf, menú sidebar, tab en Settings
   - **Eliminado**: Endpoints backend: /api/catalog/upload-pdf, /api/catalog/pdf, /api/catalog/info, DELETE /api/catalog/pdf
   - **Eliminado**: Toda lógica de detección y envío de PDF en bot_service.py (get_catalog_pdf_url, should_send_catalog_pdf)
