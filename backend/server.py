@@ -3746,6 +3746,32 @@ async def start_followup_task():
     await seed_developer_user()
     # Fix old deployment image URLs
     await fix_old_image_urls()
+    # Ensure MongoDB indexes for performance
+    await ensure_indexes()
+
+
+async def ensure_indexes():
+    """Create MongoDB indexes for frequently queried fields."""
+    try:
+        await db.conversations.create_index("phone_number", unique=True)
+        await db.conversations.create_index("id", unique=True)
+        await db.messages.create_index([("conversation_id", 1), ("timestamp", -1)])
+        await db.messages.create_index("whatsapp_message_id", sparse=True)
+        await db.leads.create_index("phone_number")
+        await db.leads.create_index("id", unique=True)
+        await db.users.create_index("email", unique=True)
+        await db.users.create_index("id", unique=True)
+        await db.products.create_index("code", unique=True)
+        await db.products.create_index([("name", "text"), ("description", "text"), ("code", "text")])
+        await db.quotes_v2.create_index("id", unique=True)
+        await db.quotes_v2.create_index([("created_at", -1)])
+        await db.quotes_v2.create_index("phone_number")
+        await db.clients.create_index("id", unique=True)
+        await db.conversation_states.create_index("phone_number", unique=True)
+        await db.activity_log.create_index([("timestamp", -1)])
+        logger.info("MongoDB indexes ensured")
+    except Exception as e:
+        logger.warning(f"Index creation warning: {e}")
 
 
 async def seed_developer_user():
@@ -3925,6 +3951,9 @@ if static_frontend_dir.exists():
     @app.get("/{full_path:path}")
     async def serve_react_app(full_path: str):
         """Serve React SPA - return index.html for all non-API routes"""
+        # Never serve HTML for API routes - return 404 JSON instead
+        if full_path.startswith("api/"):
+            return JSONResponse(status_code=404, content={"detail": "Not found"})
         file_path = static_frontend_dir / full_path
         if full_path and file_path.exists() and file_path.is_file():
             return FileResponse(str(file_path))
