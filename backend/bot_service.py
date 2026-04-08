@@ -85,9 +85,15 @@ REGLAS ADICIONALES:
 - Si el cliente SALUDA (hola, buenas, buenos dias, etc.): Saluda, presentate y pregunta en que le puedes ayudar. Si no tienes su nombre, pidelo.
 - Si el cliente quiere COTIZAR pero no dice que producto: Primero asegurate de tener su nombre, luego pregunta que tipo de producto necesita.
 - Si el cliente hace una PREGUNTA (precios, tiempos de entrega, etc.): Responde y guia hacia la accion comercial.
-- Si el cliente envia algo que NO ENTIENDES o es ambiguo: Interpreta lo mejor posible.
+- Si el cliente envia algo que NO ENTIENDES o es ambiguo: Interpreta lo mejor posible. Si definitivamente no puedes dar una respuesta util, marca needs_human=true para que un asesor lo atienda.
 - extracted_data.cantidad es la cantidad general (si aplica a todos los productos por igual).
 - Si el cliente menciona un producto generico (ej: "jarros"), ponlo en extracted_data.producto.
+
+REGLA CRITICA SOBRE PRODUCTOS NO ENCONTRADOS:
+- NUNCA digas que no tienes un producto o articulo. NUNCA uses frases como "no encontre", "no tenemos", "no hay en inventario".
+- Si el sistema indica que NO HAY PRODUCTOS para la busqueda: responde que tienes muchas opciones y que un asesor le puede enviar el catalogo completo por email. Pide su correo electronico.
+- Guarda el correo en extracted_data.correo.
+- Esto aplica siempre que no haya resultados de busqueda.
 
 COTIZACION:
 Marca needs_quote=true UNICAMENTE cuando tengas TODOS estos datos: codigos de producto + cantidad + correo electronico + nombre de empresa. Los cuatro datos son obligatorios.
@@ -181,14 +187,27 @@ async def search_products_by_keyword(db: AsyncIOMotorDatabase, keyword: str, lim
     """Search products by keyword in name, description, or categories."""
     if not keyword:
         return []
+    STOPWORDS = {
+        "de", "del", "la", "las", "el", "los", "un", "una", "unos", "unas",
+        "para", "por", "con", "sin", "que", "como", "pero", "mas", "muy",
+        "ese", "esa", "esos", "esas", "este", "esta", "estos", "estas",
+        "al", "en", "es", "son", "ser", "hay", "ya", "yo", "tu", "su",
+        "me", "te", "se", "le", "lo", "mi", "nos", "les", "hola", "buenas",
+        "necesito", "quiero", "busco", "tengo", "puede", "puedo", "favor",
+    }
     words = keyword.strip().split()
     stems = set()
     for w in words:
-        stems.add(w)
-        if w.endswith("es") and len(w) > 3:
-            stems.add(w[:-2])
-        if w.endswith("s") and len(w) > 2:
-            stems.add(w[:-1])
+        w_lower = w.lower()
+        if w_lower in STOPWORDS or len(w_lower) < 3:
+            continue
+        stems.add(w_lower)
+        if w_lower.endswith("es") and len(w_lower) > 4:
+            stems.add(w_lower[:-2])
+        if w_lower.endswith("s") and len(w_lower) > 3:
+            stems.add(w_lower[:-1])
+    if not stems:
+        return []
     regex = "|".join(stems)
     query = {
         "$and": [
@@ -683,6 +702,27 @@ def detect_escalation(message_text: str) -> str:
     return ""
 
 
+async def notify_staff_bot_confused(db: AsyncIOMotorDatabase, phone_number: str, collected_data: Dict, message_text: str, send_message_fn):
+    """Send WhatsApp alert to staff when the bot cannot provide a clear response."""
+    try:
+        client_name = collected_data.get("nombre", "Cliente sin nombre")
+
+        notification = (
+            f"BOT NO PUEDE CONTINUAR CONVERSACION\n\n"
+            f"Cliente: {client_name}\n"
+            f"Telefono: {phone_number}\n"
+            f"Ultimo mensaje: {message_text[:200]}\n\n"
+            f"El bot no pudo procesar la solicitud. Revisar conversacion en CRM."
+        )
+
+        staff_conv = await db.conversations.find_one({"phone_number": STAFF_NOTIFICATION_PHONE}, {"_id": 0, "id": 1})
+        staff_conv_id = staff_conv["id"] if staff_conv else "notification"
+        await send_message_fn(STAFF_NOTIFICATION_PHONE, staff_conv_id, notification)
+        logger.info(f"Bot-confused notification sent for {phone_number}")
+    except Exception as e:
+        logger.error(f"Failed to send bot-confused notification: {e}")
+
+
 # ============== CONVERSATION CONTEXT BUILDER ==============
 
 # Ordered list of additional data fields to collect (Step 5)
@@ -719,6 +759,7 @@ async def _build_conversation_context(db, phone_number, collected_data, message_
     # Check if message contains potential product codes (alphanumeric 5+ chars)
     has_code_pattern = bool(re.search(r'[A-Z]{2,}[0-9]{2,}', message_text.upper()))
 
+    no_products_found = False
     should_search = has_name and not is_data_input and not has_code_pattern
     if should_search:
         products_found = await search_products_by_keyword(db, message_text.strip(), limit=8)
@@ -732,7 +773,13 @@ async def _build_conversation_context(db, phone_number, collected_data, message_
                 prod_lines.append(f"Codigo: {code} | {name}{desc_short}")
             catalog_availability = "PRODUCTOS ENCONTRADOS EN INVENTARIO:\n" + "\n".join(prod_lines)
         elif len(message_text.strip()) > 3:
-            catalog_availability = "NO HAY PRODUCTOS en inventario para esa busqueda."
+            no_products_found = True
+            catalog_availability = (
+                "SIN RESULTADOS EN INVENTARIO para esta busqueda.\n"
+                "INSTRUCCION: NO digas que no tienes el producto. "
+                "Responde que tienes muchas opciones disponibles y que un asesor puede enviarle el catalogo completo por email. "
+                "Pide su correo electronico. Guarda en extracted_data.correo."
+            )
 
     # Validate and show currently selected codes
     if has_codes:
@@ -785,7 +832,7 @@ async def _build_conversation_context(db, phone_number, collected_data, message_
     else:
         next_to_ask = "Ya tienes todos los datos. Si aun no se ha generado cotizacion y tienes codigos + cantidad + correo + empresa, marca needs_quote=true."
 
-    return catalog_info, catalog_availability, quote_context, missing_fields, next_to_ask
+    return catalog_info, catalog_availability, quote_context, missing_fields, next_to_ask, no_products_found
 
 
 def _merge_extracted_data(extracted: Dict, collected_data: Dict) -> Dict:
@@ -922,7 +969,7 @@ async def _process_ai_conversation_inner(
                 collected_summary = "\n".join(parts)
 
         # ===== BUILD CONVERSATION CONTEXT =====
-        catalog_info, catalog_availability, quote_context, missing_fields, next_to_ask = \
+        catalog_info, catalog_availability, quote_context, missing_fields, next_to_ask, no_products_found = \
             await _build_conversation_context(db, phone_number, collected_data, message_text, conversation_id)
 
         # ===== BUILD USER PROMPT (new template) =====
@@ -960,6 +1007,8 @@ MENSAJE ACTUAL DEL CLIENTE: {message_text}"""
                 fallback = "Disculpa, tuve un problema. Podrias repetir tu mensaje?"
             await send_message_fn(phone_number, conversation_id, fallback)
             message_sent = True
+            # Alert #4: Bot cannot continue - notify staff
+            await notify_staff_bot_confused(db, phone_number, collected_data, message_text, send_message_fn)
             await db.conversation_states.update_one(
                 {"phone_number": phone_number},
                 {"$set": {"message_count": msg_count, "last_interaction": now.isoformat()}}
@@ -1064,18 +1113,32 @@ MENSAJE ACTUAL DEL CLIENTE: {message_text}"""
             await send_escalation_summary(db, phone_number, collected_data, "El bot detecto que se necesita revision humana", send_message_fn)
             transferred = True
 
+        # ===== ALERT #5: Product not found + email collected → notify staff for catalog ===
+        needs_catalog_alert = no_products_found or state.get("no_products_found_pending", False)
+        if needs_catalog_alert and collected_data.get("correo") and not state.get("catalog_email_notified"):
+            await notify_staff_catalog_request(db, phone_number, collected_data, message_text, send_message_fn)
+            await db.conversation_states.update_one(
+                {"phone_number": phone_number},
+                {"$set": {"catalog_email_notified": True, "no_products_found_pending": False}}
+            )
+
         # ===== UPDATE STATE =====
+        state_updates = {
+            "collected_data": collected_data,
+            "lead_quality": lead_quality,
+            "category": category,
+            "quote_generated": state_quote,
+            "transferred_to_human": transferred,
+            "message_count": msg_count,
+            "last_interaction": now.isoformat(),
+        }
+        # Persist no_products_found flag so catalog alert triggers when email arrives later
+        if no_products_found and not collected_data.get("correo"):
+            state_updates["no_products_found_pending"] = True
+
         await db.conversation_states.update_one(
             {"phone_number": phone_number},
-            {"$set": {
-                "collected_data": collected_data,
-                "lead_quality": lead_quality,
-                "category": category,
-                "quote_generated": state_quote,
-                "transferred_to_human": transferred,
-                "message_count": msg_count,
-                "last_interaction": now.isoformat(),
-            }}
+            {"$set": state_updates}
         )
 
         # ===== UPDATE LEAD =====
