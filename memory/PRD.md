@@ -198,6 +198,12 @@ CRM para ventas comerciales con WhatsApp Business que integra bot IA (GPT-5.2), 
   4. **Alertas de descarga de inventario**: Cada 15 días el usuario debe descargar inventario antes de poder subir productos. Banner de alerta en Inventario, bloqueo 403 en backend
   - Testing: 21/21 backend + todos los flujos frontend (iteration_23)
 
+## Resolved Issues (Latest cont.)
+- [x] **P0 - Fix Railway deploy: emergentintegrations** - Abr 8, 2026:
+  - Railway build fallaba con `ERROR: No matching distribution found for emergentintegrations==0.1.1`
+  - Fix: Agregado `--extra-index-url https://d33sy5i8bnduwe.cloudfront.net/simple/` al inicio de `requirements.txt`
+  - Pendiente: Usuario debe hacer "Save to GitHub" para triggear nuevo deploy
+
 ## Remaining Tasks
 1. **P2 - Refactor bot_service.py**: Split into smaller modules
 2. **P2 - Refactor large frontend components**: Extract modals
