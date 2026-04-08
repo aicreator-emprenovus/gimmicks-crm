@@ -1,6 +1,6 @@
 """
 AI-powered conversational bot for Gimmicks CRM.
-Strict state-machine sales assistant: greeting → name → product search → codes → quantities → logo → data → quote.
+Sequential sales flow: greeting → name → product search → codes → quantities → additional data → quote.
 """
 import asyncio
 import os
@@ -17,151 +17,139 @@ logger = logging.getLogger(__name__)
 # Per-phone concurrency lock to prevent race conditions when multiple messages arrive quickly
 _phone_locks: Dict[str, asyncio.Lock] = {}
 
-SYSTEM_PROMPT = """Eres Ana, asesora comercial de Gimmicks Marketing Services, empresa ecuatoriana de productos promocionales.
+SYSTEM_PROMPT = """Eres Ana, asesora comercial de Gimmicks Marketing Services, empresa ecuatoriana de productos promocionales y publicitarios.
 
 PERSONALIDAD:
-- Cálida, profesional, directa
-- Mensajes cortos, máximo 300 caracteres
-- SIN emojis, SIN markdown, SIN listas con guiones
-- Tutea al cliente, ortografía impecable con tildes
-- UNA sola pregunta por mensaje
-- NUNCA saludes con "Hola" más de una vez en la conversación
+- Habla como persona real, calida y profesional
+- Mensajes cortos, maximo 300 caracteres
+- NO uses emojis nunca
+- NO uses formato markdown, listas con guiones ni asteriscos
+- Tutea al cliente
+- Ortografia impecable: siempre usa tildes (que, cuantos, cual, informacion, personalizacion, cotizacion, direccion, etc.)
+- Solo haz UNA pregunta por mensaje
 
-REGLA MAESTRA - MÁQUINA DE ESTADOS:
-Sigue ESTRICTAMENTE el estado indicado. Cada mensaje del cliente se interpreta ÚNICAMENTE según el estado actual. NUNCA saltes estados ni interpretes datos fuera de contexto.
+REGLA MAS IMPORTANTE - LEE ESTO PRIMERO:
+Antes de responder, REVISA con atencion el HISTORIAL COMPLETO y los DATOS YA RECOPILADOS.
+Si un dato ya fue proporcionado por el cliente en cualquier punto de la conversacion, NUNCA lo pidas de nuevo.
+NUNCA repitas un mensaje que ya enviaste antes. Si necesitas comunicar algo similar, reformulalo con palabras diferentes y mas breves.
+No confirmes datos ya conocidos. No repitas informacion que ya diste.
+Simplemente avanza al siguiente dato que FALTE o responde la nueva consulta del cliente.
 
-ESTADOS:
+EXTRACCION DE DATOS - REGLA CRITICA:
+SIEMPRE extrae TODOS los datos que el cliente proporcione en CADA mensaje, sin importar en que paso del flujo estes.
+Si el cliente dice "Soy Laura de Grupo ABC, quiero 500 gorras GORALN00001, mi correo es laura@abc.com, en Quito":
+- extracted_data.nombre = "Laura"
+- extracted_data.empresa = "Grupo ABC"
+- extracted_data.codigos_producto = "GORALN00001"
+- extracted_data.cantidades_por_producto = "GORALN00001:500"
+- extracted_data.correo = "laura@abc.com"
+- extracted_data.ciudad = "Quito"
+NUNCA ignores datos que el cliente ya proporciono. Extrae TODO en extracted_data y solo pregunta por lo que FALTA.
 
-ESTADO "saludo":
-- Preséntate como Ana de Gimmicks Marketing Services
-- Pregunta el nombre del cliente
-- next_stage: "captura_nombre"
+FLUJO OBLIGATORIO DE LA CONVERSACION (SIGUE ESTE ORDEN ESTRICTAMENTE):
 
-ESTADO "captura_nombre":
-- CUALQUIER texto que el cliente envíe es su NOMBRE. NUNCA lo interpretes como producto ni código
-- Guarda en extracted_data.nombre
-- Agradece y pregunta qué producto o artículo promocional necesita
-- next_stage: "busqueda_producto"
+PASO 1 - SALUDO:
+Cuando el cliente escribe por primera vez o saluda:
+- Saluda cordialmente y presentate como Ana de Gimmicks.
+- Pregunta en que le puedes ayudar.
 
-ESTADO "busqueda_producto":
-- El cliente describe qué necesita (gorras, termos, jarros, etc.)
-- Pon catalog_search con la palabra clave del producto
-- Si hay PRODUCTOS ENCONTRADOS: muéstralos mencionando nombre y código, pide que comparta los códigos que le interesen
-- Si NO hay productos: informa que no tienes ese producto y ofrece que un asesor envie el catalogo por email. Pide su correo
-- next_stage: "esperando_codigos"
+PASO 2 - NOMBRE DEL CLIENTE:
+Antes de avanzar con productos, NECESITAS el nombre del cliente.
+- Si aun no tienes el nombre, preguntale: "Me compartes tu nombre para registrarte?"
+- Guarda el nombre en extracted_data.nombre.
+- Una vez que tengas el nombre, usalo para dirigirte al cliente de ahi en adelante.
 
-ESTADO "esperando_codigos":
-- SOLO interpreta como CÓDIGOS los textos alfanuméricos tipo JARPOR00391, GORALN00001, HT2PR2
-- Si pide más opciones u otro producto: next_stage="busqueda_producto"
-- Si pide catálogo completo: marca intent "solicitud_catalogo"
-- Cuando recibas códigos válidos: guarda en extracted_data.codigos_producto
-- next_stage: "validando_codigos"
+PASO 3 - PRODUCTO:
+Si el cliente PIDE o MENCIONA un tipo de producto (termos, jarros, gorras, tazas, etc.):
+- Confirma brevemente que vas a buscar opciones.
+- Pon catalog_search con la palabra clave del producto.
+- NO preguntes cantidad ni nada mas. Solo presenta las opciones y pide que te compartan los codigos de los productos que les gusten.
+- Termina el mensaje pidiendo que revisen el catalogo y compartan los codigos.
 
-ESTADO "validando_codigos":
-- Ya tienes códigos. Pregunta SOLO cuántas unidades de cada producto mencionando sus nombres
-- Si dice "100 de cada uno": asigna esa cantidad a todos
-- Guarda en extracted_data.cantidades_por_producto (formato CODIGO:cantidad)
-- next_stage: "tipo_logo"
+PASO 4 - CONFIRMACION DE CODIGOS:
+Si el cliente comparte CODIGOS de productos (como GIMN06001, JARPOR00391, etc.):
+- Agregalos a extracted_data.codigos_producto (SIEMPRE la lista COMPLETA acumulada, separada por comas).
+- Si el cliente pide QUITAR un codigo, devuelve la lista sin ese codigo.
+- AHORA si pregunta la cantidad exacta de cada producto, MENCIONANDO EL NOMBRE de cada uno.
+- Usa extracted_data.cantidades_por_producto con formato "CODIGO:cantidad, CODIGO:cantidad".
 
-ESTADO "tipo_logo":
-- Pregunta: "¿El logotipo será a un color o full color?"
-- Guarda en extracted_data.color_logo
-- next_stage: "recopilando_datos"
+PASO 5 - DATOS ADICIONALES (uno a la vez, SOLO despues de tener codigos Y cantidades):
+Una vez que tengas codigos Y cantidades, pide los datos que falten de UNO EN UNO en este orden:
+1. Tipo de personalizacion (serigrafia, bordado, UV, laser, sublimacion)
+2. Correo electronico
+3. Nombre de empresa
+4. Ciudad de entrega
+5. Fecha de entrega deseada
 
-ESTADO "recopilando_datos":
-- Pide UNO por UNO los datos que falten en este ORDEN ESTRICTO:
-  1. correo: "¿A qué correo enviamos la cotización?"
-  2. ciudad: "¿En qué ciudad estás?"
-  3. empresa: "¿A nombre de qué empresa?"
-- REGLAS DE INTERPRETACIÓN:
-  * Si preguntaste CORREO y responde algo con @: es correo
-  * Si preguntaste CIUDAD y responde un lugar: es ciudad
-  * Si preguntaste EMPRESA y responde un nombre: es empresa
-  * NUNCA interpretes estos datos como códigos de producto
-- Cuando tengas los 3 datos: marca needs_quote=true
-- next_stage: "confirmacion"
+REGLAS ADICIONALES:
+- Si el cliente SALUDA (hola, buenas, buenos dias, etc.): Saluda, presentate y pregunta en que le puedes ayudar. Si no tienes su nombre, pidelo.
+- Si el cliente quiere COTIZAR pero no dice que producto: Primero asegurate de tener su nombre, luego pregunta que tipo de producto necesita.
+- Si el cliente hace una PREGUNTA (precios, tiempos de entrega, etc.): Responde y guia hacia la accion comercial.
+- Si el cliente envia algo que NO ENTIENDES o es ambiguo: Interpreta lo mejor posible.
+- extracted_data.cantidad es la cantidad general (si aplica a todos los productos por igual).
+- Si el cliente menciona un producto generico (ej: "jarros"), ponlo en extracted_data.producto.
 
-ESTADO "confirmacion":
-- La cotización fue generada. Agradece al cliente
-- Informa que la cotización será enviada al email registrado
-- NO hagas más preguntas
-- Si el cliente agrega productos: needs_quote=true, needs_human=true
+COTIZACION:
+Marca needs_quote=true UNICAMENTE cuando tengas TODOS estos datos: codigos de producto + cantidad + correo electronico + nombre de empresa. Los cuatro datos son obligatorios.
+NUNCA marques needs_quote=true si aun no tienes el correo Y la empresa del cliente.
+Si el cliente cambia productos o cantidades DESPUES de la primera cotizacion, marca needs_quote=true de nuevo para actualizarla.
 
-ESTADO "escalado_humano":
-- Solo confirma que un asesor se comunicará pronto
+INFORMACION DE LA EMPRESA:
+- Gimmicks esta en Quito, Ecuador
+- Envios a todo el pais
+- Personalizacion: serigrafia, bordado, grabado laser, impresion UV, sublimacion
+- Pedido minimo: generalmente desde 50 unidades
+- Tiempos de entrega: 7-15 dias habiles
+- Metodos de pago: transferencia bancaria, tarjeta de credito
+- Facturacion electronica disponible
 
-ESCALAMIENTO INMEDIATO - marca needs_human=true y escalate=true cuando:
-- El cliente pide hablar con una persona o agente
-- Detectas frustración: "terrible", "ya no quiero", "molesto", "pésimo"
-- No puedes entender la solicitud del cliente
-- El cliente quiere cerrar rápido
-
-INFORMACIÓN DE GIMMICKS:
-- Quito, Ecuador. Envíos a todo el país
-- Personalización con logotipo a un color o full color
-- Pedido mínimo: generalmente desde 50 unidades
-- Entrega: 7-15 días hábiles
+CALIFICACION:
+- caliente: tiene codigos + cantidad + datos de contacto
+- tibio: pidio catalogo o mostro interes concreto
+- frio: pregunta general sin intencion de compra
 
 REGLA CRITICA:
 - NUNCA menciones URLs externas como gimmicks.com.ec ni inventes links.
-- Si no encuentras productos en inventario: informa que no tienes ese producto en stock pero que un asesor puede enviarle el catalogo completo por email. Pide su correo electronico para esto. NO marques needs_human ni escalate como true por esto.
-- Si el cliente pide ver el catalogo completo: explica que un asesor se lo puede enviar por email y pide su correo. NO marques needs_human ni escalate como true por esto.
-- Solicitar catalogo NO es motivo de escalamiento. Solo escala cuando el cliente explicitamente pide hablar con una persona o muestra frustracion.
 
-Solo menciona productos que aparezcan en PRODUCTOS ENCONTRADOS. NUNCA inventes nombres ni códigos.
-
-Responde SIEMPRE en JSON válido:
+Responde SIEMPRE en JSON valido:
 {
   "response": "tu mensaje",
   "extracted_data": {},
   "catalog_search": null,
-  "intent": "cotizacion_directa|consulta_ideas|pregunta_general|escalamiento|otra",
+  "intent": "cotizacion_directa|solicitud_catalogo|consulta_ideas|pedido_estacional|pregunta_general|otra",
   "lead_quality": "tibio",
-  "category": "cotizacion_directa|consulta_ideas|otra",
+  "category": "cotizacion_directa|solicitud_catalogo|consulta_ideas|pedido_estacional|otra",
   "needs_quote": false,
   "needs_human": false,
-  "escalate": false,
-  "escalate_reason": "",
-  "next_stage": "",
   "conversation_summary": "resumen"
 }"""
 
 
 # Escalation trigger keywords — detected before AI to ensure immediate escalation
 ESCALATION_KEYWORDS = [
-    "pásame con alguien", "pasame con alguien", "quiero hablar con una persona",
+    "pasame con alguien", "quiero hablar con una persona",
     "quiero hablar con alguien", "agente humano", "asesor humano", "persona real",
-    "terrible", "pésimo", "pesimo", "ya no quiero nada", "ya no quiero",
-    "sin más preguntas", "sin mas preguntas", "no más preguntas", "no mas preguntas",
-    "quiero la cotización ahorita", "quiero la cotizacion ahorita",
-    "quiero la cotización ya", "quiero la cotizacion ya",
+    "terrible", "pesimo", "ya no quiero nada", "ya no quiero",
+    "sin mas preguntas", "no mas preguntas",
+    "quiero la cotizacion ahorita", "quiero la cotizacion ya",
     "estoy molesto", "estoy frustrado", "estoy enojado",
     "hablar con alguien", "con una persona", "un humano",
 ]
 
-# Valid conversation stages
-VALID_STAGES = [
-    "saludo", "captura_nombre", "busqueda_producto", "esperando_codigos",
-    "validando_codigos", "tipo_logo", "recopilando_datos", "confirmacion", "escalado_humano"
-]
-
 # Field name normalization map
 FIELD_ALIASES = {
-    "tipo_de_personalizacion": "color_logo",
-    "tipo_personalizacion": "color_logo",
-    "color_logo": "color_logo",
-    "color_logotipo": "color_logo",
+    "tipo_de_personalizacion": "personalizacion",
+    "tipo_personalizacion": "personalizacion",
+    "personalizacion_tipo": "personalizacion",
+    "color_logo": "personalizacion",
+    "color_logotipo": "personalizacion",
     "email": "correo",
     "mail": "correo",
     "correo_electronico": "correo",
-    "correo_electrónico": "correo",
     "e_mail": "correo",
     "codigos": "codigos_producto",
     "codigo": "codigos_producto",
-    "códigos": "codigos_producto",
-    "código": "codigos_producto",
     "codigos_productos": "codigos_producto",
-    "códigos_producto": "codigos_producto",
     "nombre_empresa": "empresa",
     "nombre_de_empresa": "empresa",
     "cantidad_unidades": "cantidad",
@@ -401,13 +389,13 @@ async def upsert_quote(db: AsyncIOMotorDatabase, phone_number: str, collected_da
                 code_part, qty_part = pair.split(":", 1)
                 try:
                     qty_map[code_part.strip().upper()] = int(re.search(r'\d+', qty_part).group())
-                except:
+                except Exception:
                     qty_map[code_part.strip().upper()] = 1
 
     general_qty_str = str(collected_data.get("cantidad", ""))
     try:
         general_qty = int(re.search(r'\d+', general_qty_str).group()) if general_qty_str else 1
-    except:
+    except Exception:
         general_qty = 1
 
     def match_qty(product_code: str) -> int:
@@ -450,7 +438,7 @@ async def upsert_quote(db: AsyncIOMotorDatabase, phone_number: str, collected_da
                 "discount_type": "$",
                 "additional_amount": 0,
                 "additional_type": "$",
-                "otros": collected_data.get("color_logo", "")
+                "otros": collected_data.get("personalizacion", "")
             })
 
     if not quote_items and collected_data.get("producto"):
@@ -475,7 +463,7 @@ async def upsert_quote(db: AsyncIOMotorDatabase, phone_number: str, collected_da
                 "discount_type": "$",
                 "additional_amount": 0,
                 "additional_type": "$",
-                "otros": collected_data.get("color_logo", "")
+                "otros": collected_data.get("personalizacion", "")
             })
 
     client_name = collected_data.get("nombre", "")
@@ -589,47 +577,45 @@ def _new_state(phone_number: str, now: datetime) -> dict:
         "lead_quality": "frio",
         "category": None,
         "quote_generated": False,
-        "catalog_email_notified": False,
         "transferred_to_human": False,
         "message_count": 0,
         "reminder_sent": False,
         "reminder_count": 0,
         "last_interaction": now.isoformat(),
-        "stage": "saludo",
     }
 
 
 STAFF_NOTIFICATION_PHONE = "593999440910"
 
 
-async def notify_staff_new_quote(db: AsyncIOMotorDatabase, customer_phone: str, collected_data: Dict, is_update: bool, send_message_fn):
+async def notify_staff_new_quote(db: AsyncIOMotorDatabase, phone_number: str, collected_data: Dict, is_update: bool, send_message_fn):
     try:
-        client_name = collected_data.get("nombre", "Cliente desconocido")
+        action = "COTIZACION ACTUALIZADA" if is_update else "NUEVA COTIZACION"
+        client_name = collected_data.get("nombre", "No proporcionado")
         correo = collected_data.get("correo", "No proporcionado")
-        producto = collected_data.get("codigos_producto") or collected_data.get("producto", "No especificado")
-        action = "ACTUALIZADA" if is_update else "NUEVA"
-
-        quote = await db.quotes_v2.find_one(
-            {"phone_number": customer_phone, "status": "pending", "is_deleted": False},
-            {"_id": 0, "quote_number": 1}
-        )
-        quote_num = quote.get("quote_number", "?") if quote else "?"
+        empresa = collected_data.get("empresa", "No proporcionado")
+        codigos = collected_data.get("codigos_producto", "No proporcionado")
+        cantidades = collected_data.get("cantidades_por_producto") or collected_data.get("cantidad", "No proporcionado")
+        ciudad = collected_data.get("ciudad", "No proporcionado")
+        personalizacion = collected_data.get("personalizacion", "No proporcionado")
 
         notification = (
-            f"ALERTA COTIZACION {action}\n\n"
-            f"Cotizacion #{quote_num}\n"
+            f"{action} DESDE WHATSAPP\n\n"
             f"Cliente: {client_name}\n"
-            f"Telefono: {customer_phone}\n"
-            f"Correo: {correo}\n"
-            f"Productos: {producto}\n\n"
-            f"Revisa el CRM para mas detalles."
+            f"Telefono: {phone_number}\n"
+            f"Email: {correo}\n"
+            f"Empresa: {empresa}\n"
+            f"Productos: {codigos}\n"
+            f"Cantidades: {cantidades}\n"
+            f"Ciudad: {ciudad}\n"
+            f"Personalizacion: {personalizacion}\n\n"
+            f"Revisar en CRM."
         )
 
         staff_conv = await db.conversations.find_one({"phone_number": STAFF_NOTIFICATION_PHONE}, {"_id": 0, "id": 1})
         staff_conv_id = staff_conv["id"] if staff_conv else "notification"
-
         await send_message_fn(STAFF_NOTIFICATION_PHONE, staff_conv_id, notification)
-        logger.info(f"Staff notification sent to {STAFF_NOTIFICATION_PHONE} for quote from {customer_phone}")
+        logger.info(f"Staff notification sent for {phone_number} quote: {action}")
     except Exception as e:
         logger.error(f"Failed to send staff notification: {e}")
 
@@ -642,7 +628,7 @@ async def send_escalation_summary(db: AsyncIOMotorDatabase, phone_number: str, c
         codigos = collected_data.get("codigos_producto", "No proporcionado")
         cantidades = collected_data.get("cantidades_por_producto") or collected_data.get("cantidad", "No proporcionado")
         ciudad = collected_data.get("ciudad", "No proporcionado")
-        color_logo = collected_data.get("color_logo", "No proporcionado")
+        personalizacion = collected_data.get("personalizacion", "No proporcionado")
 
         summary = (
             f"ESCALAMIENTO A ASESOR HUMANO\n\n"
@@ -653,7 +639,7 @@ async def send_escalation_summary(db: AsyncIOMotorDatabase, phone_number: str, c
             f"Productos: {codigos}\n"
             f"Cantidades: {cantidades}\n"
             f"Ciudad: {ciudad}\n"
-            f"Logo: {color_logo}\n"
+            f"Personalizacion: {personalizacion}\n"
             f"Motivo: {reason}\n\n"
             f"Revisar en CRM."
         )
@@ -697,27 +683,44 @@ def detect_escalation(message_text: str) -> str:
     return ""
 
 
-async def _build_stage_context(db, current_stage, collected_data, message_text):
-    """Build stage-specific instructions and catalog context for AI prompt."""
-    stage_instruction = ""
+# ============== CONVERSATION CONTEXT BUILDER ==============
+
+# Ordered list of additional data fields to collect (Step 5)
+ADDITIONAL_FIELDS = [
+    ("personalizacion", "Tipo de personalizacion (serigrafia, bordado, UV, laser, sublimacion)"),
+    ("correo", "Correo electronico"),
+    ("empresa", "Nombre de empresa"),
+    ("ciudad", "Ciudad de entrega"),
+    ("fecha_entrega", "Fecha de entrega deseada"),
+]
+
+
+async def _build_conversation_context(db, phone_number, collected_data, message_text, conversation_id):
+    """Build all context variables for the user prompt following the 5-step flow."""
+
+    # --- catalog_info: track what product searches have been shown ---
+    catalog_info = ""
+    if collected_data.get("codigos_producto"):
+        catalog_info = "El cliente ya selecciono codigos de producto."
+
+    # --- catalog_availability: search products based on context ---
     catalog_availability = ""
-    codes_context = ""
+    has_codes = bool(collected_data.get("codigos_producto"))
+    has_name = bool(collected_data.get("nombre"))
 
-    if current_stage == "saludo":
-        if collected_data.get("nombre"):
-            stage_instruction = f"ESTADO: saludo. Cliente recurrente: {collected_data['nombre']}. Saluda por nombre y pregunta en que te puede ayudar. next_stage='busqueda_producto'."
-        else:
-            stage_instruction = "ESTADO: saludo. Presentate como Ana de Gimmicks Marketing Services y pregunta el nombre del cliente. next_stage='captura_nombre'."
+    # Search products when: user has given name, and message could be about products
+    # Don't search if message looks like pure data (email, short confirmations, codes)
+    msg_lower = message_text.lower().strip()
+    is_data_input = (
+        '@' in message_text or
+        len(message_text.strip()) < 3 or
+        msg_lower in ('si', 'no', 'ok', 'bueno', 'dale', 'listo', 'gracias')
+    )
+    # Check if message contains potential product codes (alphanumeric 5+ chars)
+    has_code_pattern = bool(re.search(r'[A-Z]{2,}[0-9]{2,}', message_text.upper()))
 
-    elif current_stage == "captura_nombre":
-        stage_instruction = (
-            "ESTADO: captura_nombre. Lo que el cliente diga ES su nombre. "
-            "NO lo interpretes como producto. Guardalo en extracted_data.nombre. "
-            "Agradece y pregunta que producto o articulo promocional necesita. "
-            "next_stage='busqueda_producto'."
-        )
-
-    elif current_stage == "busqueda_producto":
+    should_search = has_name and not is_data_input and not has_code_pattern
+    if should_search:
         products_found = await search_products_by_keyword(db, message_text.strip(), limit=8)
         if products_found:
             prod_lines = []
@@ -727,74 +730,62 @@ async def _build_stage_context(db, current_stage, collected_data, message_text):
                 desc = p.get("description", "")
                 desc_short = f" - {desc[:60]}" if desc else ""
                 prod_lines.append(f"Codigo: {code} | {name}{desc_short}")
-            catalog_availability = "\nPRODUCTOS ENCONTRADOS EN INVENTARIO:\n" + "\n".join(prod_lines)
-            catalog_availability += "\n\nMuestra estos productos al cliente con sus codigos y pidele que comparta los codigos que le interesen."
-            stage_instruction = "ESTADO: busqueda_producto. Hay productos disponibles. Muestralos al cliente con sus codigos y pide que elija. next_stage='esperando_codigos'."
-        else:
-            catalog_availability = "\nNO HAY PRODUCTOS en inventario para esa busqueda."
-            stage_instruction = (
-                "ESTADO: busqueda_producto. No se encontraron productos para esa busqueda. "
-                "Informa al cliente que no tienes ese producto en stock actualmente, pero que un asesor puede enviarle el catalogo completo por email. "
-                "Pide su correo electronico para que el asesor le envie el catalogo. "
-                "NO menciones ningun link ni URL externa. "
-                "Guarda el correo en extracted_data.correo si lo proporciona. "
-                "next_stage='esperando_codigos'."
-            )
+            catalog_availability = "PRODUCTOS ENCONTRADOS EN INVENTARIO:\n" + "\n".join(prod_lines)
+        elif len(message_text.strip()) > 3:
+            catalog_availability = "NO HAY PRODUCTOS en inventario para esa busqueda."
 
-    elif current_stage == "esperando_codigos":
-        stage_instruction = (
-            "ESTADO: esperando_codigos. Espera CODIGOS de producto (alfanumericos tipo JARPOR00391, HT2PR2). "
-            "Si el cliente pide mas opciones u otro producto: next_stage='busqueda_producto'. "
-            "Si pide catalogo completo: ofrece que un asesor se lo envie por email y pide su correo. "
-            "Cuando recibas codigos validos: guarda en extracted_data.codigos_producto. next_stage='validando_codigos'."
-        )
-
-    elif current_stage == "validando_codigos":
+    # Validate and show currently selected codes
+    if has_codes:
         codes_raw = collected_data.get("codigos_producto", "")
-        if codes_raw:
-            clean = str(codes_raw).replace("[", "").replace("]", "").replace("'", "").replace('"', '')
-            code_list = [c.strip() for c in re.split(r'[,\s]+', clean) if c.strip()]
-            validated = await validate_product_codes(db, code_list)
-            if validated:
-                codes_context = "\nPRODUCTOS CONFIRMADOS: " + ", ".join([f"{p.get('name', '')} ({p.get('code', '')})" for p in validated])
-        stage_instruction = (
-            "ESTADO: validando_codigos. Ya tienes codigos. Pregunta SOLO cuantas unidades de cada producto. "
-            "Guarda en extracted_data.cantidades_por_producto (formato CODIGO:cantidad). "
-            "next_stage='tipo_logo'."
-        )
-
-    elif current_stage == "tipo_logo":
-        stage_instruction = (
-            "ESTADO: tipo_logo. Pregunta: El logotipo sera a un color o full color? "
-            "Guarda la respuesta en extracted_data.color_logo. "
-            "next_stage='recopilando_datos'."
-        )
-
-    elif current_stage == "recopilando_datos":
-        missing = []
-        for field, label in [("correo", "correo electronico"), ("ciudad", "ciudad"), ("empresa", "nombre de empresa")]:
-            if not collected_data.get(field):
-                missing.append((field, label))
-        if missing:
-            next_field, next_label = missing[0]
-            stage_instruction = (
-                f"ESTADO: recopilando_datos. Pregunta SOLO: {next_label}. "
-                f"Interpreta la respuesta del cliente como {next_label}, NO como codigo de producto. "
+        clean = str(codes_raw).replace("[", "").replace("]", "").replace("'", "").replace('"', '')
+        code_list = [c.strip() for c in re.split(r'[,\s]+', clean) if c.strip()]
+        validated = await validate_product_codes(db, code_list)
+        if validated:
+            codes_info = "PRODUCTOS SELECCIONADOS POR EL CLIENTE: " + ", ".join(
+                [f"{p.get('name', '')} ({p.get('code', '')})" for p in validated]
             )
-            if len(missing) == 1:
-                stage_instruction += "Cuando tengas este dato: marca needs_quote=true. next_stage='confirmacion'."
-            else:
-                stage_instruction += "Quedan mas datos por pedir despues de este."
-        else:
-            stage_instruction = "ESTADO: recopilando_datos. Ya tienes todos los datos. Marca needs_quote=true. next_stage='confirmacion'."
+            catalog_availability = (catalog_availability + "\n" + codes_info).strip() if catalog_availability else codes_info
 
-    elif current_stage == "confirmacion":
-        stage_instruction = (
-            "ESTADO: confirmacion. La cotizacion fue generada. Agradece al cliente. "
-            "Informa que sera enviada al email registrado. NO hagas mas preguntas."
-        )
+    # --- quote_context ---
+    quote_context = ""
+    existing_quote = await db.quotes_v2.find_one(
+        {"phone_number": phone_number, "status": "pending", "is_deleted": False},
+        {"_id": 0, "quote_number": 1}
+    )
+    if existing_quote:
+        quote_context = f"Ya existe una cotizacion pendiente #{existing_quote.get('quote_number', '')} para este cliente."
 
-    return stage_instruction, catalog_availability, codes_context
+    # --- missing_fields ---
+    all_required = [
+        ("nombre", "Nombre del cliente"),
+        ("codigos_producto", "Codigos de producto seleccionados"),
+    ]
+    # cantidades: check both possible fields
+    has_qty = bool(collected_data.get("cantidades_por_producto") or collected_data.get("cantidad"))
+    if not has_qty:
+        all_required.append(("cantidades_por_producto", "Cantidades por producto"))
+
+    # Add step 5 fields
+    for field, label in ADDITIONAL_FIELDS:
+        all_required.append((field, label))
+
+    missing = []
+    for field, label in all_required:
+        if field == "cantidades_por_producto" and has_qty:
+            continue
+        if not collected_data.get(field):
+            missing.append(label)
+
+    missing_fields = "\n".join(f"- {m}" for m in missing) if missing else "Todos los datos recopilados."
+
+    # --- next_to_ask ---
+    next_to_ask = ""
+    if missing:
+        next_to_ask = f"SIGUIENTE DATO A PEDIR: {missing[0]}"
+    else:
+        next_to_ask = "Ya tienes todos los datos. Si aun no se ha generado cotizacion y tienes codigos + cantidad + correo + empresa, marca needs_quote=true."
+
+    return catalog_info, catalog_availability, quote_context, missing_fields, next_to_ask
 
 
 def _merge_extracted_data(extracted: Dict, collected_data: Dict) -> Dict:
@@ -817,35 +808,14 @@ def _merge_extracted_data(extracted: Dict, collected_data: Dict) -> Dict:
     return collected_data
 
 
-def _determine_next_stage(current_stage: str, ai_next_stage: str, collected_data: Dict) -> str:
-    """Determine next stage with strict progression and safety net."""
-    new_stage = current_stage
-
-    if ai_next_stage and ai_next_stage in VALID_STAGES:
-        new_stage = ai_next_stage
-
-    # Safety net: force progression based on collected data
-    if current_stage == "saludo":
-        new_stage = "busqueda_producto" if collected_data.get("nombre") else "captura_nombre"
-    elif current_stage == "captura_nombre" and collected_data.get("nombre"):
-        new_stage = "busqueda_producto"
-    elif current_stage == "validando_codigos" and (collected_data.get("cantidades_por_producto") or collected_data.get("cantidad")):
-        new_stage = "tipo_logo"
-    elif current_stage == "tipo_logo" and collected_data.get("color_logo"):
-        new_stage = "recopilando_datos"
-
-    return new_stage
-
-
 def _is_quote_ready(collected_data: Dict) -> bool:
-    """Check if all required data for quote generation is present."""
+    """Check if all required data for quote generation is present.
+    Per new flow: codes + quantity + email + company are the 4 mandatory fields."""
     has_codes = bool(collected_data.get("codigos_producto") or collected_data.get("producto"))
     has_qty = bool(collected_data.get("cantidad") or collected_data.get("cantidades_por_producto"))
-    has_logo = bool(collected_data.get("color_logo"))
     has_email = bool(collected_data.get("correo"))
-    has_city = bool(collected_data.get("ciudad"))
     has_empresa = bool(collected_data.get("empresa"))
-    return has_codes and has_qty and has_logo and has_email and has_city and has_empresa
+    return has_codes and has_qty and has_email and has_empresa
 
 
 async def process_ai_conversation(
@@ -868,7 +838,7 @@ async def _process_ai_conversation_inner(
     conversation_id: str,
     send_message_fn
 ):
-    """Inner conversation handler with strict state machine."""
+    """Inner conversation handler following the 5-step sequential flow."""
     message_sent = False
     try:
         now = datetime.now(timezone.utc)
@@ -908,46 +878,33 @@ async def _process_ai_conversation_inner(
 
         collected_data = state.get("collected_data", {})
         msg_count = state.get("message_count", 0) + 1
-        current_stage = state.get("stage", "saludo")
 
         # ===== PRE-AI ESCALATION DETECTION =====
         escalation_reason = detect_escalation(message_text)
-        if escalation_reason and current_stage != "escalado_humano":
-            nombre = collected_data.get("nombre", "")
-            saludo = f"{nombre}, e" if nombre else "E"
-            summary_parts = [f"{k}: {v}" for k, v in collected_data.items() if v]
-            summary_text = ", ".join(summary_parts) if summary_parts else "sin datos recopilados"
+        if escalation_reason:
+            if not state.get("transferred_to_human"):
+                nombre = collected_data.get("nombre", "")
+                saludo = f"{nombre}, e" if nombre else "E"
 
-            escalation_msg = (
-                f"{saludo}ntendido, no te hago mas preguntas. "
-                f"Dejo tu solicitud lista para revision por un asesor. "
-                f"Te contactamos enseguida."
-            )
-            await send_message_fn(phone_number, conversation_id, escalation_msg)
-            message_sent = True
-            await send_escalation_summary(db, phone_number, collected_data, escalation_reason, send_message_fn)
+                escalation_msg = (
+                    f"{saludo}ntendido, no te hago mas preguntas. "
+                    f"Dejo tu solicitud lista para revision por un asesor. "
+                    f"Te contactamos enseguida."
+                )
+                await send_message_fn(phone_number, conversation_id, escalation_msg)
+                message_sent = True
+                await send_escalation_summary(db, phone_number, collected_data, escalation_reason, send_message_fn)
 
-            await db.conversation_states.update_one(
-                {"phone_number": phone_number},
-                {"$set": {
-                    "stage": "escalado_humano",
-                    "transferred_to_human": True,
-                    "message_count": msg_count,
-                    "last_interaction": now.isoformat()
-                }}
-            )
-            await update_lead_from_ai(db, phone_number, collected_data, "caliente", "escalamiento", "cliente_potencial")
-            return
-
-        # ===== If already escalated =====
-        if current_stage == "escalado_humano":
-            await send_message_fn(phone_number, conversation_id, "Tu solicitud ya fue enviada a un asesor. Te contactara pronto.")
-            message_sent = True
-            await db.conversation_states.update_one(
-                {"phone_number": phone_number},
-                {"$set": {"message_count": msg_count, "last_interaction": now.isoformat()}}
-            )
-            return
+                await db.conversation_states.update_one(
+                    {"phone_number": phone_number},
+                    {"$set": {
+                        "transferred_to_human": True,
+                        "message_count": msg_count,
+                        "last_interaction": now.isoformat()
+                    }}
+                )
+                await update_lead_from_ai(db, phone_number, collected_data, "caliente", "escalamiento", "cliente_potencial")
+                return
 
         # ===== BUILD CONTEXT FOR AI =====
         history_text = await get_conversation_history(db, conversation_id, limit=40)
@@ -964,57 +921,34 @@ async def _process_ai_conversation_inner(
             if parts:
                 collected_summary = "\n".join(parts)
 
-        # ===== BUILD STAGE-SPECIFIC CONTEXT =====
-        stage_instruction, catalog_availability, codes_context = await _build_stage_context(
-            db, current_stage, collected_data, message_text
-        )
+        # ===== BUILD CONVERSATION CONTEXT =====
+        catalog_info, catalog_availability, quote_context, missing_fields, next_to_ask = \
+            await _build_conversation_context(db, phone_number, collected_data, message_text, conversation_id)
 
-        # ===== CATALOG REQUEST DETECTION =====
-        msg_lower = message_text.lower()
-        catalog_full_phrases = [
-            "catalogo completo", "catálogo completo", "catalogo entero", "catálogo entero",
-            "todo el catalogo", "todo el catálogo", "todos los productos", "todos sus productos",
-            "ver todo", "ver todos", "todo lo que tienen", "todo lo que manejan",
-            "quiero ver el catalogo", "quiero ver el catálogo", "me envias el catalogo",
-            "me envías el catálogo", "pasame el catalogo", "pásame el catálogo",
-            "mandame el catalogo", "mándame el catálogo", "comparteme el catalogo",
-            "compárteme el catálogo", "enviame el catalogo", "envíame el catálogo",
-            "dame el catalogo", "dame el catálogo",
-        ]
-        catalog_simple_keywords = ["catalogo", "catálogo", "catlogo", "catalog"]
-        is_full_catalog_request = any(phrase in msg_lower for phrase in catalog_full_phrases)
-        is_simple_catalog_mention = any(w in msg_lower for w in catalog_simple_keywords)
+        # ===== BUILD USER PROMPT (new template) =====
+        user_prompt = f"""INSTRUCCION: Revisa TODO el historial y los datos recopilados. NO pidas nada que ya se haya proporcionado. Haz UNA sola pregunta por mensaje. Tu respuesta debe ser UN solo mensaje coherente.
+IMPORTANTE: En extracted_data.codigos_producto siempre devuelve la lista COMPLETA ACUMULADA de codigos (no solo los nuevos).
+Si vas a enviar un catalogo (catalog_search), NO hagas otra pregunta en el mismo mensaje. Solo presenta opciones y el catalogo.
+PROHIBIDO repetir o parafrasear tu mensaje anterior. Si ya confirmaste algo, avanza directamente al siguiente paso.
+PROHIBIDO pedir el nombre si ya lo tienes en los datos recopilados. Dirigete al cliente por su nombre.
+Pide UN SOLO dato por mensaje. No combines preguntas.
 
-        needs_catalog_email = False
-        if is_full_catalog_request or (is_simple_catalog_mention and current_stage in ("busqueda_producto", "esperando_codigos")):
-            needs_catalog_email = True
-        if current_stage == "busqueda_producto" and "NO HAY PRODUCTOS" in catalog_availability:
-            needs_catalog_email = True
-
-        catalog_email_context = ""
-        if needs_catalog_email:
-            if collected_data.get("correo"):
-                catalog_email_context = "\n\nIMPORTANTE: El cliente ya proporciono su correo. Confirma que un asesor le enviara el catalogo completo a su correo. Pregunta si necesita algo mas. NO pongas needs_human=true ni escalate=true."
-            else:
-                catalog_email_context = "\n\nIMPORTANTE: El cliente necesita el catalogo completo. Ofrece que un asesor se lo puede enviar por email y pide su correo electronico. Guarda el correo en extracted_data.correo. NO pongas needs_human=true ni escalate=true."
-
-        # ===== BUILD USER PROMPT =====
-        user_prompt = f"""{stage_instruction}
-
-Revisa historial y datos recopilados. NO pidas nada que ya tengas. UNA pregunta por mensaje.
-En extracted_data.codigos_producto siempre la lista COMPLETA ACUMULADA.
-PROHIBIDO repetir tu mensaje anterior.
+{catalog_info}
 {catalog_availability}
-{codes_context}
-{catalog_email_context}
+{quote_context}
 
-=== HISTORIAL ===
+=== HISTORIAL COMPLETO DE LA CONVERSACION ===
 {history_text}
 
-=== DATOS YA RECOPILADOS (NO volver a pedir) ===
+=== DATOS YA RECOPILADOS (PROHIBIDO volver a pedir estos) ===
 {collected_summary if collected_summary else "Ninguno aun"}
 
-MENSAJE DEL CLIENTE: {message_text}"""
+=== DATOS QUE AUN FALTAN ===
+{missing_fields}
+
+{next_to_ask}
+
+MENSAJE ACTUAL DEL CLIENTE: {message_text}"""
 
         # ===== CALL AI =====
         ai_result = await call_llm(SYSTEM_PROMPT, user_prompt, phone_number)
@@ -1055,51 +989,16 @@ MENSAJE DEL CLIENTE: {message_text}"""
         extracted = ai_result.get("extracted_data", {})
         needs_quote = ai_result.get("needs_quote", False)
         needs_human = ai_result.get("needs_human", False)
-        ai_escalate = ai_result.get("escalate", False)
-        ai_escalate_reason = ai_result.get("escalate_reason", "")
-        ai_next_stage = ai_result.get("next_stage", "")
         lead_quality = ai_result.get("lead_quality", state.get("lead_quality", "frio"))
         category = ai_result.get("category", state.get("category"))
 
-        # Override: catalog requests should NOT trigger escalation
-        if needs_catalog_email:
-            needs_human = False
-            ai_escalate = False
-
-        # Handle AI-detected escalation
-        if ai_escalate and current_stage != "escalado_humano":
-            await send_message_fn(phone_number, conversation_id, response_text)
-            message_sent = True
-            reason = ai_escalate_reason or "Escalamiento detectado por el bot"
-            for key, value in extracted.items():
-                if value and str(value).strip() and str(value).lower() not in ["null", "none", "n/a", ""]:
-                    normalized_key = FIELD_ALIASES.get(key, key)
-                    collected_data[normalized_key] = str(value).strip()
-            await send_escalation_summary(db, phone_number, collected_data, reason, send_message_fn)
-            await db.conversation_states.update_one(
-                {"phone_number": phone_number},
-                {"$set": {
-                    "collected_data": collected_data,
-                    "stage": "escalado_humano",
-                    "transferred_to_human": True,
-                    "message_count": msg_count,
-                    "last_interaction": now.isoformat()
-                }}
-            )
-            await update_lead_from_ai(db, phone_number, collected_data, lead_quality, "escalamiento", "cliente_potencial")
-            return
-
         # ===== MERGE EXTRACTED DATA =====
         collected_data = _merge_extracted_data(extracted, collected_data)
-
-        # ===== DETERMINE NEXT STAGE (strict progression) =====
-        new_stage = _determine_next_stage(current_stage, ai_next_stage, collected_data)
 
         # ===== CHECK IF READY TO GENERATE QUOTE =====
         will_generate_quote = False
         if (needs_quote or _is_quote_ready(collected_data)) and not state.get("quote_generated", False):
             will_generate_quote = True
-            new_stage = "confirmacion"
 
         # ===== SEND RESPONSE =====
         if not will_generate_quote:
@@ -1132,21 +1031,13 @@ MENSAJE DEL CLIENTE: {message_text}"""
             await send_message_fn(phone_number, conversation_id, response_text)
             message_sent = True
 
-            # Notify staff if client provided email for catalog request
-            if needs_catalog_email and collected_data.get("correo"):
-                if not state.get("catalog_email_notified"):
-                    await notify_staff_catalog_request(
-                        db, phone_number, collected_data, message_text, send_message_fn
-                    )
-                    state["catalog_email_notified"] = True
-
         # ===== GENERATE QUOTE IF READY =====
         if will_generate_quote:
             existing_quote = await db.quotes_v2.find_one(
                 {"phone_number": phone_number, "status": "pending", "is_deleted": False},
                 {"_id": 0, "items": 1, "client_name": 1}
             )
-            result = await upsert_quote(db, phone_number, collected_data, conversation_id)
+            await upsert_quote(db, phone_number, collected_data, conversation_id)
             state_quote = True
 
             await notify_staff_new_quote(db, phone_number, collected_data, existing_quote is not None, send_message_fn)
@@ -1170,8 +1061,7 @@ MENSAJE DEL CLIENTE: {message_text}"""
         # ===== HANDLE HUMAN TRANSFER =====
         transferred = state.get("transferred_to_human", False)
         if needs_human and not transferred:
-            reason = ai_escalate_reason or "El bot detecto que se necesita revision humana"
-            await send_escalation_summary(db, phone_number, collected_data, reason, send_message_fn)
+            await send_escalation_summary(db, phone_number, collected_data, "El bot detecto que se necesita revision humana", send_message_fn)
             transferred = True
 
         # ===== UPDATE STATE =====
@@ -1181,12 +1071,10 @@ MENSAJE DEL CLIENTE: {message_text}"""
                 "collected_data": collected_data,
                 "lead_quality": lead_quality,
                 "category": category,
-                "catalog_email_notified": state.get("catalog_email_notified", False),
                 "quote_generated": state_quote,
                 "transferred_to_human": transferred,
                 "message_count": msg_count,
                 "last_interaction": now.isoformat(),
-                "stage": new_stage,
             }}
         )
 
@@ -1239,7 +1127,7 @@ async def update_lead_from_ai(
         "empresa": "empresa", "ciudad": "ciudad", "correo": "correo",
         "producto": "producto_interes", "codigos_producto": "codigos_producto",
         "cantidad": "cantidad_estimada", "fecha_entrega": "fecha_entrega",
-        "presupuesto": "presupuesto", "color_logo": "color_logo"
+        "presupuesto": "presupuesto", "personalizacion": "color_logo"
     }
     for src, dst in field_map.items():
         if collected_data.get(src):
