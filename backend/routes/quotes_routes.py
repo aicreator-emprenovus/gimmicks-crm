@@ -384,7 +384,7 @@ def _generate_pdf_bytes(quote: Quote, is_po: bool = False, client_data: dict = N
     else:
         logo_url = "https://customer-assets.emergentagent.com/job_quote-crafter-1/artifacts/5cvzat7e_image.png"
         title_text = f"<b>PROFORMA No. {quote.quote_number or '---'}</b>"
-    logo = fetch_image(logo_url, width_cm=4*cm)
+    logo = fetch_image(logo_url, width_cm=2.8*cm)
     months = {1:"Enero",2:"Febrero",3:"Marzo",4:"Abril",5:"Mayo",6:"Junio",7:"Julio",8:"Agosto",9:"Septiembre",10:"Octubre",11:"Noviembre",12:"Diciembre"}
     day = quote.created_at.day
     month = months[quote.created_at.month]
@@ -446,7 +446,7 @@ def _generate_pdf_bytes(quote: Quote, is_po: bool = False, client_data: dict = N
         header_table = Table(header_data, colWidths=[9*cm, 9*cm])
         header_table.setStyle(TableStyle([('VALIGN',(0,0),(-1,-1),'TOP'),('ALIGN',(0,0),(0,0),'LEFT'),('ALIGN',(1,0),(1,0),'RIGHT')]))
         elements.append(header_table)
-        elements.append(Spacer(1, 1*cm))
+        elements.append(Spacer(1, 0.5*cm))
         style_client_header = ParagraphStyle("ClientHeader", parent=style_bold, textColor=colors.HexColor('#64AF9C'), fontSize=11)
         style_normal_large = ParagraphStyle("NormalLarge", parent=style_normal, fontSize=11)
         elements.append(Paragraph("Señores", style_client_header))
