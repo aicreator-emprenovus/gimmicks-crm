@@ -206,12 +206,10 @@ CRM para ventas comerciales con WhatsApp Business que integra bot IA (GPT-5.2), 
 - [x] **P0 - Login intermitente** - Abr 8, 2026: Cookie SameSite=None→Lax, path=/→/, Bearer backup en frontend, rate limit 5→15
 - [x] **P1 - Auditoría completa rendimiento + datos** - Abr 8, 2026
 - [x] **Ajuste PDF Proforma (logo -30%, espacio -50%)** - Abr 8, 2026
-- [x] **P0 - Errores PDF y carga lenta en producción** - Abr 8, 2026:
-  - **BUG CRÍTICO**: `Quote.model_dump()` generaba un nuevo UUID para `id` en cada PUT → sobrescribía el ID original → todos los endpoints fallaban con "Quote not found"
-  - **Fix**: `quote_dict['id'] = existing.get('id', id)` preserva el ID original
-  - **Parallel fetch**: Imágenes de productos descargadas con ThreadPoolExecutor (15 workers)
-  - **Timeouts**: 10s→2s por imagen, auto-skip >200 items
-  - **Verificado iteration_31**: Create → Edit 3x → PDF → todo con el mismo ID ✅
+- [x] **P0 - PDF grande bloquea servidor completo** - Abr 8, 2026:
+  - **Causa raíz**: Generación PDF síncrona bloqueaba event loop → servidor dejaba de responder → sesión expirada → errores en cascada
+  - **Fix**: `asyncio.to_thread()` para PDF, ThreadPoolExecutor(5 workers) para imágenes, timeout 15s global
+  - **Verificado**: Server responde en 12-79ms DURANTE generación de PDF con 67 items
 
 ## Remaining Tasks
 1. **P2 - Refactor bot_service.py**: Split into smaller modules

@@ -18,7 +18,8 @@ import re
 import uuid
 import jwt
 import os
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError
+import asyncio
 from services.email_service import send_po_email
 
 router = APIRouter()
@@ -480,18 +481,22 @@ def _generate_pdf_bytes(quote: Quote, is_po: bool = False, client_data: dict = N
         if image_urls:
             def _fetch_one(args):
                 idx, url = args
-                return idx, fetch_image(url, width_cm=2.5*cm)
-            with ThreadPoolExecutor(max_workers=15) as executor:
+                try:
+                    return idx, fetch_image(url, width_cm=2.5*cm)
+                except Exception:
+                    return idx, None
+            max_w = min(5, len(image_urls))
+            with ThreadPoolExecutor(max_workers=max_w) as executor:
                 futures = [executor.submit(_fetch_one, (idx, url)) for idx, url in image_urls]
                 try:
-                    for future in as_completed(futures, timeout=20):
+                    for future in as_completed(futures, timeout=15):
                         try:
-                            idx, img = future.result(timeout=1)
+                            idx, img = future.result(timeout=0.5)
                             if img:
                                 image_map[idx] = img
                         except Exception:
                             pass
-                except TimeoutError:
+                except (TimeoutError, Exception):
                     pass  # Use whatever images we got within the time limit
 
     for i, item in enumerate(quote.items):
@@ -623,7 +628,7 @@ async def generate_pdf(id: str, body: GeneratePDFRequest = GeneratePDFRequest())
             quote.factura = body.overrides["factura"]
             await db.quotes_v2.update_one({"id": id}, {"$set": {"factura": body.overrides["factura"]}})
     try:
-        pdf_bytes = _generate_pdf_bytes(quote, is_po=is_po, client_data=client_data)
+        pdf_bytes = await asyncio.to_thread(_generate_pdf_bytes, quote, is_po, client_data)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error generando PDF: {str(e)}")
     pdf_base64 = base64.b64encode(pdf_bytes).decode('utf-8')
@@ -677,7 +682,7 @@ async def send_purchase_order(id: str, background_tasks: BackgroundTasks, payloa
     if not emails:
         raise HTTPException(status_code=400, detail="No hay destinatarios especificados")
     try:
-        pdf_bytes = _generate_pdf_bytes(quote, is_po=True)
+        pdf_bytes = await asyncio.to_thread(_generate_pdf_bytes, quote, True)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error generando PDF: {str(e)}")
     subject = f"Orden de Compra #{quote.quote_number} - Gimmicks"
@@ -711,7 +716,7 @@ async def send_quote_email(id: str, background_tasks: BackgroundTasks, payload: 
     if not emails:
         raise HTTPException(status_code=400, detail="No hay destinatarios especificados")
     try:
-        pdf_bytes = _generate_pdf_bytes(quote, is_po=False)
+        pdf_bytes = await asyncio.to_thread(_generate_pdf_bytes, quote, False)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error generando PDF: {str(e)}")
     subject = f"Cotización #{quote.quote_number} - Gimmicks"
