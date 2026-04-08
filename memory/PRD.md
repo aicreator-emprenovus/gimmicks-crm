@@ -203,6 +203,10 @@ CRM para ventas comerciales con WhatsApp Business que integra bot IA (GPT-5.2), 
   - Railway build fallaba con `ERROR: No matching distribution found for emergentintegrations==0.1.1`
   - Fix: Agregado `--extra-index-url https://d33sy5i8bnduwe.cloudfront.net/simple/` al inicio de `requirements.txt`
   - Pendiente: Usuario debe hacer "Save to GitHub" para triggear nuevo deploy
+- [x] **P0 - Bot fallback LLM (gpt-5.2 → gpt-4o)** - Abr 8, 2026:
+  - GPT-5.2 tenía errores de conexión persistentes, bot respondía siempre "Disculpa, tuve un problema"
+  - Fix: `call_llm()` ahora intenta gpt-5.2 primero, si falla automáticamente reintenta con gpt-4o
+  - Verificado: Conversación fluye correctamente con fallback (saludo → nombre → producto)
 
 ## Remaining Tasks
 1. **P2 - Refactor bot_service.py**: Split into smaller modules

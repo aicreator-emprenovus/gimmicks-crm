@@ -299,42 +299,48 @@ async def load_known_client_data(db: AsyncIOMotorDatabase, phone_number: str) ->
 
 
 async def call_llm(system_msg: str, user_msg: str, phone_number: str = "") -> Optional[Dict]:
-    """Call LLM and parse JSON response."""
-    try:
-        from emergentintegrations.llm.chat import LlmChat, UserMessage
-        api_key = os.environ.get("EMERGENT_LLM_KEY")
-        if not api_key:
-            logger.error("No EMERGENT_LLM_KEY configured")
-            return None
-        session_id = f"gimmicks-{uuid.uuid4().hex[:12]}"
-        chat = LlmChat(api_key=api_key, session_id=session_id, system_message=system_msg)
-        chat.with_model("openai", "gpt-5.2")
-        response_text = await chat.send_message(UserMessage(text=user_msg))
-
-        cleaned = re.sub(r'```json\s*', '', response_text)
-        cleaned = re.sub(r'```\s*', '', cleaned).strip()
-
-        json_match = re.search(r'\{[\s\S]*\}', cleaned)
-        if json_match:
-            try:
-                return json.loads(json_match.group())
-            except json.JSONDecodeError:
-                pass
-
-        return {
-            "response": response_text,
-            "extracted_data": {},
-            "catalog_search": None,
-            "intent": "otra",
-            "lead_quality": "frio",
-            "category": "otra",
-            "needs_quote": False,
-            "needs_human": False,
-            "conversation_summary": ""
-        }
-    except Exception as e:
-        logger.error(f"LLM call failed: {e}")
+    """Call LLM and parse JSON response. Falls back to gpt-4o if gpt-5.2 fails."""
+    from emergentintegrations.llm.chat import LlmChat, UserMessage
+    api_key = os.environ.get("EMERGENT_LLM_KEY")
+    if not api_key:
+        logger.error("No EMERGENT_LLM_KEY configured")
         return None
+
+    models = [("openai", "gpt-5.2"), ("openai", "gpt-4o")]
+    for provider, model_name in models:
+        try:
+            session_id = f"gimmicks-{uuid.uuid4().hex[:12]}"
+            chat = LlmChat(api_key=api_key, session_id=session_id, system_message=system_msg)
+            chat.with_model(provider, model_name)
+            response_text = await chat.send_message(UserMessage(text=user_msg))
+
+            cleaned = re.sub(r'```json\s*', '', response_text)
+            cleaned = re.sub(r'```\s*', '', cleaned).strip()
+
+            json_match = re.search(r'\{[\s\S]*\}', cleaned)
+            if json_match:
+                try:
+                    return json.loads(json_match.group())
+                except json.JSONDecodeError:
+                    pass
+
+            return {
+                "response": response_text,
+                "extracted_data": {},
+                "catalog_search": None,
+                "intent": "otra",
+                "lead_quality": "frio",
+                "category": "otra",
+                "needs_quote": False,
+                "needs_human": False,
+                "conversation_summary": ""
+            }
+        except Exception as e:
+            logger.error(f"LLM call failed with {model_name}: {e}")
+            if model_name != models[-1][1]:
+                logger.info(f"Retrying with fallback model {models[-1][1]}...")
+            continue
+    return None
 
 
 async def auto_create_client(db: AsyncIOMotorDatabase, collected_data: Dict, phone_number: str) -> str:
