@@ -929,6 +929,23 @@ async def _process_ai_conversation_inner(
     try:
         now = datetime.now(timezone.utc)
 
+        # === COOLDOWN: Skip if bot responded in the last 8 seconds ===
+        last_bot = await db.messages.find_one(
+            {"conversation_id": conversation_id, "sender": {"$in": ["bot", "business"]}},
+            {"_id": 0, "timestamp": 1},
+            sort=[("timestamp", -1)]
+        )
+        if last_bot and last_bot.get("timestamp"):
+            try:
+                last_ts = datetime.fromisoformat(last_bot["timestamp"].replace("Z", "+00:00"))
+                if last_ts.tzinfo is None:
+                    last_ts = last_ts.replace(tzinfo=timezone.utc)
+                if (now - last_ts).total_seconds() < 8:
+                    logger.info(f"Cooldown active for {phone_number}, skipping bot response")
+                    return
+            except Exception:
+                pass
+
         # Get or create conversation state
         state = await db.conversation_states.find_one({"phone_number": phone_number}, {"_id": 0})
 
@@ -1107,7 +1124,7 @@ MENSAJE ACTUAL DEL CLIENTE: {message_text}"""
                 response_text = f"{response_text}\n\n{catalog_link}"
                 logger.info(f"Catalog link appended for {phone_number}: {catalog_link}")
 
-            # Anti-duplication check
+            # Anti-duplication: if response is too similar to last bot message, skip it
             last_bot_msg = await db.messages.find_one(
                 {"conversation_id": conversation_id, "sender": {"$in": ["bot", "business"]}},
                 {"_id": 0, "content": 1},
@@ -1120,13 +1137,9 @@ MENSAJE ACTUAL DEL CLIENTE: {message_text}"""
                     new_words = set(response_text.lower().split())
                     if last_words and new_words:
                         overlap = len(last_words & new_words) / max(len(last_words), len(new_words))
-                        if overlap > 0.6:
-                            rephrase_result = await call_llm(
-                                "Eres un asistente que reformula mensajes. Devuelve SOLO un JSON con el campo 'response'.",
-                                f"Reformula este mensaje con palabras COMPLETAMENTE DIFERENTES, mas corto y directo. Mensaje: \"{response_text}\"",
-                            )
-                            if rephrase_result and rephrase_result.get("response"):
-                                response_text = rephrase_result["response"]
+                        if overlap > 0.7:
+                            logger.info(f"Response too similar to last message for {phone_number} (overlap={overlap:.0%}), skipping")
+                            return
 
             await send_message_fn(phone_number, conversation_id, response_text)
             message_sent = True

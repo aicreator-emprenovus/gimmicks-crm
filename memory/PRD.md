@@ -206,7 +206,13 @@ CRM para ventas comerciales con WhatsApp Business que integra bot IA (GPT-5.2), 
 - [x] **P0 - Bot fallback LLM (gpt-5.2 → gpt-4o)** - Abr 8, 2026:
   - GPT-5.2 tenía errores de conexión persistentes, bot respondía siempre "Disculpa, tuve un problema"
   - Fix: `call_llm()` ahora intenta gpt-5.2 primero, si falla automáticamente reintenta con gpt-4o
-  - Verificado: Conversación fluye correctamente con fallback (saludo → nombre → producto)
+- [x] **P0 - Bot enviando mensajes repetidos en loop** - Abr 8, 2026:
+  - **Causa raíz**: WhatsApp reintentaba webhooks porque el handler era síncrono (esperaba LLM ~15s)
+  - **Fix 1**: Webhook ahora retorna 200 inmediatamente con `asyncio.create_task`
+  - **Fix 2**: Deduplicación por `whatsapp_message_id` (wamid) - mensajes ya procesados se ignoran
+  - **Fix 3**: Cooldown de 8 segundos por teléfono - si el bot ya respondió hace <8s, no envía
+  - **Fix 4**: Anti-overlap 70% ahora OMITE el mensaje duplicado en vez de reformularlo con LLM
+  - Verificado: 3 webhooks con mismo wamid → solo 1 respuesta enviada
 
 ## Remaining Tasks
 1. **P2 - Refactor bot_service.py**: Split into smaller modules

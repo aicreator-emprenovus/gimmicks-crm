@@ -9,6 +9,7 @@ import os
 import logging
 import re
 import secrets
+import asyncio
 from pathlib import Path
 from pydantic import BaseModel, Field, ConfigDict, EmailStr
 from typing import List, Optional, Dict, Any
@@ -1714,22 +1715,18 @@ async def verify_whatsapp_webhook(request: Request):
 
 @api_router.post("/webhook/whatsapp")
 async def handle_whatsapp_webhook(request_data: dict):
-    """Handle incoming WhatsApp messages"""
-    logger.info(f"Received webhook: {json.dumps(request_data)}")
-    
+    """Handle incoming WhatsApp messages - returns 200 immediately, processes in background"""
     if request_data.get("object") == "whatsapp_business_account":
         for entry in request_data.get("entry", []):
             for change in entry.get("changes", []):
                 value = change.get("value", {})
-                # Only process messages from the configured phone number
                 incoming_phone_id = value.get("metadata", {}).get("phone_number_id", "")
                 configured_phone_id = os.environ.get("WHATSAPP_PHONE_NUMBER_ID", "")
                 if incoming_phone_id and configured_phone_id and incoming_phone_id != configured_phone_id:
-                    logger.info(f"Ignoring message from non-configured number: {incoming_phone_id}")
                     continue
                 messages = value.get("messages", [])
                 for message in messages:
-                    await process_incoming_message(message, value.get("metadata", {}))
+                    asyncio.create_task(process_incoming_message(message, value.get("metadata", {})))
     
     return {"status": "ok"}
 
@@ -1739,6 +1736,13 @@ async def process_incoming_message(message: dict, metadata: dict):
     message_id = message.get("id")
     timestamp = message.get("timestamp")
     message_type = message.get("type", "text")
+    
+    # === DEDUP: Skip if this wamid was already processed ===
+    if message_id:
+        existing = await db.messages.find_one({"whatsapp_message_id": message_id}, {"_id": 1})
+        if existing:
+            logger.info(f"Duplicate wamid {message_id} from {phone_number}, skipping")
+            return
     
     now = datetime.now(timezone.utc)
     
