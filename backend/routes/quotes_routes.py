@@ -141,25 +141,22 @@ async def get_all_activities(request: Request, limit: int = 100, authorization: 
 @router.get("/", response_model=List[Quote])
 async def get_quotes(trash: bool = False, doc_type: str = "QUOTE"):
     query = {"is_deleted": trash, "doc_type": doc_type}
-    quotes = await db.quotes_v2.find(query).sort("created_at", -1).to_list(1000)
-    for quote in quotes:
-        if '_id' in quote and hasattr(quote['_id'], '__str__'):
-            quote['_id'] = str(quote['_id'])
+    quotes = await db.quotes_v2.find(query, {"_id": 0}).sort("created_at", -1).to_list(1000)
     return quotes
 
 @router.get("/{id}", response_model=Quote)
 async def get_quote_by_id(id: str):
-    quote_data = await db.quotes_v2.find_one({"id": id})
+    quote_data = await db.quotes_v2.find_one({"id": id}, {"_id": 0})
     if not quote_data:
         try:
             quote_data = await db.quotes_v2.find_one({"_id": ObjectId(id)})
+            if quote_data:
+                quote_data['id'] = str(quote_data['_id'])
+                del quote_data['_id']
         except Exception:
             pass
     if not quote_data:
         raise HTTPException(status_code=404, detail="Quote not found")
-    if '_id' in quote_data:
-        quote_data['id'] = str(quote_data['_id'])
-        del quote_data['_id']
     return Quote(**quote_data)
 
 @router.put("/{id}", response_model=Quote)
@@ -258,6 +255,21 @@ def format_currency_ecuador(value):
         int_with_sep = digit + int_with_sep
     return f'${int_with_sep},{dec_part}'
 
+_sync_client = None
+_sync_db = None
+
+def _get_sync_db():
+    """Reuse a single synchronous MongoDB connection for PDF generation."""
+    global _sync_client, _sync_db
+    if _sync_db is None:
+        from pymongo import MongoClient as SyncClient
+        mongo_url = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
+        db_name_env = os.environ.get('DB_NAME', 'gimmicks_crm')
+        _sync_client = SyncClient(mongo_url, serverSelectionTimeoutMS=3000)
+        _sync_db = _sync_client[db_name_env]
+    return _sync_db
+
+
 def fetch_image(url, width_cm=None):
     try:
         if not url or str(url).strip().upper() in ("N/A", "NA", "-", "NONE", "NULL", "0", ""):
@@ -275,13 +287,8 @@ def fetch_image(url, width_cm=None):
             image_id = url.split("/api/inventory/images/")[-1]
             if image_id:
                 try:
-                    from pymongo import MongoClient as SyncClient
-                    mongo_url = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
-                    db_name_env = os.environ.get('DB_NAME', 'gimmicks_crm')
-                    sync_client = SyncClient(mongo_url, serverSelectionTimeoutMS=5000)
-                    sync_db = sync_client[db_name_env]
+                    sync_db = _get_sync_db()
                     doc = sync_db.product_images.find_one({"id": image_id}, {"_id": 0, "data": 1})
-                    sync_client.close()
                     if doc and doc.get("data"):
                         img_data = io.BytesIO(doc["data"])
                 except Exception:
@@ -323,11 +330,10 @@ def fetch_image(url, width_cm=None):
                 drive_urls = [
                     f"https://lh3.googleusercontent.com/d/{file_id}=w400",
                     f"https://drive.google.com/thumbnail?id={file_id}&sz=w400",
-                    f"https://drive.google.com/uc?export=download&id={file_id}",
                 ]
                 for drive_url in drive_urls:
                     try:
-                        resp = requests.get(drive_url, headers={'User-Agent': 'Mozilla/5.0'}, timeout=10, allow_redirects=True)
+                        resp = requests.get(drive_url, headers={'User-Agent': 'Mozilla/5.0'}, timeout=4, allow_redirects=True)
                         ct = resp.headers.get('content-type', '').lower()
                         if resp.status_code == 200 and 'image' in ct and len(resp.content) > 100:
                             img_data = io.BytesIO(resp.content)
@@ -336,7 +342,7 @@ def fetch_image(url, width_cm=None):
                         continue
             elif 'drive.google.com/thumbnail' in url or 'lh3.googleusercontent.com' in url:
                 try:
-                    resp = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'}, timeout=10, allow_redirects=True)
+                    resp = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'}, timeout=4, allow_redirects=True)
                     ct = resp.headers.get('content-type', '').lower()
                     if resp.status_code == 200 and 'image' in ct and len(resp.content) > 100:
                         img_data = io.BytesIO(resp.content)
@@ -344,7 +350,7 @@ def fetch_image(url, width_cm=None):
                     pass
             else:
                 try:
-                    response = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'}, timeout=10, allow_redirects=True)
+                    response = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'}, timeout=4, allow_redirects=True)
                     if response.status_code == 200:
                         content_type = response.headers.get('content-type', '').lower()
                         if 'svg' in content_type or url.endswith('.svg'):
@@ -588,7 +594,10 @@ async def generate_pdf(id: str, body: GeneratePDFRequest = GeneratePDFRequest())
         if "factura" in body.overrides:
             quote.factura = body.overrides["factura"]
             await db.quotes_v2.update_one({"id": id}, {"$set": {"factura": body.overrides["factura"]}})
-    pdf_bytes = _generate_pdf_bytes(quote, is_po=is_po, client_data=client_data)
+    try:
+        pdf_bytes = _generate_pdf_bytes(quote, is_po=is_po, client_data=client_data)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error generando PDF: {str(e)}")
     pdf_base64 = base64.b64encode(pdf_bytes).decode('utf-8')
     prefix = "ORDEN_COMPRA" if is_po else "PROFORMA"
     filename = f"{prefix}_{quote.quote_number}.pdf"
@@ -596,10 +605,12 @@ async def generate_pdf(id: str, body: GeneratePDFRequest = GeneratePDFRequest())
 
 @router.post("/{id}/convert-to-po")
 async def convert_to_po(id: str):
-    quote_data = await db.quotes_v2.find_one({"id": id})
+    quote_data = await db.quotes_v2.find_one({"id": id}, {"_id": 0})
     if not quote_data:
         try:
             quote_data = await db.quotes_v2.find_one({"_id": ObjectId(id)})
+            if quote_data:
+                del quote_data['_id']
         except Exception:
             pass
     if not quote_data:
@@ -619,10 +630,13 @@ async def convert_to_po(id: str):
 
 @router.post("/{id}/send-po")
 async def send_purchase_order(id: str, background_tasks: BackgroundTasks, payload: dict = Body(...)):
-    quote_data = await db.quotes_v2.find_one({"id": id})
+    quote_data = await db.quotes_v2.find_one({"id": id}, {"_id": 0})
     if not quote_data:
         try:
             quote_data = await db.quotes_v2.find_one({"_id": ObjectId(id)})
+            if quote_data:
+                quote_data['id'] = str(quote_data['_id'])
+                del quote_data['_id']
         except Exception:
             pass
     if not quote_data:
@@ -634,7 +648,10 @@ async def send_purchase_order(id: str, background_tasks: BackgroundTasks, payloa
     emails = payload.get('emails', [])
     if not emails:
         raise HTTPException(status_code=400, detail="No hay destinatarios especificados")
-    pdf_bytes = _generate_pdf_bytes(quote, is_po=True)
+    try:
+        pdf_bytes = _generate_pdf_bytes(quote, is_po=True)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error generando PDF: {str(e)}")
     subject = f"Orden de Compra #{quote.quote_number} - Gimmicks"
     html_content = f"""<h1>Orden de Compra</h1><p>Estimado/a {quote.client_name},</p><p>Adjunto encontrará la orden de compra #{quote.quote_number}.</p><p>Saludos,<br>Gimmicks Marketing Services</p>"""
     filename = f"ORDEN_COMPRA_{quote.quote_number}.pdf"
@@ -647,10 +664,13 @@ async def send_purchase_order(id: str, background_tasks: BackgroundTasks, payloa
 
 @router.post("/{id}/send-quote")
 async def send_quote_email(id: str, background_tasks: BackgroundTasks, payload: dict = Body(...)):
-    quote_data = await db.quotes_v2.find_one({"id": id})
+    quote_data = await db.quotes_v2.find_one({"id": id}, {"_id": 0})
     if not quote_data:
         try:
             quote_data = await db.quotes_v2.find_one({"_id": ObjectId(id)})
+            if quote_data:
+                quote_data['id'] = str(quote_data['_id'])
+                del quote_data['_id']
         except Exception:
             pass
     if not quote_data:
@@ -662,7 +682,10 @@ async def send_quote_email(id: str, background_tasks: BackgroundTasks, payload: 
     emails = payload.get('emails', [])
     if not emails:
         raise HTTPException(status_code=400, detail="No hay destinatarios especificados")
-    pdf_bytes = _generate_pdf_bytes(quote, is_po=False)
+    try:
+        pdf_bytes = _generate_pdf_bytes(quote, is_po=False)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error generando PDF: {str(e)}")
     subject = f"Cotización #{quote.quote_number} - Gimmicks"
     html_content = f"""<h1>Cotización</h1><p>Estimado/a {quote.client_name},</p><p>Adjunto encontrará la cotización #{quote.quote_number} para su revisión.</p><p>Quedamos atentos a sus comentarios.</p><p>Saludos,<br>Gimmicks Marketing Services</p>"""
     filename = f"COTIZACION_{quote.quote_number}.pdf"
