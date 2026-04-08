@@ -202,17 +202,19 @@ CRM para ventas comerciales con WhatsApp Business que integra bot IA (GPT-5.2), 
 - [x] **P0 - Fix Railway deploy: emergentintegrations** - Abr 8, 2026:
   - Railway build fallaba con `ERROR: No matching distribution found for emergentintegrations==0.1.1`
   - Fix: Agregado `--extra-index-url https://d33sy5i8bnduwe.cloudfront.net/simple/` al inicio de `requirements.txt`
-  - Pendiente: Usuario debe hacer "Save to GitHub" para triggear nuevo deploy
 - [x] **P0 - Bot fallback LLM (gpt-5.2 → gpt-4o)** - Abr 8, 2026:
   - GPT-5.2 tenía errores de conexión persistentes, bot respondía siempre "Disculpa, tuve un problema"
   - Fix: `call_llm()` ahora intenta gpt-5.2 primero, si falla automáticamente reintenta con gpt-4o
 - [x] **P0 - Bot enviando mensajes repetidos en loop** - Abr 8, 2026:
-  - **Causa raíz**: WhatsApp reintentaba webhooks porque el handler era síncrono (esperaba LLM ~15s)
-  - **Fix 1**: Webhook ahora retorna 200 inmediatamente con `asyncio.create_task`
-  - **Fix 2**: Deduplicación por `whatsapp_message_id` (wamid) - mensajes ya procesados se ignoran
-  - **Fix 3**: Cooldown de 8 segundos por teléfono - si el bot ya respondió hace <8s, no envía
-  - **Fix 4**: Anti-overlap 70% ahora OMITE el mensaje duplicado en vez de reformularlo con LLM
-  - Verificado: 3 webhooks con mismo wamid → solo 1 respuesta enviada
+  - Fix: Webhook async, dedup por wamid, cooldown 8s, anti-overlap skip >70%
+- [x] **P0 - Error autenticación tras deploy Railway** - Abr 8, 2026:
+  - static_frontend/ tenía build viejo. Reconstruido con cookie-based auth
+- [x] **P1 - Auditoría completa rendimiento + datos** - Abr 8, 2026:
+  - Agregado protección SPA catch-all (rutas /api/ retornan JSON 404, no HTML)
+  - Agregados índices MongoDB para todas las colecciones frecuentes
+  - Todas las secciones verificadas: Dashboard, Inbox, Inventario, Clientes, Leads, Cotizaciones, Usuarios, Activity Log
+  - Testing 100% (24/24 backend + frontend completo, iteration_29)
+- [x] **Ajuste PDF Proforma** - Abr 8, 2026: Logo -30%, espacio logo→saludo -50%
 
 ## Remaining Tasks
 1. **P2 - Refactor bot_service.py**: Split into smaller modules
