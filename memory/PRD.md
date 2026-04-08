@@ -199,22 +199,19 @@ CRM para ventas comerciales con WhatsApp Business que integra bot IA (GPT-5.2), 
   - Testing: 21/21 backend + todos los flujos frontend (iteration_23)
 
 ## Resolved Issues (Latest cont.)
-- [x] **P0 - Fix Railway deploy: emergentintegrations** - Abr 8, 2026:
-  - Railway build fallaba con `ERROR: No matching distribution found for emergentintegrations==0.1.1`
-  - Fix: Agregado `--extra-index-url https://d33sy5i8bnduwe.cloudfront.net/simple/` al inicio de `requirements.txt`
-- [x] **P0 - Bot fallback LLM (gpt-5.2 → gpt-4o)** - Abr 8, 2026:
-  - GPT-5.2 tenía errores de conexión persistentes, bot respondía siempre "Disculpa, tuve un problema"
-  - Fix: `call_llm()` ahora intenta gpt-5.2 primero, si falla automáticamente reintenta con gpt-4o
-- [x] **P0 - Bot enviando mensajes repetidos en loop** - Abr 8, 2026:
-  - Fix: Webhook async, dedup por wamid, cooldown 8s, anti-overlap skip >70%
-- [x] **P0 - Error autenticación tras deploy Railway** - Abr 8, 2026:
-  - static_frontend/ tenía build viejo. Reconstruido con cookie-based auth
-- [x] **P1 - Auditoría completa rendimiento + datos** - Abr 8, 2026:
-  - Agregado protección SPA catch-all (rutas /api/ retornan JSON 404, no HTML)
-  - Agregados índices MongoDB para todas las colecciones frecuentes
-  - Todas las secciones verificadas: Dashboard, Inbox, Inventario, Clientes, Leads, Cotizaciones, Usuarios, Activity Log
-  - Testing 100% (24/24 backend + frontend completo, iteration_29)
-- [x] **Ajuste PDF Proforma** - Abr 8, 2026: Logo -30%, espacio logo→saludo -50%
+- [x] **P0 - Fix Railway deploy: emergentintegrations** - Abr 8, 2026
+- [x] **P0 - Bot fallback LLM (gpt-5.2 → gpt-4o)** - Abr 8, 2026
+- [x] **P0 - Bot enviando mensajes repetidos en loop** - Abr 8, 2026
+- [x] **P0 - Error autenticación tras deploy Railway** - Abr 8, 2026
+- [x] **P1 - Auditoría completa rendimiento + datos** - Abr 8, 2026
+- [x] **Ajuste PDF Proforma (logo -30%, espacio -50%)** - Abr 8, 2026
+- [x] **P0 - Errores PDF y carga lenta en producción** - Abr 8, 2026:
+  - **fetch_image()**: Eliminada creación de conexión MongoDB por imagen → reúso con `_get_sync_db()`
+  - **Timeouts**: Reducidos de 10s a 4s para imágenes externas, eliminado tercer intento Google Drive
+  - **_id exclusion**: Todos los endpoints `quotes-v2` ahora usan `{"_id": 0}` en proyección
+  - **Error handling**: `generate-pdf`, `send-po`, `send-quote` ahora capturan excepciones y retornan error JSON
+  - **SPA catch-all**: Rutas `/api/` retornan JSON 404, no HTML
+  - **Testing**: iteration_30 → 100% (12 backend + frontend QuoteHistory con PDF preview)
 
 ## Remaining Tasks
 1. **P2 - Refactor bot_service.py**: Split into smaller modules
