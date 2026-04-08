@@ -141,6 +141,16 @@ CRM para ventas comerciales con WhatsApp Business que integra bot IA (GPT-5.2), 
   - Testing: 13/13 backend + frontend completo 100% (iteration_20)
 
 ## Resolved Issues (Latest)
+- [x] **5 alertas WhatsApp al agente humano** - Abr 8, 2026:
+  - Alerta 1: NUEVA COTIZACION con nombre del cliente (ya existia, verificada)
+  - Alerta 2: COTIZACION ACTUALIZADA con nombre del cliente (ya existia, verificada)
+  - Alerta 3: ESCALAMIENTO cuando cliente pide hablar con agente humano (ya existia, verificada)
+  - Alerta 4: BOT NO PUEDE CONTINUAR - nueva funcion `notify_staff_bot_confused()` cuando LLM falla
+  - Alerta 5: SOLICITUD DE CATALOGO POR EMAIL - cuando producto no encontrado + email capturado
+  - Bot NUNCA dice "no tenemos" o "no encontre" - pide email para catalogo
+  - Filtro STOPWORDS en busqueda para evitar falsos positivos ("para", "con", etc.)
+  - Estado `no_products_found_pending` para alertar cuando email llega en turno posterior
+  - Testing: 9/9 backend 100% (iteration_27)
 - [x] **Reemplazo completo del flujo conversacional del bot WhatsApp** - Abr 8, 2026:
   - **Nuevo flujo de 5 pasos**: 1) Saludo, 2) Nombre, 3) Producto (busqueda), 4) Codigos + cantidades, 5) Datos adicionales uno a uno (personalizacion, email, empresa, ciudad, fecha entrega)
   - **Cotizacion automatica**: Se genera cuando tiene codigos + cantidad + email + empresa
