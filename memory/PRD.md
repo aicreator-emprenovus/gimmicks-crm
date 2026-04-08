@@ -192,11 +192,9 @@ CRM para ventas comerciales con WhatsApp Business que integra bot IA (GPT-5.2), 
   - Testing: 21/21 backend + todos los flujos frontend (iteration_23)
 
 ## Remaining Tasks
-1. **P1 - Generate 3 Demo WhatsApp Conversations**: Simulate with curl
-2. **P1 - Re-upload ~700 valid products**: Restore from /app/backups/products_backup_production.json
-3. **P2 - Refactor bot_service.py**: Split into smaller modules
-4. **P2 - Refactor large frontend components**: Extract modals
-5. **P3 - Asesor permission audit**: Full audit of role permissions
+1. **P2 - Refactor bot_service.py**: Split into smaller modules
+2. **P2 - Refactor large frontend components**: Extract modals
+3. **P3 - Asesor permission audit**: Full audit of role permissions
 
 ## Resolved Issues
 - [x] **P0 - Investigación y limpieza de 5,412 productos en producción** - Abr 6, 2026:
