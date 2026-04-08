@@ -18,6 +18,7 @@ import re
 import uuid
 import jwt
 import os
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from services.email_service import send_po_email
 
 router = APIRouter()
@@ -312,7 +313,7 @@ def fetch_image(url, width_cm=None):
                 try:
                     api_path = url if url.startswith("/api/") else f"/api{url}"
                     local_url = f"http://localhost:8001{api_path}"
-                    resp = requests.get(local_url, timeout=5)
+                    resp = requests.get(local_url, timeout=2)
                     if resp.status_code == 200:
                         img_data = io.BytesIO(resp.content)
                 except Exception:
@@ -333,7 +334,7 @@ def fetch_image(url, width_cm=None):
                 ]
                 for drive_url in drive_urls:
                     try:
-                        resp = requests.get(drive_url, headers={'User-Agent': 'Mozilla/5.0'}, timeout=4, allow_redirects=True)
+                        resp = requests.get(drive_url, headers={'User-Agent': 'Mozilla/5.0'}, timeout=2, allow_redirects=True)
                         ct = resp.headers.get('content-type', '').lower()
                         if resp.status_code == 200 and 'image' in ct and len(resp.content) > 100:
                             img_data = io.BytesIO(resp.content)
@@ -342,7 +343,7 @@ def fetch_image(url, width_cm=None):
                         continue
             elif 'drive.google.com/thumbnail' in url or 'lh3.googleusercontent.com' in url:
                 try:
-                    resp = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'}, timeout=4, allow_redirects=True)
+                    resp = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'}, timeout=2, allow_redirects=True)
                     ct = resp.headers.get('content-type', '').lower()
                     if resp.status_code == 200 and 'image' in ct and len(resp.content) > 100:
                         img_data = io.BytesIO(resp.content)
@@ -350,7 +351,7 @@ def fetch_image(url, width_cm=None):
                     pass
             else:
                 try:
-                    response = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'}, timeout=4, allow_redirects=True)
+                    response = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'}, timeout=2, allow_redirects=True)
                     if response.status_code == 200:
                         content_type = response.headers.get('content-type', '').lower()
                         if 'svg' in content_type or url.endswith('.svg'):
@@ -466,8 +467,32 @@ def _generate_pdf_bytes(quote: Quote, is_po: bool = False, client_data: dict = N
         elements.append(Spacer(1, 0.5*cm))
     table_headers = ['CÓDIGO', 'CANTIDAD', 'DESCRIPCIÓN', 'VALOR\nUNITARIO', 'VALOR\nTOTAL', 'IMAGEN']
     table_data = [table_headers]
-    for item in quote.items:
-        p_img = fetch_image(item.image_url, width_cm=2.5*cm)
+
+    # Fetch all images in parallel for performance (critical for 50+ items)
+    # Skip image fetching for very large quotes to stay within timeout
+    image_map = {}
+    skip_images = len(quote.items) > 200
+    if not skip_images:
+        image_urls = [(i, item.image_url) for i, item in enumerate(quote.items) if item.image_url]
+        if image_urls:
+            def _fetch_one(args):
+                idx, url = args
+                return idx, fetch_image(url, width_cm=2.5*cm)
+            with ThreadPoolExecutor(max_workers=15) as executor:
+                futures = [executor.submit(_fetch_one, (idx, url)) for idx, url in image_urls]
+                try:
+                    for future in as_completed(futures, timeout=20):
+                        try:
+                            idx, img = future.result(timeout=1)
+                            if img:
+                                image_map[idx] = img
+                        except Exception:
+                            pass
+                except TimeoutError:
+                    pass  # Use whatever images we got within the time limit
+
+    for i, item in enumerate(quote.items):
+        p_img = image_map.get(i)
         desc_parts = [f"<b>{item.name}</b>", item.description]
         # Show manually selected characteristics (not auto-filled from inventory)
         sel_chars = getattr(item, 'selected_characteristics', None) or []
@@ -503,7 +528,7 @@ def _generate_pdf_bytes(quote: Quote, is_po: bool = False, client_data: dict = N
         ]
         table_data.append(row)
     col_widths = [2.5*cm, 2*cm, 6*cm, 2.5*cm, 2.5*cm, 3*cm]
-    t = Table(table_data, colWidths=col_widths)
+    t = Table(table_data, colWidths=col_widths, repeatRows=1)
     t.setStyle(TableStyle([('FONTNAME',(0,0),(-1,0),'Helvetica-Bold'),('ALIGN',(0,0),(-1,-1),'CENTER'),('ALIGN',(2,1),(2,-1),'LEFT'),('VALIGN',(0,0),(-1,-1),'MIDDLE'),('GRID',(0,0),(-1,-1),0.5,colors.black),('BACKGROUND',(0,0),(-1,0),colors.HexColor('#F0F0F0')),('FONTSIZE',(0,0),(-1,-1),8)]))
     elements.append(t)
     elements.append(Spacer(1, 0.5*cm))
