@@ -178,6 +178,8 @@ async def update_quote(id: str, request: Request, quote: Quote, authorization: s
     quote_dict = quote.model_dump()
     if '_id' in quote_dict:
         del quote_dict['_id']
+    # Preserve the original document id - never overwrite it
+    quote_dict['id'] = existing.get('id', id)
     await db.quotes_v2.update_one(query, {"$set": quote_dict})
     action_type = "Orden de Compra" if quote.doc_type == "PO" else "Cotización"
     await log_client_activity(quote.client_id, "quote_updated", f"{action_type} actualizada #{quote.quote_number}")
@@ -185,6 +187,7 @@ async def update_quote(id: str, request: Request, quote: Quote, authorization: s
     if _log_activity and user:
         await _log_activity(user.get("email", ""), user.get("name", ""),
                             "quote_update", f"{action_type} actualizada #{quote.quote_number} - {quote.client_name}")
+    quote.id = quote_dict['id']
     return quote
 
 @router.delete("/{id}")

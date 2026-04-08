@@ -1,0 +1,85 @@
+{
+  "summary": "Iteration 31: CRITICAL BUG FIX VERIFIED - Quote ID preservation after PUT updates. All 7 backend tests passed. Frontend PDF generation and quote editing working correctly for quotes with 15+ items.",
+
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+
+  "passed_tests": {
+    "quote_id_preservation": [
+      "✓ Create quote with 15 items → Edit → ID PRESERVED (same before and after edit)",
+      "✓ After editing, GET /api/quotes-v2/{id} still works with original ID",
+      "✓ After editing, POST /api/quotes-v2/{id}/generate-pdf still works with original ID",
+      "✓ Create quote → Edit 3 times → Each time ID stays same → Then generate PDF → Works",
+      "✓ Create quote with 20 items → Edit → ID preserved → PDF generated successfully"
+    ],
+    "quotes_v2_endpoints": [
+      "✓ GET /api/quotes-v2/?doc_type=QUOTE returns JSON array without errors",
+      "✓ POST /api/quotes-v2/{id}/convert-to-po preserves document and creates new PO"
+    ],
+    "frontend_verification": [
+      "✓ Login with admin@gimmicks.com successful",
+      "✓ Cotizaciones page loads with 30 quotes",
+      "✓ PDF button generates and displays PDF preview modal for quotes with 15+ items",
+      "✓ PDF modal shows filename PROFORMA_4740.pdf with Descargar button",
+      "✓ Edit page loads correctly for quotes with 15+ items"
+    ]
+  },
+
+  "bug_fix_verification": {
+    "root_cause": "Quote.model_dump() generates a NEW UUID for 'id' field every time. On PUT (update), the $set operation was overwriting the original document ID with this new UUID.",
+    "fix_location": "/app/backend/routes/quotes_routes.py, Line 181-182",
+    "fix_code": "quote_dict['id'] = existing.get('id', id)  # Preserve the original document id",
+    "verification": "All tests confirm ID is preserved after PUT updates. Quotes with 15-20 items can be edited multiple times and still be accessed via original ID."
+  },
+
+  "test_report_links": [
+    "/app/backend/tests/test_iteration31_quote_id_preservation.py",
+    "/app/test_reports/pytest/pytest_iteration31.xml"
+  ],
+
+  "action_items": [],
+
+  "critical_code_review_comments": [
+    "BUG FIX VERIFIED: Line 181-182 in quotes_routes.py correctly preserves original ID",
+    "The fix quote_dict['id'] = existing.get('id', id) ensures the original document ID is never overwritten",
+    "All subsequent operations (GET, PDF, email) using the original ID now work correctly"
+  ],
+
+  "updated_files": [
+    "/app/backend/tests/test_iteration31_quote_id_preservation.py"
+  ],
+
+  "success_rate": {
+    "backend": "100% (7/7 pytest tests passed)",
+    "frontend": "100% (All quote editing and PDF generation tests passed)"
+  },
+
+  "test_credentials": {
+    "admin_login": "admin@gimmicks.com / admin123456"
+  },
+
+  "seed_data_creation": "Created test quotes with 15-20 items for testing, then cleaned up",
+
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+
+  "context_for_next_testing_agent": "Iteration 31 verified the critical bug fix for quote ID preservation. The root cause was Quote.model_dump() generating new UUIDs on every call, which was overwriting document IDs during PUT updates. The fix at line 181-182 preserves the original ID. All tests with 15-20 item quotes pass. PDF generation, editing, and all CRUD operations work correctly.",
+
+  "verified_functionality": {
+    "quote_id_preservation": "PUT /api/quotes-v2/{id} now preserves original document ID",
+    "pdf_generation_after_edit": "POST /api/quotes-v2/{id}/generate-pdf works with original ID after edits",
+    "multiple_edits": "Quote can be edited 3+ times and ID remains the same",
+    "large_quotes": "Quotes with 15-20 items can be created, edited, and PDF generated",
+    "convert_to_po": "POST /api/quotes-v2/{id}/convert-to-po preserves original quote"
+  },
+
+  "mocked_api_note": "WhatsApp Cloud API send is MOCKED (messages go to local DB only, not actual WhatsApp). All other APIs are real."
+}
