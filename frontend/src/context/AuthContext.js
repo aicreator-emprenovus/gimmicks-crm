@@ -10,6 +10,16 @@ axios.defaults.withCredentials = true;
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [token, setToken] = useState(null);
+
+  // Set Authorization header whenever token changes
+  useEffect(() => {
+    if (token) {
+      axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+    } else {
+      delete axios.defaults.headers.common["Authorization"];
+    }
+  }, [token]);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -18,6 +28,7 @@ export function AuthProvider({ children }) {
         setUser(response.data);
       } catch {
         setUser(null);
+        setToken(null);
       }
       setLoading(false);
     };
@@ -26,6 +37,9 @@ export function AuthProvider({ children }) {
 
   const login = async (email, password) => {
     const response = await axios.post(`${API_URL}/api/auth/login`, { email, password });
+    const accessToken = response.data.access_token;
+    setToken(accessToken);
+    axios.defaults.headers.common["Authorization"] = `Bearer ${accessToken}`;
     setUser(response.data.user);
     return response.data.user;
   };
@@ -41,6 +55,8 @@ export function AuthProvider({ children }) {
       await axios.post(`${API_URL}/api/auth/logout`);
     } catch { /* ignore */ }
     setUser(null);
+    setToken(null);
+    delete axios.defaults.headers.common["Authorization"];
   };
 
   // Auth headers no longer needed - httpOnly cookies handle auth via withCredentials

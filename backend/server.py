@@ -41,7 +41,7 @@ security = HTTPBearer()
 
 # ============== SECURITY: Rate Limiting & Login Protection ==============
 login_attempts = defaultdict(list)  # {ip: [timestamps]}
-MAX_LOGIN_ATTEMPTS = 5
+MAX_LOGIN_ATTEMPTS = 15
 LOGIN_WINDOW_SECONDS = 300  # 5 minutes
 
 
@@ -684,9 +684,9 @@ async def login(credentials: UserLogin, request: Request):
         value=token,
         httponly=True,
         secure=True,
-        samesite="none",
+        samesite="lax",
         max_age=86400,
-        path="/api"
+        path="/"
     )
     await log_activity(user["email"], user["name"], "login", "Inicio de sesion")
     return resp
@@ -701,6 +701,8 @@ async def logout_user(request: Request, credentials: HTTPAuthorizationCredential
     except Exception:
         pass
     resp = JR(content={"message": "Sesión cerrada"})
+    resp.delete_cookie(key="auth_token", path="/")
+    # Also delete old cookie path in case it exists
     resp.delete_cookie(key="auth_token", path="/api")
     return resp
 

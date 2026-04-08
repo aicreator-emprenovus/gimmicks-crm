@@ -203,6 +203,7 @@ CRM para ventas comerciales con WhatsApp Business que integra bot IA (GPT-5.2), 
 - [x] **P0 - Bot fallback LLM (gpt-5.2 → gpt-4o)** - Abr 8, 2026
 - [x] **P0 - Bot enviando mensajes repetidos en loop** - Abr 8, 2026
 - [x] **P0 - Error autenticación tras deploy Railway** - Abr 8, 2026
+- [x] **P0 - Login intermitente** - Abr 8, 2026: Cookie SameSite=None→Lax, path=/→/, Bearer backup en frontend, rate limit 5→15
 - [x] **P1 - Auditoría completa rendimiento + datos** - Abr 8, 2026
 - [x] **Ajuste PDF Proforma (logo -30%, espacio -50%)** - Abr 8, 2026
 - [x] **P0 - Errores PDF y carga lenta en producción** - Abr 8, 2026:
