@@ -206,13 +206,11 @@ CRM para ventas comerciales con WhatsApp Business que integra bot IA (GPT-5.2), 
 - [x] **P1 - Auditoría completa rendimiento + datos** - Abr 8, 2026
 - [x] **Ajuste PDF Proforma (logo -30%, espacio -50%)** - Abr 8, 2026
 - [x] **P0 - Errores PDF y carga lenta en producción** - Abr 8, 2026:
-  - **fetch_image()**: Eliminada creación de conexión MongoDB por imagen → reúso con `_get_sync_db()`
-  - **Parallel fetch**: Imágenes de productos se descargan en paralelo (ThreadPoolExecutor 15 workers)
-  - **Timeouts**: Reducidos de 10s→2s. Auto-skip imágenes >200 items. Catch TimeoutError gracefully
-  - **_id exclusion**: Todos los endpoints `quotes-v2` ahora usan `{"_id": 0}`
-  - **Error handling**: `generate-pdf`, `send-po`, `send-quote` capturan excepciones
-  - **repeatRows**: Encabezados de tabla se repiten en cada página del PDF
-  - **Verificado**: 5 items (1s), 100 items (2s), 1000 items (1s) — todos OK
+  - **BUG CRÍTICO**: `Quote.model_dump()` generaba un nuevo UUID para `id` en cada PUT → sobrescribía el ID original → todos los endpoints fallaban con "Quote not found"
+  - **Fix**: `quote_dict['id'] = existing.get('id', id)` preserva el ID original
+  - **Parallel fetch**: Imágenes de productos descargadas con ThreadPoolExecutor (15 workers)
+  - **Timeouts**: 10s→2s por imagen, auto-skip >200 items
+  - **Verificado iteration_31**: Create → Edit 3x → PDF → todo con el mismo ID ✅
 
 ## Remaining Tasks
 1. **P2 - Refactor bot_service.py**: Split into smaller modules
