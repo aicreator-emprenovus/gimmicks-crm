@@ -11,6 +11,7 @@ from reportlab.lib.enums import TA_RIGHT, TA_CENTER
 from reportlab.lib import colors
 import io
 import base64
+from PIL import Image as PILImage
 from datetime import datetime, timezone
 from bson import ObjectId
 import requests
@@ -274,18 +275,39 @@ def _get_sync_db():
     return _sync_db
 
 
+THUMB_MAX_PX = 120  # Max thumbnail dimension in pixels
+THUMB_QUALITY = 50  # JPEG quality for thumbnails
+
+def _make_thumbnail(raw_bytes: bytes) -> io.BytesIO:
+    """Convert any image to a tiny JPEG thumbnail. Handles any size safely."""
+    pil_img = PILImage.open(io.BytesIO(raw_bytes))
+    if pil_img.mode in ("RGBA", "P", "LA"):
+        bg = PILImage.new("RGB", pil_img.size, (255, 255, 255))
+        if pil_img.mode == "P":
+            pil_img = pil_img.convert("RGBA")
+        bg.paste(pil_img, mask=pil_img.split()[-1] if pil_img.mode in ("RGBA", "LA") else None)
+        pil_img = bg
+    elif pil_img.mode != "RGB":
+        pil_img = pil_img.convert("RGB")
+    pil_img.thumbnail((THUMB_MAX_PX, THUMB_MAX_PX), PILImage.LANCZOS)
+    out = io.BytesIO()
+    pil_img.save(out, format="JPEG", quality=THUMB_QUALITY, optimize=True)
+    out.seek(0)
+    return out
+
+
 def fetch_image(url, width_cm=None):
-    """Fetch image ONLY from local sources (no external HTTP). Instant and reliable."""
+    """Fetch image from local sources only, return as optimized thumbnail."""
     try:
         if not url or str(url).strip().upper() in ("N/A", "NA", "-", "NONE", "NULL", "0", ""):
             return None
         url = str(url).strip()
-        img_data = None
+        raw_bytes = None
 
         if url.startswith("data:image"):
             try:
-                header, encoded = url.split(",", 1)
-                img_data = io.BytesIO(base64.b64decode(encoded))
+                _, encoded = url.split(",", 1)
+                raw_bytes = base64.b64decode(encoded)
             except Exception:
                 return None
 
@@ -296,42 +318,34 @@ def fetch_image(url, width_cm=None):
                     sync_db = _get_sync_db()
                     doc = sync_db.product_images.find_one({"id": image_id}, {"_id": 0, "data": 1})
                     if doc and doc.get("data"):
-                        img_data = io.BytesIO(doc["data"])
+                        raw_bytes = doc["data"] if isinstance(doc["data"], bytes) else doc["data"].encode()
                 except Exception:
                     pass
 
         elif url.startswith("/api/uploads/") or url.startswith("/uploads/"):
             filename = url.split("/products/")[-1] if "/products/" in url else ""
-            possible_paths = [
-                f"/app/backend/uploads/products/{filename}",
-                f"/app/frontend/public/uploads/products/{filename}",
-            ]
+            paths = [f"/app/backend/uploads/products/{filename}", f"/app/frontend/public/uploads/products/{filename}"]
             if url.startswith("/api/uploads/"):
-                possible_paths.insert(0, f"/app/backend/{url.replace('/api/', '')}")
-            for path in possible_paths:
+                paths.insert(0, f"/app/backend/{url.replace('/api/', '')}")
+            for path in paths:
                 if path and os.path.exists(path):
                     with open(path, 'rb') as f:
-                        img_data = io.BytesIO(f.read())
+                        raw_bytes = f.read()
                     break
 
-        # Skip ALL external HTTP fetches (Google Drive, pardux, etc.) - they cause server crashes
-        # External images are intentionally skipped for reliability
+        if not raw_bytes or len(raw_bytes) < 100:
+            return None
 
-        if img_data:
-            try:
-                utils = ImageReader(img_data)
-                iw, ih = utils.getSize()
-                aspect = ih / float(iw)
-                target_width = width_cm if width_cm else 2.5*cm
-                target_height = target_width * aspect
-                img = Image(img_data, width=target_width, height=target_height)
-                img.hAlign = 'RIGHT'
-                return img
-            except Exception:
-                return None
+        thumb = _make_thumbnail(raw_bytes)
+        target_width = width_cm if width_cm else 2.5 * cm
+        utils = ImageReader(thumb)
+        iw, ih = utils.getSize()
+        aspect = ih / float(iw)
+        img = Image(thumb, width=target_width, height=target_width * aspect)
+        img.hAlign = 'RIGHT'
+        return img
     except Exception:
         return None
-    return None
 
 def _generate_pdf_bytes(quote: Quote, is_po: bool = False, client_data: dict = None) -> bytes:
     buffer = io.BytesIO()
