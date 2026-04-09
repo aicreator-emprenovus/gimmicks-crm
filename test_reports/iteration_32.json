@@ -1,0 +1,116 @@
+{
+  "summary": "Iteration 32: Verified all 3 new bot conversational flow rules. All 15 backend tests passed. SYSTEM_PROMPT correctly implements: (1) PASO 1 greets without asking name, (2) PASO 2 prioritizes product search before name, (3) PASO 3 asks name after showing products, (4) REGLA CRITICA forbids mentioning quote numbers, (5) PRODUCTOS NO ENCONTRADOS does NOT ask for email.",
+
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+
+  "passed_tests": {
+    "system_prompt_rules": [
+      "✓ PASO 1 correctly instructs to greet WITHOUT asking for name",
+      "✓ PASO 2 correctly prioritizes PRODUCTO before asking for name",
+      "✓ PASO 3 correctly asks for name AFTER showing products",
+      "✓ REGLA CRITICA correctly forbids mentioning quote numbers to client",
+      "✓ PRODUCTOS NO ENCONTRADOS rule correctly does NOT ask for email"
+    ],
+    "notify_staff_catalog_request": [
+      "✓ notify_staff_catalog_request sends 'PRODUCTO NO ENCONTRADO EN INVENTARIO' alert",
+      "✓ Notification does NOT include Email field",
+      "✓ Function does not require email in collected_data"
+    ],
+    "alert_5_immediate_trigger": [
+      "✓ Alert #5 triggers IMMEDIATELY without email prerequisite"
+    ],
+    "quote_context": [
+      "✓ quote_context does NOT include #{quote_number}",
+      "✓ quote_context instructs NOT to mention quote number"
+    ],
+    "fallback_message": [
+      "✓ Fallback message says 'En que puedo ayudarte?' without asking for name"
+    ],
+    "backend_auth": [
+      "✓ POST /api/auth/login works correctly with valid credentials",
+      "✓ POST /api/auth/login correctly rejects invalid credentials (401)"
+    ],
+    "webhook_endpoint": [
+      "✓ GET /api/webhook/whatsapp verification works correctly",
+      "✓ POST /api/webhook/whatsapp exists and returns 200"
+    ]
+  },
+
+  "verified_rules": {
+    "rule_1_greeting": "PASO 1 says 'Hola, soy Ana de Gimmicks Marketing Services. En que puedo ayudarte?' and explicitly states 'NO pidas el nombre en el primer mensaje'",
+    "rule_2_product_priority": "PASO 2 is PRODUCTO (PRIORIDAD MAXIMA) - searches products immediately, says 'NO pidas nombre, email ni ningun otro dato antes de mostrar el catalogo'",
+    "rule_3_name_after_products": "PASO 3 is NOMBRE DEL CLIENTE - 'Despues de mostrar opciones de producto' asks for name",
+    "rule_4_no_quote_number": "REGLA CRITICA - NUMERO DE COTIZACION: 'NUNCA menciones el numero de cotizacion al cliente... Es un dato interno del sistema'",
+    "rule_5_no_email_for_catalog": "PRODUCTOS NO ENCONTRADOS: 'NO pidas el correo electronico para enviar catalogo. El asesor humano se encargara directamente'"
+  },
+
+  "verified_functions": {
+    "notify_staff_catalog_request": {
+      "location": "bot_service.py line 685",
+      "notification_text": "PRODUCTO NO ENCONTRADO EN INVENTARIO",
+      "fields_included": ["Cliente", "Telefono", "Busqueda"],
+      "fields_NOT_included": ["Email", "Correo"]
+    },
+    "alert_5_trigger": {
+      "location": "bot_service.py line 1183",
+      "condition": "if no_products_found and not state.get('catalog_alert_sent_for_search')",
+      "no_email_prerequisite": true
+    },
+    "quote_context": {
+      "location": "bot_service.py line 844",
+      "text": "Ya existe una cotizacion pendiente para este cliente. NO menciones el numero de cotizacion.",
+      "no_quote_number_reference": true
+    },
+    "fallback_message": {
+      "location": "bot_service.py line 1063",
+      "text": "Hola, soy Ana de Gimmicks Marketing Services. En que puedo ayudarte?",
+      "no_name_request": true
+    }
+  },
+
+  "test_report_links": [
+    "/app/backend/tests/test_iteration32_bot_rules.py",
+    "/app/test_reports/pytest/pytest_iteration32.xml"
+  ],
+
+  "action_items": [],
+
+  "critical_code_review_comments": [
+    "All 3 new conversational flow rules correctly implemented in SYSTEM_PROMPT",
+    "PASO 1-2-3 order is correct: Greeting → Product → Name",
+    "notify_staff_catalog_request correctly sends 'PRODUCTO NO ENCONTRADO EN INVENTARIO' without email field",
+    "Alert #5 triggers immediately on no_products_found without email prerequisite",
+    "quote_context correctly instructs NOT to mention quote number"
+  ],
+
+  "updated_files": [
+    "/app/backend/tests/test_iteration32_bot_rules.py"
+  ],
+
+  "success_rate": {
+    "backend": "100% (15/15 pytest tests passed)",
+    "frontend": "N/A (backend only testing requested)"
+  },
+
+  "test_credentials": {
+    "admin_login": "admin@gimmicks.com / admin123456"
+  },
+
+  "seed_data_creation": "No seed data created - tests validate code structure and API endpoints",
+
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+
+  "context_for_next_testing_agent": "Iteration 32 verified all 3 new bot conversational flow rules: (1) PASO 1 greets without name, (2) PASO 2 prioritizes product search, (3) PASO 3 asks name after products. Also verified: REGLA CRITICA forbids quote numbers, PRODUCTOS NO ENCONTRADOS does NOT ask for email, notify_staff_catalog_request sends correct alert, Alert #5 triggers immediately, quote_context has no quote number, fallback message is correct. All 15 tests passed.",
+
+  "mocked_api_note": "WhatsApp Cloud API send is MOCKED (messages go to local DB only, not actual WhatsApp). LLM calls (GPT-5.2) were NOT tested as they require real API keys - only SYSTEM_PROMPT text and function logic were validated."
+}

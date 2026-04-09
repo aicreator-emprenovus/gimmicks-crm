@@ -48,24 +48,24 @@ NUNCA ignores datos que el cliente ya proporciono. Extrae TODO en extracted_data
 
 FLUJO OBLIGATORIO DE LA CONVERSACION (SIGUE ESTE ORDEN ESTRICTAMENTE):
 
-PASO 1 - SALUDO:
+PASO 1 - SALUDO INICIAL:
 Cuando el cliente escribe por primera vez o saluda:
-- Saluda cordialmente y presentate como Ana de Gimmicks.
-- Pregunta en que le puedes ayudar.
+- Responde: "Hola, soy Ana de Gimmicks Marketing Services. En que puedo ayudarte?"
+- NO pidas el nombre en el primer mensaje. Solo saluda y pregunta en que puedes ayudar.
+- Si el cliente menciona un producto en su primer mensaje, ve directo al PASO 2.
 
-PASO 2 - NOMBRE DEL CLIENTE:
-Antes de avanzar con productos, NECESITAS el nombre del cliente.
-- Si aun no tienes el nombre, preguntale: "Me compartes tu nombre para registrarte?"
+PASO 2 - PRODUCTO (PRIORIDAD MAXIMA):
+Si el cliente PIDE o MENCIONA un tipo de producto (termos, jarros, gorras, tazas, etc.):
+- Busca opciones inmediatamente. Pon catalog_search con la palabra clave del producto.
+- Si el sistema te proporciona un LINK DEL CATALOGO FILTRADO, incluyelo EXACTAMENTE en tu respuesta para que el cliente vea las opciones con imagenes y copie los codigos.
+- NO pidas nombre, email ni ningun otro dato antes de mostrar el catalogo. Primero muestra las opciones.
+- Termina pidiendo que revisen el catalogo en el link y compartan los codigos que les gusten.
+
+PASO 3 - NOMBRE DEL CLIENTE:
+Despues de mostrar opciones de producto o cuando el flujo lo permita naturalmente:
+- Si aun no tienes el nombre, pidelo de forma natural: "Y me compartes tu nombre para registrarte?"
 - Guarda el nombre en extracted_data.nombre.
 - Una vez que tengas el nombre, usalo para dirigirte al cliente de ahi en adelante.
-
-PASO 3 - PRODUCTO:
-Si el cliente PIDE o MENCIONA un tipo de producto (termos, jarros, gorras, tazas, etc.):
-- Confirma brevemente que vas a buscar opciones.
-- Pon catalog_search con la palabra clave del producto.
-- Si el sistema te proporciona un LINK DEL CATALOGO FILTRADO, incluyelo EXACTAMENTE en tu respuesta para que el cliente pueda ver las opciones con imagenes y copiar los codigos.
-- NO preguntes cantidad ni nada mas. Solo presenta las opciones, comparte el link y pide que te compartan los codigos de los productos que les gusten.
-- Termina el mensaje pidiendo que revisen el catalogo en el link y compartan los codigos.
 
 PASO 4 - CONFIRMACION DE CODIGOS:
 Si el cliente comparte CODIGOS de productos (como GIMN06001, JARPOR00391, etc.):
@@ -83,8 +83,8 @@ Una vez que tengas codigos Y cantidades, pide los datos que falten de UNO EN UNO
 5. Fecha de entrega deseada
 
 REGLAS ADICIONALES:
-- Si el cliente SALUDA (hola, buenas, buenos dias, etc.): Saluda, presentate y pregunta en que le puedes ayudar. Si no tienes su nombre, pidelo.
-- Si el cliente quiere COTIZAR pero no dice que producto: Primero asegurate de tener su nombre, luego pregunta que tipo de producto necesita.
+- Si el cliente SALUDA (hola, buenas, buenos dias, etc.): Saluda y pregunta en que le puedes ayudar. NO pidas el nombre de inmediato.
+- Si el cliente quiere COTIZAR pero no dice que producto: Pregunta que tipo de producto necesita. NO exijas el nombre primero.
 - Si el cliente hace una PREGUNTA (precios, tiempos de entrega, etc.): Responde y guia hacia la accion comercial.
 - Si el cliente envia algo que NO ENTIENDES o es ambiguo: Interpreta lo mejor posible. Si definitivamente no puedes dar una respuesta util, marca needs_human=true para que un asesor lo atienda.
 - extracted_data.cantidad es la cantidad general (si aplica a todos los productos por igual).
@@ -92,14 +92,18 @@ REGLAS ADICIONALES:
 
 REGLA CRITICA SOBRE PRODUCTOS NO ENCONTRADOS:
 - NUNCA digas que no tienes un producto o articulo. NUNCA uses frases como "no encontre", "no tenemos", "no hay en inventario".
-- Si el sistema indica que NO HAY PRODUCTOS para la busqueda: responde que tienes muchas opciones y que un asesor le puede enviar el catalogo completo por email. Pide su correo electronico.
-- Guarda el correo en extracted_data.correo.
-- Esto aplica siempre que no haya resultados de busqueda.
+- Si el sistema indica que NO HAY PRODUCTOS para la busqueda: responde que tienes muchas opciones disponibles y que un asesor se comunicara con el para enviarle mas opciones por WhatsApp.
+- NO pidas el correo electronico para enviar catalogo. El asesor humano se encargara directamente.
+- Simplemente tranquiliza al cliente y continua con el flujo normal de la conversacion.
 
 COTIZACION:
 Marca needs_quote=true UNICAMENTE cuando tengas TODOS estos datos: codigos de producto + cantidad + correo electronico + nombre de empresa. Los cuatro datos son obligatorios.
 NUNCA marques needs_quote=true si aun no tienes el correo Y la empresa del cliente.
 Si el cliente cambia productos o cantidades DESPUES de la primera cotizacion, marca needs_quote=true de nuevo para actualizarla.
+
+REGLA CRITICA - NUMERO DE COTIZACION:
+- NUNCA menciones el numero de cotizacion al cliente (ej: #4700, #4701, etc.). Es un dato interno del sistema.
+- Cuando confirmes una cotizacion, solo di que fue registrada y sera enviada. JAMAS incluyas el numero.
 
 INFORMACION DE LA EMPRESA:
 - Gimmicks esta en Quito, Ecuador
@@ -679,18 +683,16 @@ async def send_escalation_summary(db: AsyncIOMotorDatabase, phone_number: str, c
 
 
 async def notify_staff_catalog_request(db: AsyncIOMotorDatabase, phone_number: str, collected_data: Dict, product_request: str, send_message_fn):
-    """Send WhatsApp alert to staff when a client requests the catalog via email."""
+    """Send immediate WhatsApp alert to staff when product search returns no results."""
     try:
-        client_name = collected_data.get("nombre", "Cliente desconocido")
-        correo = collected_data.get("correo", "No proporcionado")
+        client_name = collected_data.get("nombre", "Cliente sin nombre")
 
         notification = (
-            f"SOLICITUD DE CATALOGO POR EMAIL\n\n"
+            f"PRODUCTO NO ENCONTRADO EN INVENTARIO\n\n"
             f"Cliente: {client_name}\n"
             f"Telefono: {phone_number}\n"
-            f"Email: {correo}\n"
-            f"Busqueda original: {product_request}\n\n"
-            f"Enviar catalogo PDF al correo del cliente."
+            f"Busqueda: {product_request}\n\n"
+            f"Enviar link del catalogo al cliente por WhatsApp."
         )
 
         staff_conv = await db.conversations.find_one({"phone_number": STAFF_NOTIFICATION_PHONE}, {"_id": 0, "id": 1})
@@ -815,9 +817,9 @@ async def _build_conversation_context(db, phone_number, collected_data, message_
             no_products_found = True
             catalog_availability = (
                 "SIN RESULTADOS EN INVENTARIO para esta busqueda.\n"
-                "INSTRUCCION: NO digas que no tienes el producto. "
-                "Responde que tienes muchas opciones disponibles y que un asesor puede enviarle el catalogo completo por email. "
-                "Pide su correo electronico. Guarda en extracted_data.correo."
+                "INSTRUCCION: NO digas que no tienes el producto. NO pidas correo para enviar catalogo. "
+                "Responde que tienes muchas opciones disponibles y que un asesor se comunicara con el "
+                "para enviarle mas opciones por WhatsApp. Continua con el flujo normal."
             )
 
     # Validate and show currently selected codes
@@ -839,7 +841,7 @@ async def _build_conversation_context(db, phone_number, collected_data, message_
         {"_id": 0, "quote_number": 1}
     )
     if existing_quote:
-        quote_context = f"Ya existe una cotizacion pendiente #{existing_quote.get('quote_number', '')} para este cliente."
+        quote_context = "Ya existe una cotizacion pendiente para este cliente. NO menciones el numero de cotizacion."
 
     # --- missing_fields ---
     all_required = [
@@ -1058,7 +1060,7 @@ MENSAJE ACTUAL DEL CLIENTE: {message_text}"""
 
         if ai_result is None:
             if msg_count <= 1:
-                fallback = "Hola, soy Ana de Gimmicks Marketing Services. Me compartes tu nombre para ayudarte?"
+                fallback = "Hola, soy Ana de Gimmicks Marketing Services. En que puedo ayudarte?"
             else:
                 fallback = "Disculpa, tuve un problema. Podrias repetir tu mensaje?"
             await send_message_fn(phone_number, conversation_id, fallback)
@@ -1177,13 +1179,12 @@ MENSAJE ACTUAL DEL CLIENTE: {message_text}"""
             await send_escalation_summary(db, phone_number, collected_data, "El bot detecto que se necesita revision humana", send_message_fn)
             transferred = True
 
-        # ===== ALERT #5: Product not found + email collected → notify staff for catalog ===
-        needs_catalog_alert = no_products_found or state.get("no_products_found_pending", False)
-        if needs_catalog_alert and collected_data.get("correo") and not state.get("catalog_email_notified"):
+        # ===== ALERT #5: Product not found → immediately notify staff ===
+        if no_products_found and not state.get("catalog_alert_sent_for_search"):
             await notify_staff_catalog_request(db, phone_number, collected_data, message_text, send_message_fn)
             await db.conversation_states.update_one(
                 {"phone_number": phone_number},
-                {"$set": {"catalog_email_notified": True, "no_products_found_pending": False}}
+                {"$set": {"catalog_alert_sent_for_search": True}}
             )
 
         # ===== UPDATE STATE =====
@@ -1196,9 +1197,6 @@ MENSAJE ACTUAL DEL CLIENTE: {message_text}"""
             "message_count": msg_count,
             "last_interaction": now.isoformat(),
         }
-        # Persist no_products_found flag so catalog alert triggers when email arrives later
-        if no_products_found and not collected_data.get("correo"):
-            state_updates["no_products_found_pending"] = True
 
         await db.conversation_states.update_one(
             {"phone_number": phone_number},
