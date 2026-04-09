@@ -18,7 +18,6 @@ import re
 import uuid
 import jwt
 import os
-from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError
 import asyncio
 from services.email_service import send_po_email
 
@@ -276,18 +275,20 @@ def _get_sync_db():
 
 
 def fetch_image(url, width_cm=None):
+    """Fetch image ONLY from local sources (no external HTTP). Instant and reliable."""
     try:
         if not url or str(url).strip().upper() in ("N/A", "NA", "-", "NONE", "NULL", "0", ""):
             return None
         url = str(url).strip()
         img_data = None
+
         if url.startswith("data:image"):
             try:
                 header, encoded = url.split(",", 1)
-                img_bytes = base64.b64decode(encoded)
-                img_data = io.BytesIO(img_bytes)
+                img_data = io.BytesIO(base64.b64decode(encoded))
             except Exception:
                 return None
+
         elif url.startswith("/api/inventory/images/"):
             image_id = url.split("/api/inventory/images/")[-1]
             if image_id:
@@ -298,8 +299,7 @@ def fetch_image(url, width_cm=None):
                         img_data = io.BytesIO(doc["data"])
                 except Exception:
                     pass
-            if not img_data:
-                return None
+
         elif url.startswith("/api/uploads/") or url.startswith("/uploads/"):
             filename = url.split("/products/")[-1] if "/products/" in url else ""
             possible_paths = [
@@ -313,57 +313,10 @@ def fetch_image(url, width_cm=None):
                     with open(path, 'rb') as f:
                         img_data = io.BytesIO(f.read())
                     break
-            if not img_data:
-                try:
-                    api_path = url if url.startswith("/api/") else f"/api{url}"
-                    local_url = f"http://localhost:8001{api_path}"
-                    resp = requests.get(local_url, timeout=2)
-                    if resp.status_code == 200:
-                        img_data = io.BytesIO(resp.content)
-                except Exception:
-                    pass
-        else:
-            if not url.startswith("http"):
-                return None
-            # Google Drive folder URLs - cannot fetch
-            if 'drive.google.com/drive/folders' in url:
-                return None
-            # Google Drive file URLs - try multiple strategies
-            drive_match = re.search(r'drive\.google\.com/file/d/([^/\?]+)', url)
-            if drive_match:
-                file_id = drive_match.group(1)
-                drive_urls = [
-                    f"https://lh3.googleusercontent.com/d/{file_id}=w400",
-                    f"https://drive.google.com/thumbnail?id={file_id}&sz=w400",
-                ]
-                for drive_url in drive_urls:
-                    try:
-                        resp = requests.get(drive_url, headers={'User-Agent': 'Mozilla/5.0'}, timeout=2, allow_redirects=True)
-                        ct = resp.headers.get('content-type', '').lower()
-                        if resp.status_code == 200 and 'image' in ct and len(resp.content) > 100:
-                            img_data = io.BytesIO(resp.content)
-                            break
-                    except Exception:
-                        continue
-            elif 'drive.google.com/thumbnail' in url or 'lh3.googleusercontent.com' in url:
-                try:
-                    resp = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'}, timeout=2, allow_redirects=True)
-                    ct = resp.headers.get('content-type', '').lower()
-                    if resp.status_code == 200 and 'image' in ct and len(resp.content) > 100:
-                        img_data = io.BytesIO(resp.content)
-                except Exception:
-                    pass
-            else:
-                try:
-                    response = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'}, timeout=2, allow_redirects=True)
-                    if response.status_code == 200:
-                        content_type = response.headers.get('content-type', '').lower()
-                        if 'svg' in content_type or url.endswith('.svg'):
-                            return None
-                        if 'image' in content_type and len(response.content) > 100:
-                            img_data = io.BytesIO(response.content)
-                except Exception:
-                    pass
+
+        # Skip ALL external HTTP fetches (Google Drive, pardux, etc.) - they cause server crashes
+        # External images are intentionally skipped for reliability
+
         if img_data:
             try:
                 utils = ImageReader(img_data)
@@ -389,13 +342,26 @@ def _generate_pdf_bytes(quote: Quote, is_po: bool = False, client_data: dict = N
     style_normal.fontSize = 9
     style_bold = ParagraphStyle("Bold", parent=style_normal, fontName="Helvetica-Bold")
     effective_is_po = is_po or (quote.doc_type == "PO")
+    # Use local logo files (no HTTP fetch)
+    logo_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets")
     if effective_is_po:
-        logo_url = "https://customer-assets.emergentagent.com/job_quote-crafter-1/artifacts/x43p1zgk_image.png"
+        logo_path = os.path.join(logo_dir, "logo_gimmicks.png")
         title_text = f"<b>ORDEN DE COMPRA No. {quote.quote_number or '---'}</b>"
     else:
-        logo_url = "https://customer-assets.emergentagent.com/job_quote-crafter-1/artifacts/5cvzat7e_image.png"
+        logo_path = os.path.join(logo_dir, "logo_po.png")
         title_text = f"<b>PROFORMA No. {quote.quote_number or '---'}</b>"
-    logo = fetch_image(logo_url, width_cm=2.8*cm)
+    logo = None
+    if os.path.exists(logo_path):
+        try:
+            with open(logo_path, 'rb') as f:
+                img_data = io.BytesIO(f.read())
+            utils = ImageReader(img_data)
+            iw, ih = utils.getSize()
+            target_w = 2.8*cm
+            ratio = target_w / iw
+            logo = Image(img_data, width=target_w, height=ih*ratio)
+        except Exception:
+            pass
     months = {1:"Enero",2:"Febrero",3:"Marzo",4:"Abril",5:"Mayo",6:"Junio",7:"Julio",8:"Agosto",9:"Septiembre",10:"Octubre",11:"Noviembre",12:"Diciembre"}
     day = quote.created_at.day
     month = months[quote.created_at.month]
@@ -472,35 +438,8 @@ def _generate_pdf_bytes(quote: Quote, is_po: bool = False, client_data: dict = N
     table_headers = ['CÓDIGO', 'CANTIDAD', 'DESCRIPCIÓN', 'VALOR\nUNITARIO', 'VALOR\nTOTAL', 'IMAGEN']
     table_data = [table_headers]
 
-    # Fetch all images in parallel for performance (critical for 50+ items)
-    # Skip image fetching for very large quotes to stay within timeout
-    image_map = {}
-    skip_images = len(quote.items) > 200
-    if not skip_images:
-        image_urls = [(i, item.image_url) for i, item in enumerate(quote.items) if item.image_url]
-        if image_urls:
-            def _fetch_one(args):
-                idx, url = args
-                try:
-                    return idx, fetch_image(url, width_cm=2.5*cm)
-                except Exception:
-                    return idx, None
-            max_w = min(5, len(image_urls))
-            with ThreadPoolExecutor(max_workers=max_w) as executor:
-                futures = [executor.submit(_fetch_one, (idx, url)) for idx, url in image_urls]
-                try:
-                    for future in as_completed(futures, timeout=15):
-                        try:
-                            idx, img = future.result(timeout=0.5)
-                            if img:
-                                image_map[idx] = img
-                        except Exception:
-                            pass
-                except (TimeoutError, Exception):
-                    pass  # Use whatever images we got within the time limit
-
     for i, item in enumerate(quote.items):
-        p_img = image_map.get(i)
+        p_img = fetch_image(item.image_url, width_cm=2.5*cm) if item.image_url else None
         desc_parts = [f"<b>{item.name}</b>", item.description]
         # Show manually selected characteristics (not auto-filled from inventory)
         sel_chars = getattr(item, 'selected_characteristics', None) or []
