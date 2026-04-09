@@ -141,6 +141,18 @@ CRM para ventas comerciales con WhatsApp Business que integra bot IA (GPT-5.2), 
   - Testing: 13/13 backend + frontend completo 100% (iteration_20)
 
 ## Resolved Issues (Latest)
+- [x] **P0 - Múltiples usuarios no pueden ingresar simultáneamente** - Abr 2026:
+  - **Causa raíz**: Rate limiter usaba `request.client.host` que devuelve la IP del proxy (Railway). Todos los usuarios compartían la misma IP → 15 intentos totales entre TODOS → bloqueo (429)
+  - **Fix**: Nuevo helper `get_client_ip()` que lee `X-Forwarded-For` y `X-Real-IP` para obtener la IP real de cada usuario
+  - **Fix**: `MAX_LOGIN_ATTEMPTS` aumentado de 15 a 50
+  - Testing: 20 logins rápidos consecutivos todos exitosos (iteration_34)
+- [x] **P0 - Sistema no funciona en Firefox ni Edge** - Abr 2026:
+  - **Causa raíz**: CORS configurado con `allow_credentials=True` + `allow_origins=["*"]` → INVÁLIDO per spec CORS. Chrome lo tolera, Firefox/Edge lo bloquean completamente
+  - **Fix**: Auth migrado de cookies a Bearer token via `localStorage` como mecanismo principal
+  - **Fix**: CORS simplificado: `allow_origins=["*"]` SIN `allow_credentials` → compatible con TODOS los navegadores
+  - **Fix**: `AuthContext.js`: token persiste en `localStorage`, se restaura al recargar, se envía como `Authorization: Bearer` header
+  - **Fix**: Eliminado `withCredentials=true` de axios (causaba el bloqueo CORS)
+  - Testing: sesión persiste tras refresh, login/logout funcional, 6/6 UI tests (iteration_34)
 - [x] **P0 - Refactorización flujo conversacional bot WhatsApp** - Abr 2026:
   - **Regla 1**: PASO 1 saluda SIN pedir nombre. "Hola, soy Ana de Gimmicks. En que puedo ayudarte?"
   - **Regla 2**: PASO 2 prioriza búsqueda de producto y envío de link interno `/catalog?q=keyword` ANTES de pedir nombre o datos
