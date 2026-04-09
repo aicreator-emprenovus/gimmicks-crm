@@ -4,48 +4,59 @@ import axios from "axios";
 const AuthContext = createContext(null);
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
-// Configure axios to always send cookies
-axios.defaults.withCredentials = true;
+// Do NOT set withCredentials globally - it forces CORS credential checks
+// that break in Firefox/Edge when proxy returns Access-Control-Allow-Origin: *
+// Bearer token from localStorage is the primary auth mechanism
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [token, setToken] = useState(null);
+  const [token, setToken] = useState(() => {
+    try { return localStorage.getItem("auth_token") || null; } catch { return null; }
+  });
 
-  // Set Authorization header whenever token changes
+  // Sync token to axios headers and localStorage whenever it changes
   useEffect(() => {
     if (token) {
       axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+      try { localStorage.setItem("auth_token", token); } catch {}
     } else {
       delete axios.defaults.headers.common["Authorization"];
+      try { localStorage.removeItem("auth_token"); } catch {}
     }
   }, [token]);
 
   useEffect(() => {
     const checkAuth = async () => {
-      try {
-        const response = await axios.get(`${API_URL}/api/auth/me`);
-        setUser(response.data);
-      } catch {
-        setUser(null);
-        setToken(null);
+      const stored = localStorage.getItem("auth_token");
+      if (stored) {
+        axios.defaults.headers.common["Authorization"] = `Bearer ${stored}`;
+        try {
+          const response = await axios.get(`${API_URL}/api/auth/me`);
+          setUser(response.data);
+          setToken(stored);
+        } catch {
+          setUser(null);
+          setToken(null);
+        }
       }
       setLoading(false);
     };
     checkAuth();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const login = async (email, password) => {
     const response = await axios.post(`${API_URL}/api/auth/login`, { email, password });
     const accessToken = response.data.access_token;
     setToken(accessToken);
-    axios.defaults.headers.common["Authorization"] = `Bearer ${accessToken}`;
     setUser(response.data.user);
     return response.data.user;
   };
 
   const register = async (email, password, name) => {
     const response = await axios.post(`${API_URL}/api/auth/register`, { email, password, name });
+    const accessToken = response.data.access_token;
+    if (accessToken) setToken(accessToken);
     setUser(response.data.user);
     return response.data.user;
   };
@@ -56,10 +67,8 @@ export function AuthProvider({ children }) {
     } catch { /* ignore */ }
     setUser(null);
     setToken(null);
-    delete axios.defaults.headers.common["Authorization"];
   };
 
-  // Auth headers no longer needed - httpOnly cookies handle auth via withCredentials
   const getAuthHeaders = () => ({});
 
   return (

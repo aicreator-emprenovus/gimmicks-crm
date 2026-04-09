@@ -41,11 +41,22 @@ security = HTTPBearer()
 
 # ============== SECURITY: Rate Limiting & Login Protection ==============
 login_attempts = defaultdict(list)  # {ip: [timestamps]}
-MAX_LOGIN_ATTEMPTS = 15
+MAX_LOGIN_ATTEMPTS = 50
 LOGIN_WINDOW_SECONDS = 300  # 5 minutes
 
 
-def check_rate_limit(ip: str, limit: int = 60, window: int = 60) -> bool:
+def get_client_ip(request: Request) -> str:
+    """Get real client IP behind proxies (Railway, Nginx, etc.)."""
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    real_ip = request.headers.get("x-real-ip")
+    if real_ip:
+        return real_ip.strip()
+    return request.client.host if request.client else "unknown"
+
+
+def check_rate_limit(ip: str, limit: int = 120, window: int = 60) -> bool:
     """Simple in-memory rate limiter. Returns True if allowed."""
     now = datetime.now(timezone.utc)
     cutoff = now - timedelta(seconds=window)
@@ -647,7 +658,7 @@ async def register(user_data: UserCreate):
 
 @api_router.post("/auth/login")
 async def login(credentials: UserLogin, request: Request):
-    client_ip = request.client.host if request.client else "unknown"
+    client_ip = get_client_ip(request)
 
     if not check_login_attempts(client_ip):
         raise HTTPException(
@@ -684,7 +695,7 @@ async def login(credentials: UserLogin, request: Request):
         value=token,
         httponly=True,
         secure=True,
-        samesite="lax",
+        samesite="none",
         max_age=86400,
         path="/"
     )
@@ -3921,14 +3932,15 @@ if _env_origins:
 _frontend_url = os.environ.get('FRONTEND_URL', '').strip()
 if _frontend_url and _frontend_url not in _cors_origins:
     _cors_origins.append(_frontend_url)
-# Fallback: allow all origins if none configured (same-origin deployments)
-if not _cors_origins:
-    _cors_origins = ["*"]
+_backend_url = os.environ.get('REACT_APP_BACKEND_URL', '').strip()
+if _backend_url and _backend_url not in _cors_origins:
+    _cors_origins.append(_backend_url)
 
+# CORS: Allow all origins. Auth is handled via Bearer token in Authorization header,
+# NOT cookies, so allow_credentials is not needed. This works in ALL browsers.
 app.add_middleware(
     CORSMiddleware,
-    allow_credentials=True,
-    allow_origins=_cors_origins,
+    allow_origins=["*"],
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
