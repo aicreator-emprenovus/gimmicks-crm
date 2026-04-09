@@ -148,6 +148,13 @@ CRM para ventas comerciales con WhatsApp Business que integra bot IA (GPT-5.2), 
   - **Regla 3**: NUNCA se menciona número de cotización. `quote_context` eliminó `#{quote_number}`. Regla estricta en prompt
   - PASO reordenado: Saludo → Producto → Nombre → Códigos → Datos adicionales
   - Testing: 15/15 backend 100% (iteration_32)
+- [x] **P0 - 4 reglas nuevas del bot WhatsApp** - Abr 2026:
+  - Regla 1: Mensajes cortos, de manera natural, sin emojis (PERSONALIDAD actualizada)
+  - Regla 2: Pide "nombre y apellido" (PASO 3), datos personales SOLO después de entender artículos (PASO 5)
+  - Regla 3: Primer recordatorio a las 4h solo para etapas "Lead"/"Cliente potencial" con mensaje exacto del usuario
+  - Regla 4: Segundo recordatorio a las 23h solo para etapas "Lead"/"Cliente potencial" con mensaje exacto del usuario
+  - Filtro de etapas: recordatorios NO se envían a "cotizacion_generada", "pedido", "perdido"
+  - Testing: 15/15 backend 100% (iteration_33)
 - [x] **Link del inventario filtrado en el bot + email para catalogo** - Abr 8, 2026:
   - Cuando hay productos: bot envia link `/catalog?q=keyword` filtrado para que cliente vea opciones y copie codigos
   - Cuando NO hay productos: bot pide email, NUNCA dice "no tenemos", alerta al staff
