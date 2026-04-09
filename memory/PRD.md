@@ -141,6 +141,13 @@ CRM para ventas comerciales con WhatsApp Business que integra bot IA (GPT-5.2), 
   - Testing: 13/13 backend + frontend completo 100% (iteration_20)
 
 ## Resolved Issues (Latest)
+- [x] **P0 - Refactorización flujo conversacional bot WhatsApp** - Abr 2026:
+  - **Regla 1**: PASO 1 saluda SIN pedir nombre. "Hola, soy Ana de Gimmicks. En que puedo ayudarte?"
+  - **Regla 2**: PASO 2 prioriza búsqueda de producto y envío de link interno `/catalog?q=keyword` ANTES de pedir nombre o datos
+  - **Regla 2b**: Cuando NO hay productos → alerta inmediata al agente humano (+593999440910) por WhatsApp. NO se pide email para catálogo
+  - **Regla 3**: NUNCA se menciona número de cotización. `quote_context` eliminó `#{quote_number}`. Regla estricta en prompt
+  - PASO reordenado: Saludo → Producto → Nombre → Códigos → Datos adicionales
+  - Testing: 15/15 backend 100% (iteration_32)
 - [x] **Link del inventario filtrado en el bot + email para catalogo** - Abr 8, 2026:
   - Cuando hay productos: bot envia link `/catalog?q=keyword` filtrado para que cliente vea opciones y copie codigos
   - Cuando NO hay productos: bot pide email, NUNCA dice "no tenemos", alerta al staff
