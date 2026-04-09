@@ -1,0 +1,114 @@
+{
+  "summary": "Iteration 33: Verified all 4 NEW bot rules. All 15 backend tests passed. SYSTEM_PROMPT correctly implements: (1) PERSONALIDAD says 'mensajes cortos, de manera natural, sin emojis', (2) PASO 3 asks for 'nombre y apellido', (3) PASO 5 says 'DATOS PERSONALES UNICAMENTE despues de entender cuales articulos', (4) PASO 2 (PRODUCTO) comes before PASO 3 (NOMBRE). run_followup_check correctly implements: (5) REMINDER_1_MSG exact text, (6) REMINDER_2_MSG exact text, (7) first reminder at 4h with stage filter, (8) second reminder at 23h with stage filter, (9) reminders NOT sent for excluded stages.",
+
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+
+  "passed_tests": {
+    "system_prompt_rules": [
+      "✓ PERSONALIDAD correctly says 'mensajes cortos, de manera natural, sin emojis'",
+      "✓ PASO 3 correctly asks for 'nombre y apellido' (not just 'nombre')",
+      "✓ PASO 5 correctly says 'DATOS PERSONALES UNICAMENTE despues de entender cuales articulos'",
+      "✓ PASO 2 (PRODUCTO) correctly comes BEFORE PASO 3 (NOMBRE)"
+    ],
+    "reminder_messages": [
+      "✓ REMINDER_1_MSG exact text: 'Hola, te escribo solo para saber si pudiste revisar la información que te envié. Recuerda que estoy aquí para ayudarte en tus requerimientos'",
+      "✓ REMINDER_2_MSG exact text: 'Hola, solo quería hacer seguimiento a la información que te compartí. Si deseas, puedo ayudarte por aquí mismo a resolver cualquier duda o avanzar con lo que necesitas. Quedo atenta.'"
+    ],
+    "reminder_timing_and_stages": [
+      "✓ First reminder triggers at 4h AND lead_stage in ('lead','cliente_potencial')",
+      "✓ Second reminder triggers at 23h AND lead_stage in ('lead','cliente_potencial')",
+      "✓ Reminders do NOT send for 'cotizacion_generada', 'pedido', 'perdido' stages"
+    ],
+    "backend_auth": [
+      "✓ GET /api/health returns 200",
+      "✓ POST /api/auth/login works correctly with valid credentials",
+      "✓ POST /api/auth/login correctly rejects invalid credentials (401)"
+    ],
+    "function_structure": [
+      "✓ run_followup_check function exists in server.py",
+      "✓ lead_stage is checked before sending reminders",
+      "✓ Conversations with quote_generated are skipped"
+    ]
+  },
+
+  "verified_rules": {
+    "rule_1_personalidad": "PERSONALIDAD section says: 'Responde con mensajes cortos, de manera natural, sin emojis'",
+    "rule_2_nombre_y_apellido": "PASO 3 says: 'Me compartes tu nombre y apellido para registrarte?' and 'Guarda el nombre completo (nombre y apellido) en extracted_data.nombre'",
+    "rule_3_datos_personales": "PASO 5 says: 'Solicita los datos personales UNICAMENTE despues de entender cuales articulos desea el cliente'",
+    "rule_4_product_before_name": "PASO 2 (PRODUCTO - PRIORIDAD MAXIMA) comes before PASO 3 (NOMBRE Y APELLIDO DEL CLIENTE)",
+    "rule_5_reminder_1_msg": "REMINDER_1_MSG = 'Hola, te escribo solo para saber si pudiste revisar la información que te envié. Recuerda que estoy aquí para ayudarte en tus requerimientos'",
+    "rule_6_reminder_2_msg": "REMINDER_2_MSG = 'Hola, solo quería hacer seguimiento a la información que te compartí. Si deseas, puedo ayudarte por aquí mismo a resolver cualquier duda o avanzar con lo que necesitas. Quedo atenta.'",
+    "rule_7_first_reminder_4h": "First reminder condition: 'if 4 <= hours_inactive and reminder_count == 0 and lead_stage in REMINDER_ELIGIBLE_STAGES'",
+    "rule_8_second_reminder_23h": "Second reminder condition: 'elif reminder_count == 1 and hours_inactive >= 23 and lead_stage in REMINDER_ELIGIBLE_STAGES'",
+    "rule_9_eligible_stages": "REMINDER_ELIGIBLE_STAGES = ('lead', 'cliente_potencial') - excludes 'cotizacion_generada', 'pedido', 'perdido'"
+  },
+
+  "verified_code_locations": {
+    "SYSTEM_PROMPT": {
+      "file": "/app/backend/bot_service.py",
+      "lines": "20-136",
+      "PERSONALIDAD": "lines 22-28",
+      "PASO_2_PRODUCTO": "lines 56-61",
+      "PASO_3_NOMBRE_Y_APELLIDO": "lines 63-67",
+      "PASO_5_DATOS_PERSONALES": "lines 76-83"
+    },
+    "run_followup_check": {
+      "file": "/app/backend/server.py",
+      "function_line": "3247",
+      "REMINDER_1_MSG": "line 3257",
+      "REMINDER_2_MSG": "line 3258",
+      "REMINDER_ELIGIBLE_STAGES": "line 3259",
+      "first_reminder_condition": "line 3284",
+      "second_reminder_condition": "line 3313"
+    }
+  },
+
+  "test_report_links": [
+    "/app/backend/tests/test_iteration33_bot_rules.py",
+    "/app/test_reports/pytest/pytest_iteration33.xml"
+  ],
+
+  "action_items": [],
+
+  "critical_code_review_comments": [
+    "All 4 NEW bot rules correctly implemented",
+    "PERSONALIDAD section correctly instructs 'mensajes cortos, de manera natural, sin emojis'",
+    "PASO 3 correctly asks for 'nombre y apellido' (full name)",
+    "PASO 5 correctly says 'DATOS PERSONALES UNICAMENTE despues de entender cuales articulos'",
+    "PASO 2 (PRODUCTO) correctly comes before PASO 3 (NOMBRE) - product first, name after",
+    "REMINDER_1_MSG and REMINDER_2_MSG exact text matches user requirements",
+    "First reminder at 4h and second at 23h with correct stage filtering",
+    "Reminders correctly excluded for 'cotizacion_generada', 'pedido', 'perdido' stages"
+  ],
+
+  "updated_files": [
+    "/app/backend/tests/test_iteration33_bot_rules.py"
+  ],
+
+  "success_rate": {
+    "backend": "100% (15/15 pytest tests passed)",
+    "frontend": "N/A (backend only testing requested)"
+  },
+
+  "test_credentials": {
+    "admin_login": "admin@gimmicks.com / admin123456"
+  },
+
+  "seed_data_creation": "No seed data created - tests validate code structure and API endpoints",
+
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+
+  "context_for_next_testing_agent": "Iteration 33 verified all 4 NEW bot rules: (1) PERSONALIDAD says 'mensajes cortos, de manera natural, sin emojis', (2) PASO 3 asks for 'nombre y apellido', (3) PASO 5 says 'DATOS PERSONALES UNICAMENTE despues de entender cuales articulos', (4) PASO 2 (PRODUCTO) before PASO 3 (NOMBRE). Also verified run_followup_check: REMINDER_1_MSG and REMINDER_2_MSG exact text, first reminder at 4h, second at 23h, both with stage filter ('lead','cliente_potencial'), excludes 'cotizacion_generada', 'pedido', 'perdido'. All 15 tests passed.",
+
+  "mocked_api_note": "WhatsApp Cloud API send is MOCKED (messages go to local DB only, not actual WhatsApp). LLM calls (GPT-5.2) were NOT tested as they require real API keys - only SYSTEM_PROMPT text and function logic were validated."
+}

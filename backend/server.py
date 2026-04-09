@@ -3254,6 +3254,10 @@ async def run_followup_check():
         {"_id": 0}
     ).to_list(500)
     
+    REMINDER_1_MSG = "Hola, te escribo solo para saber si pudiste revisar la información que te envié. Recuerda que estoy aquí para ayudarte en tus requerimientos"
+    REMINDER_2_MSG = "Hola, solo quería hacer seguimiento a la información que te compartí. Si deseas, puedo ayudarte por aquí mismo a resolver cualquier duda o avanzar con lo que necesitas. Quedo atenta."
+    REMINDER_ELIGIBLE_STAGES = ("lead", "cliente_potencial")
+
     for state in states:
         phone = state.get("phone_number")
         last_interaction = state.get("last_interaction")
@@ -3271,13 +3275,17 @@ async def run_followup_check():
         
         hours_inactive = (now - last_dt).total_seconds() / 3600
         reminder_count = state.get("reminder_count", 0)
+
+        # Check lead funnel stage - only send reminders to "lead" and "cliente_potencial"
+        lead = await db.leads.find_one({"phone_number": phone}, {"_id": 0, "funnel_stage": 1})
+        lead_stage = lead.get("funnel_stage", "lead") if lead else "lead"
         
-        # First reminder at 4 hours (only if no reminders sent yet)
-        if 4 <= hours_inactive and reminder_count == 0:
+        # First reminder after 4 hours of inactivity
+        if 4 <= hours_inactive and reminder_count == 0 and lead_stage in REMINDER_ELIGIBLE_STAGES:
             conv = await db.conversations.find_one({"phone_number": phone}, {"_id": 0, "id": 1})
             if conv:
                 try:
-                    await send_whatsapp_message(phone, "Hola, solo para saber si pudiste revisar la información que te envié. Si quieres te ayudo con la cotización.")
+                    await send_whatsapp_message(phone, REMINDER_1_MSG)
                     
                     now_iso = now.isoformat()
                     msg_doc = {
@@ -3286,7 +3294,7 @@ async def run_followup_check():
                         "phone_number": phone,
                         "sender": "business",
                         "message_type": "text",
-                        "content": {"text": "Hola, solo para saber si pudiste revisar la información que te envié. Si quieres te ayudo con la cotización."},
+                        "content": {"text": REMINDER_1_MSG},
                         "status": "sent",
                         "is_automated": True,
                         "is_followup": True,
@@ -3301,42 +3309,34 @@ async def run_followup_check():
                 except Exception as e:
                     logger.error(f"Failed to send reminder to {phone}: {e}")
         
-        # Second reminder 24 hours after first reminder
-        elif reminder_count == 1:
-            first_reminder_time = state.get("first_reminder_time")
-            if first_reminder_time:
-                if isinstance(first_reminder_time, str):
-                    first_dt = datetime.fromisoformat(first_reminder_time.replace('Z', '+00:00'))
-                else:
-                    first_dt = first_reminder_time
-                hours_since_first = (now - first_dt).total_seconds() / 3600
-                if hours_since_first >= 24:
-                    conv = await db.conversations.find_one({"phone_number": phone}, {"_id": 0, "id": 1})
-                    if conv:
-                        try:
-                            await send_whatsapp_message(phone, "Hola de nuevo, quería saber si aún tienes interés en los productos. Estoy aquí para ayudarte cuando lo necesites.")
-                            
-                            now_iso = now.isoformat()
-                            msg_doc = {
-                                "id": str(uuid.uuid4()),
-                                "conversation_id": conv["id"],
-                                "phone_number": phone,
-                                "sender": "business",
-                                "message_type": "text",
-                                "content": {"text": "Hola de nuevo, quería saber si aún tienes interés en los productos. Estoy aquí para ayudarte cuando lo necesites."},
-                                "status": "sent",
-                                "is_automated": True,
-                                "is_followup": True,
-                                "timestamp": now_iso
-                            }
-                            await db.messages.insert_one(msg_doc)
-                            await db.conversation_states.update_one(
-                                {"phone_number": phone},
-                                {"$set": {"reminder_count": 2, "second_reminder_time": now_iso}}
-                            )
-                            results["reminders_sent"] += 1
-                        except Exception as e:
-                            logger.error(f"Failed to send 2nd reminder to {phone}: {e}")
+        # Second reminder after 23 hours of inactivity
+        elif reminder_count == 1 and hours_inactive >= 23 and lead_stage in REMINDER_ELIGIBLE_STAGES:
+            conv = await db.conversations.find_one({"phone_number": phone}, {"_id": 0, "id": 1})
+            if conv:
+                try:
+                    await send_whatsapp_message(phone, REMINDER_2_MSG)
+                    
+                    now_iso = now.isoformat()
+                    msg_doc = {
+                        "id": str(uuid.uuid4()),
+                        "conversation_id": conv["id"],
+                        "phone_number": phone,
+                        "sender": "business",
+                        "message_type": "text",
+                        "content": {"text": REMINDER_2_MSG},
+                        "status": "sent",
+                        "is_automated": True,
+                        "is_followup": True,
+                        "timestamp": now_iso
+                    }
+                    await db.messages.insert_one(msg_doc)
+                    await db.conversation_states.update_one(
+                        {"phone_number": phone},
+                        {"$set": {"reminder_count": 2, "second_reminder_time": now_iso}}
+                    )
+                    results["reminders_sent"] += 1
+                except Exception as e:
+                    logger.error(f"Failed to send 2nd reminder to {phone}: {e}")
         
         # Mark as lost 24 hours after second reminder
         elif reminder_count >= 2:
@@ -3348,8 +3348,7 @@ async def run_followup_check():
                     second_dt = second_reminder_time
                 hours_since_second = (now - second_dt).total_seconds() / 3600
                 if hours_since_second >= 24:
-                    lead = await db.leads.find_one({"phone_number": phone}, {"_id": 0})
-                    if lead and lead.get("funnel_stage") not in ("perdido", "pedido", "cotizacion_generada"):
+                    if lead and lead_stage not in ("perdido", "pedido", "cotizacion_generada"):
                         await db.leads.update_one(
                             {"phone_number": phone},
                             {"$set": {"funnel_stage": "perdido", "updated_at": now.isoformat()}}
