@@ -1,0 +1,151 @@
+{
+  "summary": "Iteration 35: Verified ALL 5 key fixes for WhatsApp bot issues. All 30 backend tests passed. (1) Greeting detection: GREETING_WORDS set prevents product search on 'hola', 'buenas', 'buenos dias', etc. (2) base_url now reads REACT_APP_BACKEND_URL from os.environ FIRST. (3) should_search no longer requires has_name and is False when is_greeting is True. (4) SYSTEM_PROMPT: link is OBLIGATORIO, codes NUNCA without link, no products = 'agente enviara catalogo completo, espere unos minutos'. (5) user_prompt reinforces all rules. Fallback appends catalog_link if AI didn't include it.",
+
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+
+  "passed_tests": {
+    "health_and_login": [
+      "✓ GET /api/health returns 200 with status=healthy",
+      "✓ Admin login returns access_token"
+    ],
+    "greeting_detection": [
+      "✓ GREETING_WORDS set exists with 'hola', 'buenas', 'buenos'",
+      "✓ is_greeting flag is computed in code",
+      "✓ is_greeting checks message against GREETING_WORDS",
+      "✓ 'hola' is detected as greeting",
+      "✓ 'buenas' is detected as greeting",
+      "✓ 'buenos dias' is detected as greeting",
+      "✓ 'hola como estas' is detected as greeting",
+      "✓ 'termos' is NOT detected as greeting (product search allowed)",
+      "✓ 'quiero cotizar gorras' is NOT detected as greeting (product search allowed)"
+    ],
+    "should_search_logic": [
+      "✓ should_search does NOT require has_name",
+      "✓ should_search is False when is_greeting is True",
+      "✓ should_search is True for product query like 'termos'",
+      "✓ should_search is False for email input",
+      "✓ should_search is False for product code like GORALN00001"
+    ],
+    "base_url_configuration": [
+      "✓ base_url reads REACT_APP_BACKEND_URL from os.environ FIRST",
+      "✓ base_url fallback order: REACT_APP_BACKEND_URL -> CATALOG_BASE_URL -> frontend/.env",
+      "✓ REACT_APP_BACKEND_URL is set in backend/.env",
+      "✓ REACT_APP_BACKEND_URL = https://catalog-pdf-fix.preview.emergentagent.com"
+    ],
+    "system_prompt_rules": [
+      "✓ SYSTEM_PROMPT mentions reading historial with 20 mensajes",
+      "✓ SYSTEM_PROMPT says link is OBLIGATORIO, NUNCA omitas el link",
+      "✓ SYSTEM_PROMPT says NUNCA menciones codigos si NO has enviado el link",
+      "✓ SYSTEM_PROMPT says 'un agente le enviara el catalogo completo, espere unos minutos'"
+    ],
+    "user_prompt_rules": [
+      "✓ user_prompt enforces OBLIGATORIO catalog link",
+      "✓ user_prompt says NUNCA mention codes without link"
+    ],
+    "fallback_and_stopwords": [
+      "✓ Fallback appends catalog_link if AI didn't include it",
+      "✓ LINK_STOPWORDS includes required stopwords ('quiero', etc.)",
+      "✓ Conversation history limit is 40 (>= 20)"
+    ]
+  },
+
+  "verified_fixes": {
+    "fix_1_greeting_detection": {
+      "problem": "Saying 'Hola' triggered product search → stopword → no results → 'asesor se comunicará'",
+      "fix": "Added GREETING_WORDS set and is_greeting flag that prevents product search on greetings",
+      "code_location": "bot_service.py lines 773-784",
+      "verification": [
+        "GREETING_WORDS = {'hola', 'buenas', 'buenos', 'hey', 'saludos', 'buen', 'buenos dias', 'buenas tardes', 'buenas noches', 'buen dia', 'que tal'}",
+        "is_greeting checks msg_lower in GREETING_WORDS, startswith patterns, and word intersection",
+        "should_search = not is_data_input and not has_code_pattern and not is_greeting"
+      ]
+    },
+    "fix_2_base_url_from_env": {
+      "problem": "base_url='' in production because CATALOG_BASE_URL wasn't set and frontend/.env doesn't exist in Railway",
+      "fix": "Now reads REACT_APP_BACKEND_URL from os.environ FIRST, then CATALOG_BASE_URL, then frontend/.env as last resort",
+      "code_location": "bot_service.py lines 793-806",
+      "verification": [
+        "base_url = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')",
+        "if not base_url: base_url = os.environ.get('CATALOG_BASE_URL', '').rstrip('/')",
+        "if not base_url: try reading frontend/.env",
+        "REACT_APP_BACKEND_URL=https://catalog-pdf-fix.preview.emergentagent.com in backend/.env"
+      ]
+    },
+    "fix_3_should_search_no_has_name": {
+      "problem": "should_search required has_name, delaying product search until name was collected",
+      "fix": "Removed has_name dependency from should_search condition",
+      "code_location": "bot_service.py line 788",
+      "verification": [
+        "should_search = not is_data_input and not has_code_pattern and not is_greeting",
+        "No has_name in the condition"
+      ]
+    },
+    "fix_4_system_prompt_rules": {
+      "problem": "Bot mentioned codes before sending link, didn't say 'agente enviara catalogo' when no products found",
+      "fix": "Updated SYSTEM_PROMPT with OBLIGATORIO link, NUNCA codes without link, and 'agente enviara catalogo completo' for no results",
+      "code_location": "bot_service.py lines 55-99",
+      "verification": [
+        "PASO 1: 'ultimos 20 mensajes minimo'",
+        "PASO 2: 'es OBLIGATORIO incluirlo EXACTAMENTE', 'NUNCA omitas el link'",
+        "PASO 2: 'NUNCA menciones codigos de productos si NO has enviado primero el link del catalogo'",
+        "PRODUCTOS NO ENCONTRADOS: 'un agente le enviara el catalogo completo, que por favor espere unos minutos'"
+      ]
+    },
+    "fix_5_user_prompt_reinforcement": {
+      "problem": "AI sometimes ignored SYSTEM_PROMPT rules",
+      "fix": "user_prompt now reinforces OBLIGATORIO link and NUNCA codes without link",
+      "code_location": "bot_service.py lines 1051-1075",
+      "verification": [
+        "user_prompt includes: 'es OBLIGATORIO incluirlo en tu respuesta. NUNCA lo omitas.'",
+        "user_prompt includes: 'NUNCA menciones codigos de productos si no has incluido el link del catalogo'"
+      ]
+    }
+  },
+
+  "test_report_links": [
+    "/app/backend/tests/test_iteration35_bot_fixes.py",
+    "/app/test_reports/pytest/pytest_iteration35.xml"
+  ],
+
+  "action_items": [],
+
+  "critical_code_review_comments": [
+    "All 5 key fixes correctly implemented",
+    "Greeting detection prevents 'Hola' from triggering product search",
+    "base_url now properly reads from os.environ first (production-safe)",
+    "should_search allows immediate product search without requiring name",
+    "SYSTEM_PROMPT and user_prompt enforce link rules and no-products-found behavior",
+    "Fallback at line 1144 ensures catalog_link is always appended if AI omits it"
+  ],
+
+  "updated_files": [
+    "/app/backend/tests/test_iteration35_bot_fixes.py"
+  ],
+
+  "success_rate": {
+    "backend": "100% (30/30 pytest tests passed)",
+    "frontend": "N/A (backend only testing requested)"
+  },
+
+  "test_credentials": {
+    "admin_login": "admin@gimmicks.com / admin123456"
+  },
+
+  "seed_data_creation": "No seed data created - tests verify code structure and logic",
+
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+
+  "context_for_next_testing_agent": "Iteration 35 verified ALL 5 key fixes for WhatsApp bot issues: (1) GREETING_WORDS set at line 773 detects 'hola', 'buenas', 'buenos dias', etc. and sets is_greeting=True which makes should_search=False. (2) base_url at line 793 reads REACT_APP_BACKEND_URL from os.environ FIRST (was only reading frontend/.env which doesn't exist in production). (3) should_search at line 788 no longer requires has_name. (4) SYSTEM_PROMPT at lines 55-99 says link is OBLIGATORIO, NUNCA codes without link, no products = 'agente enviara catalogo completo'. (5) user_prompt at lines 1051-1075 reinforces all rules. Fallback at line 1144 appends catalog_link if AI didn't include it. Conversation history limit is 40 (line 1032). All 30 tests passed.",
+
+  "mocked_api_note": "No mocked APIs - all tests verify actual code structure and logic"
+}

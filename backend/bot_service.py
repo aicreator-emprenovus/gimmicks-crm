@@ -52,13 +52,15 @@ Cuando el cliente escribe por primera vez o saluda:
 - Responde: "Hola, soy Ana de Gimmicks Marketing Services. En que puedo ayudarte?"
 - NO pidas el nombre en el primer mensaje. Solo saluda y pregunta en que puedes ayudar.
 - Si el cliente menciona un producto en su primer mensaje, ve directo al PASO 2.
+- SIEMPRE lee el historial de conversacion (ultimos 20 mensajes minimo). Si el cliente ya habia conversado antes, retoma desde donde quedo y NO repitas el saludo generico.
 
-PASO 2 - PRODUCTO (PRIORIDAD MAXIMA):
-Si el cliente PIDE o MENCIONA un tipo de producto (termos, jarros, gorras, tazas, etc.):
+PASO 2 - PRODUCTO (PRIORIDAD MAXIMA - OBLIGATORIO):
+Si el cliente PIDE o MENCIONA un tipo de producto (termos, jarros, gorras, tazas, esferos, etc.):
 - Busca opciones inmediatamente. Pon catalog_search con la palabra clave del producto.
-- Si el sistema te proporciona un LINK DEL CATALOGO FILTRADO, incluyelo EXACTAMENTE en tu respuesta para que el cliente vea las opciones con imagenes y copie los codigos.
-- NO pidas nombre, email ni ningun otro dato antes de mostrar el catalogo. Primero muestra las opciones.
+- Si el sistema te proporciona un LINK DEL CATALOGO FILTRADO, es OBLIGATORIO incluirlo EXACTAMENTE en tu respuesta. NUNCA omitas el link.
+- NO pidas nombre, email ni ningun otro dato antes de mostrar el catalogo. Primero muestra las opciones con el link.
 - Termina pidiendo que revisen el catalogo en el link y compartan los codigos que les gusten.
+- REGLA CRITICA: NUNCA menciones codigos de productos si NO has enviado primero el link del catalogo. Los codigos solo se mencionan DESPUES de enviar el link.
 
 PASO 3 - NOMBRE Y APELLIDO DEL CLIENTE:
 Despues de entender que articulos desea el cliente (despues de mostrar opciones o recibir codigos):
@@ -92,9 +94,9 @@ REGLAS ADICIONALES:
 
 REGLA CRITICA SOBRE PRODUCTOS NO ENCONTRADOS:
 - NUNCA digas que no tienes un producto o articulo. NUNCA uses frases como "no encontre", "no tenemos", "no hay en inventario".
-- Si el sistema indica que NO HAY PRODUCTOS para la busqueda: responde que tienes muchas opciones disponibles y que un asesor se comunicara con el para enviarle mas opciones por WhatsApp.
-- NO pidas el correo electronico para enviar catalogo. El asesor humano se encargara directamente.
-- Simplemente tranquiliza al cliente y continua con el flujo normal de la conversacion.
+- Si el sistema indica que NO HAY PRODUCTOS para la busqueda: responde que tienes muchas opciones y que un agente le enviara el catalogo completo, que por favor espere unos minutos.
+- NO pidas el correo electronico para enviar catalogo. El agente humano se encargara directamente.
+- UNICAMENTE en este caso (sin resultados) menciona que un agente enviara el catalogo. En cualquier otro caso, TU envias el link interno.
 
 COTIZACION:
 Marca needs_quote=true UNICAMENTE cuando tengas TODOS estos datos: codigos de producto + cantidad + correo electronico + nombre de empresa. Los cuatro datos son obligatorios.
@@ -755,9 +757,8 @@ async def _build_conversation_context(db, phone_number, collected_data, message_
     # --- catalog_availability: search products based on context ---
     catalog_availability = ""
     has_codes = bool(collected_data.get("codigos_producto"))
-    has_name = bool(collected_data.get("nombre"))
 
-    # Search products when: user has given name, and message could be about products
+    # Search products when: message could be about products
     # Don't search if message looks like pure data (email, short confirmations, codes)
     msg_lower = message_text.lower().strip()
     is_data_input = (
@@ -768,16 +769,32 @@ async def _build_conversation_context(db, phone_number, collected_data, message_
     # Check if message contains potential product codes (alphanumeric 5+ chars)
     has_code_pattern = bool(re.search(r'[A-Z]{2,}[0-9]{2,}', message_text.upper()))
 
+    # Detect greetings - these should NOT trigger product search
+    GREETING_WORDS = {
+        'hola', 'buenas', 'buenos', 'hey', 'saludos', 'buen',
+        'buenos dias', 'buenas tardes', 'buenas noches', 'buen dia', 'que tal',
+    }
+    msg_words = set(msg_lower.split())
+    is_greeting = (
+        msg_lower in GREETING_WORDS or
+        msg_lower.startswith('hola ') or
+        msg_lower.startswith('buenas ') or
+        msg_lower.startswith('buenos ') or
+        (len(msg_words) <= 3 and msg_words & {'hola', 'buenas', 'buenos', 'hey', 'saludos'})
+    )
+
     no_products_found = False
     catalog_link = ""
-    should_search = has_name and not is_data_input and not has_code_pattern
+    should_search = not is_data_input and not has_code_pattern and not is_greeting
     if should_search:
         products_found = await search_products_by_keyword(db, message_text.strip(), limit=8)
         if products_found:
             # Build catalog link with search query
-            base_url = os.environ.get("CATALOG_BASE_URL", "").rstrip("/")
+            base_url = os.environ.get("REACT_APP_BACKEND_URL", "").rstrip("/")
             if not base_url:
-                # Read from frontend .env as fallback
+                base_url = os.environ.get("CATALOG_BASE_URL", "").rstrip("/")
+            if not base_url:
+                # Last resort: read from frontend .env
                 try:
                     fe_env = os.path.join(os.path.dirname(os.path.dirname(__file__)), "frontend", ".env")
                     with open(fe_env) as f:
@@ -817,9 +834,9 @@ async def _build_conversation_context(db, phone_number, collected_data, message_
             no_products_found = True
             catalog_availability = (
                 "SIN RESULTADOS EN INVENTARIO para esta busqueda.\n"
-                "INSTRUCCION: NO digas que no tienes el producto. NO pidas correo para enviar catalogo. "
-                "Responde que tienes muchas opciones disponibles y que un asesor se comunicara con el "
-                "para enviarle mas opciones por WhatsApp. Continua con el flujo normal."
+                "INSTRUCCION: NO digas que no tienes el producto. "
+                "Responde que tienes muchas opciones y que un agente le enviara el catalogo completo, "
+                "que por favor espere unos minutos. NO pidas correo. NO menciones links externos."
             )
 
     # Validate and show currently selected codes
@@ -1033,10 +1050,12 @@ async def _process_ai_conversation_inner(
         # ===== BUILD USER PROMPT (new template) =====
         user_prompt = f"""INSTRUCCION: Revisa TODO el historial y los datos recopilados. NO pidas nada que ya se haya proporcionado. Haz UNA sola pregunta por mensaje. Tu respuesta debe ser UN solo mensaje coherente.
 IMPORTANTE: En extracted_data.codigos_producto siempre devuelve la lista COMPLETA ACUMULADA de codigos (no solo los nuevos).
-Si vas a enviar un catalogo (catalog_search), NO hagas otra pregunta en el mismo mensaje. Solo presenta opciones y el catalogo.
+Si el sistema te proporciona un LINK DEL CATALOGO, es OBLIGATORIO incluirlo en tu respuesta. NUNCA lo omitas.
+NUNCA menciones codigos de productos si no has incluido el link del catalogo en tu respuesta. Los codigos solo se presentan junto con o despues del link.
 PROHIBIDO repetir o parafrasear tu mensaje anterior. Si ya confirmaste algo, avanza directamente al siguiente paso.
 PROHIBIDO pedir el nombre si ya lo tienes en los datos recopilados. Dirigete al cliente por su nombre.
 Pide UN SOLO dato por mensaje. No combines preguntas.
+Lee siempre el historial completo. Si el cliente ya habia conversado antes, retoma desde donde quedo.
 
 {catalog_info}
 {catalog_availability}
