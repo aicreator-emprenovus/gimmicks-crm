@@ -141,6 +141,14 @@ CRM para ventas comerciales con WhatsApp Business que integra bot IA (GPT-5.2), 
   - Testing: 13/13 backend + frontend completo 100% (iteration_20)
 
 ## Resolved Issues (Latest)
+- [x] **P0 - Templates WhatsApp para mensajes fuera de 24h** - Abr 2026:
+  - 3 plantillas creadas en Meta Business Manager: `alerta_producto_no_encontrado` (3 variables), `recordatorio_seguimiento_1`, `recordatorio_seguimiento_2`
+  - Nueva función `send_whatsapp_template()` en server.py para enviar mensajes template via WhatsApp Cloud API
+  - Nueva función `send_whatsapp_message_or_template()`: intenta mensaje normal primero, si falla por ventana 24h (error 131047/131026) automáticamente usa el template correspondiente
+  - Recordatorio 1 (4h) → fallback a `recordatorio_seguimiento_1`
+  - Recordatorio 2 (23h) → fallback a `recordatorio_seguimiento_2`
+  - Alerta al agente → fallback a `alerta_producto_no_encontrado` con parámetros (nombre, teléfono, búsqueda)
+  - Testing: 23/23 backend 100% (iteration_38)
 - [x] **P0 - Reglas de Automatización limpiadas + Bot conectado al panel** - Abr 2026:
   - Eliminados 28 duplicados. 13 reglas finales: 10 activas + 3 desactivadas para revisión manual
   - Seed actualizado: solo inserta si `count == 0` (no más duplicados en reinicio)
