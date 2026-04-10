@@ -141,6 +141,12 @@ CRM para ventas comerciales con WhatsApp Business que integra bot IA (GPT-5.2), 
   - Testing: 13/13 backend + frontend completo 100% (iteration_20)
 
 ## Resolved Issues (Latest)
+- [x] **P0 - Reglas de Automatización limpiadas + Bot conectado al panel** - Abr 2026:
+  - Eliminados 28 duplicados. 13 reglas finales: 10 activas + 3 desactivadas para revisión manual
+  - Seed actualizado: solo inserta si `count == 0` (no más duplicados en reinicio)
+  - **Bot ahora LEE reglas del panel DB**: `bot_service.py` carga `automation_rules` activas y las inyecta como "REGLAS DE AUTOMATIZACIÓN DEL SISTEMA (OBLIGATORIAS)" en el prompt de la IA
+  - Si la IA no encuentra respuesta adecuada → `needs_human=true` → alerta al agente humano
+  - Testing: 14/14 backend PASS (iteration_37)
 - [x] **P0 - Bot no envía link del catálogo y no entiende saludos** - Abr 2026:
   - **Causa raíz 1**: `base_url` vacío en producción → link NUNCA se generaba. Fix: lee `REACT_APP_BACKEND_URL` de `os.environ`
   - **Causa raíz 2**: "Hola" activaba búsqueda → "asesor se comunicará". Fix: detección de saludos `GREETING_WORDS`
