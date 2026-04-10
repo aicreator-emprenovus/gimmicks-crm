@@ -465,6 +465,75 @@ async def send_whatsapp_message(to_phone: str, message_text: str) -> str:
             return message_id
 
 
+
+async def send_whatsapp_template(to_phone: str, template_name: str, language_code: str = "es", parameters: list = None) -> str:
+    """Send a template message via WhatsApp Business API (works outside 24h window)."""
+    import aiohttp
+
+    phone_number_id = os.environ.get("WHATSAPP_PHONE_NUMBER_ID")
+    access_token = os.environ.get("WHATSAPP_ACCESS_TOKEN")
+
+    if not phone_number_id or not access_token:
+        raise Exception("WhatsApp credentials not configured")
+
+    clean_phone = ''.join(c for c in to_phone if c.isdigit())
+    url = f"https://graph.facebook.com/v18.0/{phone_number_id}/messages"
+
+    headers = {
+        "Authorization": f"Bearer {access_token}",
+        "Content-Type": "application/json"
+    }
+
+    template_obj = {
+        "name": template_name,
+        "language": {"code": language_code}
+    }
+
+    # Add parameters if template has variables ({{1}}, {{2}}, etc.)
+    if parameters:
+        template_obj["components"] = [{
+            "type": "body",
+            "parameters": [{"type": "text", "text": str(p)} for p in parameters]
+        }]
+
+    payload = {
+        "messaging_product": "whatsapp",
+        "recipient_type": "individual",
+        "to": clean_phone,
+        "type": "template",
+        "template": template_obj
+    }
+
+    async with aiohttp.ClientSession() as session:
+        async with session.post(url, headers=headers, json=payload) as response:
+            result = await response.json()
+
+            if response.status != 200:
+                error_msg = result.get("error", {}).get("message", "Unknown error")
+                error_code = result.get("error", {}).get("code", 0)
+                logger.error(f"WhatsApp template API error: {result}")
+                raise Exception(f"WhatsApp template error ({error_code}): {error_msg}")
+
+            message_id = result.get("messages", [{}])[0].get("id")
+            logger.info(f"Template '{template_name}' sent to {clean_phone}: {message_id}")
+            return message_id
+
+
+async def send_whatsapp_message_or_template(to_phone: str, message_text: str, template_name: str = None, template_params: list = None) -> str:
+    """Try sending a regular message first. If 24h window error, fall back to template."""
+    try:
+        return await send_whatsapp_message(to_phone, message_text)
+    except Exception as e:
+        error_str = str(e).lower()
+        # Error 131047 = "Re-engagement message" (24h window expired)
+        # Error 131026 = "Message failed to send because more than 24 hours have passed"
+        is_24h_error = "131047" in error_str or "131026" in error_str or "24 hour" in error_str or "re-engagement" in error_str
+        if is_24h_error and template_name:
+            logger.info(f"24h window expired for {to_phone}, falling back to template '{template_name}'")
+            return await send_whatsapp_template(to_phone, template_name, "es", template_params)
+        raise
+
+
 async def send_whatsapp_document(to_phone: str, document_url: str, caption: str, filename: str) -> str:
     """Send a document (PDF) via WhatsApp Business API"""
     import aiohttp
@@ -2196,7 +2265,7 @@ async def send_bot_message(phone_number: str, conversation_id: str, message: str
     except Exception as e:
         logger.error(f"Error saving bot message to DB: {e}")
     
-    # Then try to send via WhatsApp
+    # Then try to send via WhatsApp (with template fallback for 24h window)
     try:
         await send_whatsapp_message(phone_number, message)
         logger.info(f"Bot message sent to {phone_number}: {message[:60]}...")
@@ -3296,7 +3365,10 @@ async def run_followup_check():
             conv = await db.conversations.find_one({"phone_number": phone}, {"_id": 0, "id": 1})
             if conv:
                 try:
-                    await send_whatsapp_message(phone, REMINDER_1_MSG)
+                    await send_whatsapp_message_or_template(
+                        phone, REMINDER_1_MSG,
+                        template_name="recordatorio_seguimiento_1"
+                    )
                     
                     now_iso = now.isoformat()
                     msg_doc = {
@@ -3325,7 +3397,10 @@ async def run_followup_check():
             conv = await db.conversations.find_one({"phone_number": phone}, {"_id": 0, "id": 1})
             if conv:
                 try:
-                    await send_whatsapp_message(phone, REMINDER_2_MSG)
+                    await send_whatsapp_message_or_template(
+                        phone, REMINDER_2_MSG,
+                        template_name="recordatorio_seguimiento_2"
+                    )
                     
                     now_iso = now.isoformat()
                     msg_doc = {

@@ -687,7 +687,8 @@ async def send_escalation_summary(db: AsyncIOMotorDatabase, phone_number: str, c
 
 
 async def notify_staff_catalog_request(db: AsyncIOMotorDatabase, phone_number: str, collected_data: Dict, product_request: str, send_message_fn):
-    """Send immediate WhatsApp alert to staff when product search returns no results."""
+    """Send immediate WhatsApp alert to staff when product search returns no results.
+    Falls back to template message if 24h window has expired."""
     try:
         client_name = collected_data.get("nombre", "Cliente sin nombre")
 
@@ -701,8 +702,25 @@ async def notify_staff_catalog_request(db: AsyncIOMotorDatabase, phone_number: s
 
         staff_conv = await db.conversations.find_one({"phone_number": STAFF_NOTIFICATION_PHONE}, {"_id": 0, "id": 1})
         staff_conv_id = staff_conv["id"] if staff_conv else "notification"
-        await send_message_fn(STAFF_NOTIFICATION_PHONE, staff_conv_id, notification)
-        logger.info(f"Catalog email request notification sent for {phone_number} to staff")
+        
+        try:
+            await send_message_fn(STAFF_NOTIFICATION_PHONE, staff_conv_id, notification)
+        except Exception as send_err:
+            # If regular message fails (24h window), try template
+            error_str = str(send_err).lower()
+            if "131047" in error_str or "131026" in error_str or "24 hour" in error_str or "re-engagement" in error_str:
+                logger.info(f"24h window expired for staff {STAFF_NOTIFICATION_PHONE}, using template")
+                from server import send_whatsapp_template
+                await send_whatsapp_template(
+                    STAFF_NOTIFICATION_PHONE,
+                    "alerta_producto_no_encontrado",
+                    "es",
+                    [client_name, phone_number, product_request]
+                )
+            else:
+                raise
+        
+        logger.info(f"Staff notified about missing product for {phone_number}")
     except Exception as e:
         logger.error(f"Failed to send catalog request notification: {e}")
 
