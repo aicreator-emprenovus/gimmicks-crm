@@ -3828,100 +3828,60 @@ async def fix_old_image_urls():
 
 
 async def seed_system_automation_rules():
-    """Seed all system automation rules on startup if they don't exist"""
+    """Seed system automation rules on startup - only creates if DB is completely empty"""
+    count = await db.automation_rules.count_documents({})
+    if count > 0:
+        logger.info(f"Automation rules already exist ({count}), skipping seed")
+        return
+    
+    logger.info("No automation rules found, seeding defaults...")
+    now = datetime.now(timezone.utc).isoformat()
     system_rules = [
-        {
-            "name": "Bienvenida automática",
-            "trigger_type": "new_lead",
-            "trigger_value": None,
-            "action_type": "ai_response",
-            "action_value": "Saluda al cliente, preséntate como Ana de Gimmicks y pregunta en qué puedes ayudar.",
-            "is_active": True
-        },
-        {
-            "name": "Envío de catálogo",
-            "trigger_type": "ai_intent",
-            "trigger_value": "solicitud_catalogo",
-            "action_type": "ai_response",
-            "action_value": "Cuando el cliente mencione un tipo de producto (jarros, termos, gorras, etc.), envía automáticamente el link del catálogo público filtrado por ese producto.",
-            "is_active": True
-        },
-        {
-            "name": "Recopilación de datos",
-            "trigger_type": "ai_intent",
-            "trigger_value": "cotizacion_directa",
-            "action_type": "ai_response",
-            "action_value": "Recopila datos del cliente UNO a la vez en este orden: cantidad, personalización, correo, nombre/empresa, ciudad/fecha. No repitas datos ya proporcionados.",
-            "is_active": True
-        },
-        {
-            "name": "Generación de cotización",
-            "trigger_type": "ai_intent",
-            "trigger_value": "datos_completos",
-            "action_type": "ai_response",
-            "action_value": "Cuando se tengan producto/códigos + cantidad + correo, genera automáticamente una cotización pendiente para revisión del admin.",
-            "is_active": True
-        },
-        {
-            "name": "Primer recordatorio (4 horas)",
-            "trigger_type": "no_response",
-            "trigger_value": "4",
-            "action_type": "send_message",
-            "action_value": "Hola, solo para saber si pudiste revisar la información que te envié. Si quieres te ayudo con la cotización.",
-            "is_active": True
-        },
-        {
-            "name": "Segundo recordatorio (24 horas)",
-            "trigger_type": "no_response",
-            "trigger_value": "24",
-            "action_type": "send_message",
-            "action_value": "Hola de nuevo, quería saber si aún tienes interés en los productos. Estoy aquí para ayudarte cuando lo necesites.",
-            "is_active": True
-        },
-        {
-            "name": "Marcar como perdido",
-            "trigger_type": "no_response",
-            "trigger_value": "48",
-            "action_type": "change_stage",
-            "action_value": "perdido",
-            "is_active": True
-        },
-        {
-            "name": "Reanudar conversación (12h inactiva)",
-            "trigger_type": "no_response",
-            "trigger_value": "12",
-            "action_type": "ai_response",
-            "action_value": "Si la conversación estuvo inactiva 12+ horas y tenía datos pendientes, pregunta al cliente si quiere retomar donde quedó o empezar una nueva consulta.",
-            "is_active": True
-        },
-        {
-            "name": "Transferir a humano",
-            "trigger_type": "ai_intent",
-            "trigger_value": "queja,problema,reclamo",
-            "action_type": "assign_agent",
-            "action_value": "Transfiere la conversación a un asesor humano cuando el bot detecta una queja, problema complejo o solicitud explícita de hablar con una persona.",
-            "is_active": True
-        },
-        {
-            "name": "Respuesta a consulta de precios",
-            "trigger_type": "keyword",
-            "trigger_value": "precio,costo,cuánto,cotización",
-            "action_type": "ai_response",
-            "action_value": "Cuando el cliente pregunte por precios, guíalo hacia la cotización: pregunta qué producto necesita y en qué cantidad para poder generar una cotización personalizada.",
-            "is_active": True
-        },
+        {"name": "Bienvenida automática", "trigger_type": "new_lead", "trigger_value": None,
+         "action_type": "ai_response",
+         "action_value": "Saluda cordialmente y pregunta: En que puedo ayudarte hoy? Si conoces el nombre del cliente del historial, usalo. NO pidas nombre, codigos ni datos personales. Solo saluda y pregunta en que puedes ayudar.",
+         "is_active": True},
+        {"name": "Envío de catálogo", "trigger_type": "ai_intent", "trigger_value": "solicitud_catalogo",
+         "action_type": "ai_response",
+         "action_value": "Cuando el cliente mencione un producto, busca INMEDIATAMENTE en el inventario interno y envia el link del catalogo filtrado. El link es OBLIGATORIO.",
+         "is_active": True},
+        {"name": "Recopilación de datos", "trigger_type": "ai_intent", "trigger_value": "cotizacion_directa",
+         "action_type": "ai_response",
+         "action_value": "Pide datos personales UNO a la vez DESPUES de enviar el link del catalogo. Orden: nombre y apellido, cantidad, personalizacion, correo, empresa, ciudad, fecha.",
+         "is_active": True},
+        {"name": "Generación de cotización", "trigger_type": "ai_intent", "trigger_value": "datos_completos",
+         "action_type": "ai_response",
+         "action_value": "Genera cotizacion cuando tengas: codigos + cantidad + correo + empresa. NUNCA menciones el numero de cotizacion.",
+         "is_active": True},
+        {"name": "Primer recordatorio (4 horas)", "trigger_type": "no_response", "trigger_value": "4",
+         "action_type": "send_message",
+         "action_value": "Hola, te escribo solo para saber si pudiste revisar la información que te envié. Recuerda que estoy aquí para ayudarte en tus requerimientos",
+         "is_active": True},
+        {"name": "Segundo recordatorio (23 horas)", "trigger_type": "no_response", "trigger_value": "23",
+         "action_type": "send_message",
+         "action_value": "Hola, solo quería hacer seguimiento a la información que te compartí. Si deseas, puedo ayudarte por aquí mismo a resolver cualquier duda o avanzar con lo que necesitas. Quedo atenta.",
+         "is_active": True},
+        {"name": "Marcar como perdido", "trigger_type": "no_response", "trigger_value": "47",
+         "action_type": "change_stage", "action_value": "perdido", "is_active": True},
+        {"name": "Reanudar conversación", "trigger_type": "no_response", "trigger_value": "12",
+         "action_type": "ai_response",
+         "action_value": "Lee el historial (20+ mensajes). Retoma desde donde quedo. No repitas informacion.",
+         "is_active": True},
+        {"name": "Transferir a humano", "trigger_type": "ai_intent", "trigger_value": "queja,problema,reclamo",
+         "action_type": "assign_agent",
+         "action_value": "Transfiere a un asesor humano cuando detecta queja, problema o solicitud explicita de hablar con persona.",
+         "is_active": True},
+        {"name": "Respuesta a consulta de precios", "trigger_type": "keyword",
+         "trigger_value": "precio,costo,cuanto,cotización,cotizar",
+         "action_type": "ai_response",
+         "action_value": "Guia al cliente hacia cotizacion: pregunta producto y cantidad.",
+         "is_active": True},
     ]
-    now = datetime.now(timezone.utc)
-    created = 0
     for rule in system_rules:
-        existing = await db.automation_rules.find_one({"name": rule["name"]})
-        if not existing:
-            rule["id"] = str(uuid.uuid4())
-            rule["created_at"] = now.isoformat()
-            await db.automation_rules.insert_one(rule)
-            created += 1
-    if created:
-        logger.info(f"Seeded {created} system automation rules")
+        rule["id"] = str(uuid.uuid4())
+        rule["created_at"] = now
+    await db.automation_rules.insert_many(system_rules)
+    logger.info(f"Seeded {len(system_rules)} automation rules")
 
 
 # Build CORS origins: always include the preview URL and any CORS_ORIGINS from env

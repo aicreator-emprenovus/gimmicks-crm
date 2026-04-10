@@ -1054,6 +1054,20 @@ async def _process_ai_conversation_inner(
         catalog_info, catalog_availability, quote_context, missing_fields, next_to_ask, no_products_found, catalog_link = \
             await _build_conversation_context(db, phone_number, collected_data, message_text, conversation_id)
 
+        # ===== LOAD AUTOMATION RULES FROM DATABASE =====
+        automation_rules_text = ""
+        try:
+            active_rules = await db.automation_rules.find(
+                {"is_active": True}, {"_id": 0, "name": 1, "action_value": 1, "trigger_type": 1}
+            ).to_list(50)
+            if active_rules:
+                rules_lines = []
+                for rule in active_rules:
+                    rules_lines.append(f"- {rule['name']}: {rule['action_value']}")
+                automation_rules_text = "=== REGLAS DE AUTOMATIZACION DEL SISTEMA (OBLIGATORIAS) ===\nEstas reglas fueron configuradas por el administrador. DEBES seguirlas estrictamente:\n" + "\n".join(rules_lines)
+        except Exception as e:
+            logger.warning(f"Could not load automation rules: {e}")
+
         # ===== BUILD USER PROMPT (new template) =====
         user_prompt = f"""INSTRUCCION: Revisa TODO el historial y los datos recopilados. NO pidas nada que ya se haya proporcionado. Haz UNA sola pregunta por mensaje. Tu respuesta debe ser UN solo mensaje coherente.
 IMPORTANTE: En extracted_data.codigos_producto siempre devuelve la lista COMPLETA ACUMULADA de codigos (no solo los nuevos).
@@ -1069,6 +1083,8 @@ Lee siempre el historial completo. Si el cliente ya habia conversado antes, reto
 {catalog_info}
 {catalog_availability}
 {quote_context}
+
+{automation_rules_text}
 
 === HISTORIAL COMPLETO DE LA CONVERSACION ===
 {history_text}
