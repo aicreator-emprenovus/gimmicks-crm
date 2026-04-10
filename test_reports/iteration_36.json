@@ -1,0 +1,158 @@
+{
+  "summary": "Iteration 36: Verified ALL STRENGTHENED prompt rules for WhatsApp bot. All 30 backend tests passed. Key verifications: (1) PASO 1 says 'UNICAMENTE saludo cordial', 'NO pidas codigos, NO menciones cotizaciones pendientes'. (2) PASO 2 says 'De manera INMEDIATA busca', includes example response, 'NUNCA digas agente te enviara catalogo si sistema encontro productos'. (3) catalog_availability when products found says 'PROHIBIDO decir un agente te enviara el catalogo'. (4) STAFF_NOTIFICATION_PHONE = 593963560326 (updated from 593999440910). (5) user_prompt reinforces all rules including greeting behavior.",
+
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+
+  "passed_tests": {
+    "health_and_login": [
+      "✓ GET /api/health returns 200 with status=healthy",
+      "✓ Admin login returns access_token"
+    ],
+    "paso1_saludo_inicial": [
+      "✓ PASO 1 contains 'UNICAMENTE saludo cordial' language",
+      "✓ PASO 1 contains 'NO pidas codigos' rule",
+      "✓ PASO 1 contains 'NO menciones cotizaciones pendientes' rule",
+      "✓ PASO 1 contains 'En que puedo ayudarte hoy?' question",
+      "✓ PASO 1 mentions using client name from history"
+    ],
+    "paso2_producto_busqueda": [
+      "✓ PASO 2 contains 'De manera INMEDIATA busca' instruction",
+      "✓ PASO 2 says link is OBLIGATORIO",
+      "✓ PASO 2 includes example response format",
+      "✓ PASO 2 contains 'NUNCA agente enviara catalogo si sistema encontro productos'"
+    ],
+    "productos_no_encontrados": [
+      "✓ When NO products: says 'un agente le enviara el catalogo completo, espere unos minutos'",
+      "✓ catalog_availability for no products has correct instruction"
+    ],
+    "catalog_availability_prohibido": [
+      "✓ catalog_availability when products found: 'PROHIBIDO decir un agente te enviara el catalogo'",
+      "✓ catalog_availability when products found: 'TU envias el link'"
+    ],
+    "staff_notification_phone": [
+      "✓ STAFF_NOTIFICATION_PHONE = '593963560326' (updated from old number)",
+      "✓ Old phone number 593999440910 is NOT used for STAFF_NOTIFICATION_PHONE"
+    ],
+    "user_prompt_reinforcement": [
+      "✓ user_prompt reinforces 'NUNCA agente enviara catalogo si sistema ENCONTRO productos'",
+      "✓ user_prompt: 'Si el cliente saluda, responde SOLO con saludo y en que puedo ayudarte hoy'",
+      "✓ user_prompt reinforces 'NO pidas codigos' rule"
+    ],
+    "base_url_configuration": [
+      "✓ base_url reads REACT_APP_BACKEND_URL from os.environ first",
+      "✓ REACT_APP_BACKEND_URL is set in backend/.env"
+    ],
+    "greeting_detection": [
+      "✓ GREETING_WORDS set exists with 'hola'",
+      "✓ is_greeting flag is computed in code",
+      "✓ should_search is False when is_greeting is True",
+      "✓ GREETING_WORDS includes 'hola', 'buenas', 'buenos'"
+    ],
+    "fallback_and_history": [
+      "✓ Fallback appends catalog_link if AI didn't include it",
+      "✓ Conversation history limit is >= 20"
+    ],
+    "complete_rules_verification": [
+      "✓ PASO 1 complete rules verified",
+      "✓ PASO 2 complete rules verified"
+    ]
+  },
+
+  "verified_fixes": {
+    "fix_1_paso1_strengthened": {
+      "problem": "Bot was asking for codes and mentioning pending quotes on greeting",
+      "fix": "PASO 1 now says 'UNICAMENTE saludo cordial', 'NO pidas codigos, NO menciones cotizaciones pendientes'",
+      "code_location": "bot_service.py lines 50-56",
+      "verification": [
+        "PASO 1 - SALUDO INICIAL: 'Responde UNICAMENTE con un saludo cordial y pregunta: En que puedo ayudarte hoy?'",
+        "'NO pidas el nombre, NO pidas codigos, NO pidas datos, NO menciones cotizaciones pendientes'",
+        "'Si ya conoces su nombre del historial, usalo: Hola [nombre], en que puedo ayudarte hoy?'"
+      ]
+    },
+    "fix_2_paso2_strengthened": {
+      "problem": "Bot was not immediately searching and sometimes said 'agente enviara catalogo' when products were found",
+      "fix": "PASO 2 now says 'De manera INMEDIATA busca', includes example response, and 'NUNCA digas agente te enviara catalogo si sistema encontro productos'",
+      "code_location": "bot_service.py lines 58-66",
+      "verification": [
+        "'De manera INMEDIATA busca en el inventario interno del sistema'",
+        "'es OBLIGATORIO incluirlo EXACTAMENTE en tu respuesta. NUNCA omitas el link'",
+        "'Ejemplo de respuesta correcta: Tengo varias opciones de termos. Aqui puedes verlos con fotos y codigos: [LINK]'",
+        "'NUNCA digas un agente te enviara el catalogo si el sistema encontro productos'"
+      ]
+    },
+    "fix_3_catalog_availability_prohibido": {
+      "problem": "Bot sometimes said 'agente enviara catalogo' even when products were found",
+      "fix": "catalog_availability when products found now says 'PROHIBIDO decir un agente te enviara el catalogo'",
+      "code_location": "bot_service.py lines 830-839",
+      "verification": [
+        "'PROHIBIDO decir un agente te enviara el catalogo porque SI hay productos. TU envias el link.'"
+      ]
+    },
+    "fix_4_staff_phone_updated": {
+      "problem": "Staff notification phone was old number 593999440910",
+      "fix": "STAFF_NOTIFICATION_PHONE updated to 593963560326",
+      "code_location": "bot_service.py line 622",
+      "verification": [
+        "STAFF_NOTIFICATION_PHONE = '593963560326'"
+      ]
+    },
+    "fix_5_user_prompt_reinforcement": {
+      "problem": "AI sometimes ignored SYSTEM_PROMPT rules",
+      "fix": "user_prompt now reinforces all rules including greeting behavior",
+      "code_location": "bot_service.py lines 1058-1084",
+      "verification": [
+        "'NUNCA digas un agente te enviara el catalogo si el sistema ENCONTRO productos'",
+        "'Si el cliente saluda, responde SOLO con un saludo y en que puedo ayudarte hoy. NO pidas codigos, NO menciones cotizaciones pendientes'"
+      ]
+    }
+  },
+
+  "test_report_links": [
+    "/app/backend/tests/test_iteration36_strengthened_prompts.py",
+    "/app/test_reports/pytest/pytest_iteration36.xml"
+  ],
+
+  "action_items": [],
+
+  "critical_code_review_comments": [
+    "All STRENGTHENED prompt rules correctly implemented",
+    "PASO 1: 'UNICAMENTE saludo cordial', 'NO pidas codigos, NO menciones cotizaciones pendientes' - VERIFIED",
+    "PASO 2: 'De manera INMEDIATA busca', example response, 'NUNCA agente enviara catalogo si productos encontrados' - VERIFIED",
+    "catalog_availability: 'PROHIBIDO decir agente enviara catalogo' when products found - VERIFIED",
+    "STAFF_NOTIFICATION_PHONE = 593963560326 (updated from 593999440910) - VERIFIED",
+    "user_prompt reinforces all rules including greeting behavior - VERIFIED",
+    "Greeting detection prevents product search on 'hola' - VERIFIED",
+    "base_url reads REACT_APP_BACKEND_URL from os.environ first - VERIFIED"
+  ],
+
+  "updated_files": [
+    "/app/backend/tests/test_iteration36_strengthened_prompts.py"
+  ],
+
+  "success_rate": {
+    "backend": "100% (30/30 pytest tests passed)",
+    "frontend": "N/A (backend only testing requested)"
+  },
+
+  "test_credentials": {
+    "admin_login": "admin@gimmicks.com / admin123456"
+  },
+
+  "seed_data_creation": "No seed data created - tests verify code structure and prompt rules",
+
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+
+  "context_for_next_testing_agent": "Iteration 36 verified ALL STRENGTHENED prompt rules: (1) PASO 1 at lines 50-56 says 'UNICAMENTE saludo cordial', 'NO pidas codigos, NO menciones cotizaciones pendientes', uses client name from history. (2) PASO 2 at lines 58-66 says 'De manera INMEDIATA busca', includes example response format, 'NUNCA digas agente te enviara catalogo si sistema encontro productos'. (3) catalog_availability at lines 830-839 says 'PROHIBIDO decir agente te enviara catalogo' when products found. (4) STAFF_NOTIFICATION_PHONE at line 622 = 593963560326 (updated from 593999440910). (5) user_prompt at lines 1058-1084 reinforces all rules including greeting behavior. (6) Greeting detection at lines 773-786 prevents product search on 'hola'. All 30 tests passed.",
+
+  "mocked_api_note": "No mocked APIs - all tests verify actual code structure and prompt rules"
+}

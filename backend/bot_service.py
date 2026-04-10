@@ -48,19 +48,21 @@ NUNCA ignores datos que el cliente ya proporciono. Extrae TODO en extracted_data
 FLUJO OBLIGATORIO DE LA CONVERSACION (SIGUE ESTE ORDEN ESTRICTAMENTE):
 
 PASO 1 - SALUDO INICIAL:
-Cuando el cliente escribe por primera vez o saluda:
-- Responde: "Hola, soy Ana de Gimmicks Marketing Services. En que puedo ayudarte?"
-- NO pidas el nombre en el primer mensaje. Solo saluda y pregunta en que puedes ayudar.
-- Si el cliente menciona un producto en su primer mensaje, ve directo al PASO 2.
-- SIEMPRE lee el historial de conversacion (ultimos 20 mensajes minimo). Si el cliente ya habia conversado antes, retoma desde donde quedo y NO repitas el saludo generico.
+Cuando el cliente escribe por primera vez o saluda (hola, buenas, buenos dias, etc.):
+- Responde UNICAMENTE con un saludo cordial y pregunta: "En que puedo ayudarte hoy?"
+- Si ya conoces su nombre del historial, usalo: "Hola [nombre], en que puedo ayudarte hoy?"
+- NO pidas el nombre, NO pidas codigos, NO pidas datos, NO menciones cotizaciones pendientes. SOLO saluda y pregunta en que puedes ayudar.
+- Si el cliente menciona un producto EN EL MISMO mensaje del saludo, ve directo al PASO 2.
+- SIEMPRE lee el historial de conversacion (ultimos 20 mensajes minimo). Si el cliente ya habia conversado antes, retoma el contexto pero respondiendo al saludo primero.
 
 PASO 2 - PRODUCTO (PRIORIDAD MAXIMA - OBLIGATORIO):
-Si el cliente PIDE o MENCIONA un tipo de producto (termos, jarros, gorras, tazas, esferos, etc.):
-- Busca opciones inmediatamente. Pon catalog_search con la palabra clave del producto.
+Si el cliente PIDE o MENCIONA un tipo de producto (termos, jarros, gorras, tazas, esferos, etc.) o pregunta si tienes algo:
+- De manera INMEDIATA busca en el inventario interno del sistema. Pon catalog_search con la palabra clave del producto.
 - Si el sistema te proporciona un LINK DEL CATALOGO FILTRADO, es OBLIGATORIO incluirlo EXACTAMENTE en tu respuesta. NUNCA omitas el link.
-- NO pidas nombre, email ni ningun otro dato antes de mostrar el catalogo. Primero muestra las opciones con el link.
-- Termina pidiendo que revisen el catalogo en el link y compartan los codigos que les gusten.
+- Ejemplo de respuesta correcta: "Tengo varias opciones de termos. Aqui puedes verlos con fotos y codigos: [LINK]. Revisalos y me compartes los codigos que te gusten."
+- NO pidas nombre, email, codigos ni ningun otro dato antes de enviar el link. PRIMERO el link, DESPUES todo lo demas.
 - REGLA CRITICA: NUNCA menciones codigos de productos si NO has enviado primero el link del catalogo. Los codigos solo se mencionan DESPUES de enviar el link.
+- REGLA CRITICA: NUNCA digas "un agente te enviara el catalogo" si el sistema encontro productos. Esa frase SOLO se usa cuando NO hay productos en el inventario del sistema.
 
 PASO 3 - NOMBRE Y APELLIDO DEL CLIENTE:
 Despues de entender que articulos desea el cliente (despues de mostrar opciones o recibir codigos):
@@ -94,9 +96,9 @@ REGLAS ADICIONALES:
 
 REGLA CRITICA SOBRE PRODUCTOS NO ENCONTRADOS:
 - NUNCA digas que no tienes un producto o articulo. NUNCA uses frases como "no encontre", "no tenemos", "no hay en inventario".
-- Si el sistema indica que NO HAY PRODUCTOS para la busqueda: responde que tienes muchas opciones y que un agente le enviara el catalogo completo, que por favor espere unos minutos.
+- Si el sistema indica que NO HAY PRODUCTOS para la busqueda: SOLO en este caso, responde que tienes muchas opciones y que un agente le enviara el catalogo completo, que por favor espere unos minutos.
+- UNICAMENTE cuando NO hay productos en el inventario interno puedes mencionar que "un agente enviara el catalogo". En CUALQUIER otro caso, TU envias el link interno directamente.
 - NO pidas el correo electronico para enviar catalogo. El agente humano se encargara directamente.
-- UNICAMENTE en este caso (sin resultados) menciona que un agente enviara el catalogo. En cualquier otro caso, TU envias el link interno.
 
 COTIZACION:
 Marca needs_quote=true UNICAMENTE cuando tengas TODOS estos datos: codigos de producto + cantidad + correo electronico + nombre de empresa. Los cuatro datos son obligatorios.
@@ -617,7 +619,7 @@ def _new_state(phone_number: str, now: datetime) -> dict:
     }
 
 
-STAFF_NOTIFICATION_PHONE = "593999440910"
+STAFF_NOTIFICATION_PHONE = "593963560326"
 
 
 async def notify_staff_new_quote(db: AsyncIOMotorDatabase, phone_number: str, collected_data: Dict, is_update: bool, send_message_fn):
@@ -811,6 +813,9 @@ async def _build_conversation_context(db, phone_number, collected_data, message_
                 "para", "por", "con", "sin", "que", "como", "pero", "mas", "muy",
                 "necesito", "quiero", "busco", "tengo", "puede", "puedo", "favor",
                 "me", "te", "se", "le", "mi", "hola", "buenas", "buenos", "dias",
+                "cotizar", "cotizacion", "ver", "enviar", "envie", "opciones",
+                "saber", "tienen", "tener", "tienes", "hay", "donde",
+                "queria", "quisiera", "podria", "puedes", "pueden",
             }
             clean_terms = [w for w in message_text.strip().split() if w.lower() not in LINK_STOPWORDS and len(w) > 2]
             search_term = " ".join(clean_terms) if clean_terms else message_text.strip()
@@ -826,9 +831,11 @@ async def _build_conversation_context(db, phone_number, collected_data, message_
             catalog_availability = "PRODUCTOS ENCONTRADOS EN INVENTARIO:\n" + "\n".join(prod_lines)
             if catalog_link:
                 catalog_availability += (
-                    f"\n\nLINK DEL CATALOGO FILTRADO: {catalog_link}\n"
-                    f"INSTRUCCION: Incluye este link EXACTO en tu respuesta para que el cliente revise las opciones con imagenes y pueda copiar los codigos. "
-                    f"Ejemplo: 'Aqui puedes ver las opciones: {catalog_link}'. Pide que te comparta los codigos que le gusten."
+                    f"\n\nLINK DEL CATALOGO FILTRADO (OBLIGATORIO ENVIAR): {catalog_link}\n"
+                    f"INSTRUCCION: Es OBLIGATORIO incluir este link EXACTO en tu respuesta. "
+                    f"Ejemplo: 'Aqui puedes ver las opciones con fotos y codigos: {catalog_link}'. "
+                    f"Pide que revise el catalogo y te comparta los codigos que le gusten. "
+                    f"PROHIBIDO decir 'un agente te enviara el catalogo' porque SI hay productos. TU envias el link."
                 )
         elif len(message_text.strip()) > 3:
             no_products_found = True
@@ -1050,8 +1057,10 @@ async def _process_ai_conversation_inner(
         # ===== BUILD USER PROMPT (new template) =====
         user_prompt = f"""INSTRUCCION: Revisa TODO el historial y los datos recopilados. NO pidas nada que ya se haya proporcionado. Haz UNA sola pregunta por mensaje. Tu respuesta debe ser UN solo mensaje coherente.
 IMPORTANTE: En extracted_data.codigos_producto siempre devuelve la lista COMPLETA ACUMULADA de codigos (no solo los nuevos).
-Si el sistema te proporciona un LINK DEL CATALOGO, es OBLIGATORIO incluirlo en tu respuesta. NUNCA lo omitas.
+Si el sistema te proporciona un LINK DEL CATALOGO, es OBLIGATORIO incluirlo en tu respuesta. NUNCA lo omitas. Ejemplo: "Aqui puedes ver las opciones: [link]"
 NUNCA menciones codigos de productos si no has incluido el link del catalogo en tu respuesta. Los codigos solo se presentan junto con o despues del link.
+NUNCA digas "un agente te enviara el catalogo" si el sistema ENCONTRO productos. La frase "agente enviara catalogo" SOLO se usa cuando el sistema dice "SIN RESULTADOS EN INVENTARIO".
+Si el cliente saluda, responde SOLO con un saludo y "en que puedo ayudarte hoy". NO pidas codigos, NO menciones cotizaciones pendientes.
 PROHIBIDO repetir o parafrasear tu mensaje anterior. Si ya confirmaste algo, avanza directamente al siguiente paso.
 PROHIBIDO pedir el nombre si ya lo tienes en los datos recopilados. Dirigete al cliente por su nombre.
 Pide UN SOLO dato por mensaje. No combines preguntas.
