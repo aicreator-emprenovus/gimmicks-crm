@@ -142,13 +142,13 @@ CRM para ventas comerciales con WhatsApp Business que integra bot IA (GPT-5.2), 
 
 ## Resolved Issues (Latest)
 - [x] **P0 - Bot no envía link del catálogo y no entiende saludos** - Abr 2026:
-  - **Causa raíz 1**: `base_url` vacío en producción → link NUNCA se generaba. Código leía `frontend/.env` que NO existe en Railway
-  - **Fix**: Lee `REACT_APP_BACKEND_URL` de `os.environ` primero (siempre disponible en producción)
-  - **Causa raíz 2**: "Hola" activaba búsqueda → stopword → 0 resultados → "asesor se comunicará" en vez de saludar
-  - **Fix**: Detección de saludos (`GREETING_WORDS`) que evita búsqueda innecesaria
-  - **Fix**: `should_search` ya NO requiere `has_name` → búsqueda inmediata sin nombre
-  - **5 reglas del usuario implementadas**: (1) Saludo cordial, (2) Leer 20+ msgs de historial, (3) SIEMPRE enviar link interno OBLIGATORIO, (4) Códigos solo DESPUÉS del link, (5) Sin productos → "agente enviará catálogo completo, espere unos minutos"
-  - Testing: 30/30 backend 100% (iteration_35)
+  - **Causa raíz 1**: `base_url` vacío en producción → link NUNCA se generaba. Fix: lee `REACT_APP_BACKEND_URL` de `os.environ`
+  - **Causa raíz 2**: "Hola" activaba búsqueda → "asesor se comunicará". Fix: detección de saludos `GREETING_WORDS`
+  - **Causa raíz 3**: PASO 1 no era estricto → bot pedía códigos al saludar. Fix: "UNICAMENTE saludo cordial, NO pidas codigos, NO menciones cotizaciones"
+  - **Causa raíz 4**: Bot decía "agente enviará catálogo" aunque SÍ había productos. Fix: "PROHIBIDO decir agente enviará catalogo si hay productos. TU envías el link"
+  - **Reglas implementadas**: (1) Saludo cordial + "¿En qué puedo ayudarte hoy?", (2) Leer 20+ msgs, (3) SIEMPRE link interno OBLIGATORIO, (4) Códigos solo después del link, (5) "agente enviará catálogo" SOLO sin productos
+  - **Número agente actualizado**: +593 96 356 0326
+  - Testing: 30/30 backend 100% (iteration_35 + iteration_36)
 - [x] **P0 - Múltiples usuarios no pueden ingresar simultáneamente** - Abr 2026:
   - **Causa raíz**: Rate limiter usaba `request.client.host` que devuelve la IP del proxy (Railway). Todos los usuarios compartían la misma IP → 15 intentos totales entre TODOS → bloqueo (429)
   - **Fix**: Nuevo helper `get_client_ip()` que lee `X-Forwarded-For` y `X-Real-IP` para obtener la IP real de cada usuario
