@@ -277,6 +277,16 @@ CRM para ventas comerciales con WhatsApp Business que integra bot IA (GPT-5.2), 
   - **Cargar Excel**: `POST /api/automation-rules/import-excel` importa reglas desde .xlsx (agrega a existentes)
   - **Borrar Todas**: `DELETE /api/automation-rules-bulk/delete-all` elimina todas las reglas con confirmación
   - Frontend: 3 botones en panel Configuración > Automatización con confirmaciones y toasts
+- [x] **P0 - Limpieza de reglas de automatización + fix sync duplicación** - Abr 2026:
+  - Eliminadas 68 reglas (masivamente duplicadas por sync_service que re-insertaba 18 reglas de producción)
+  - Curadas exactamente 12 reglas esenciales para el flujo del bot
+  - **Fix sync_service**: `automation_rules` ahora se compara por `name` en vez de `id`, y NO inserta reglas de producción que no existan localmente
+  - Backup guardado en `/app/backups/reglas_backup_antes_limpieza.xlsx`
+- [x] **Diagnóstico WhatsApp sin respuesta del bot** - Abr 2026:
+  - 3 mensajes de producción (18:21-18:26) no recibieron respuesta del bot
+  - **Causa**: Redeploy automático de Railway durante cambios de código (servidor reiniciándose)
+  - **Verificado**: Webhook funcional, LLM (GPT-5.2) funcional, API WhatsApp funcional, flujo completo testeado
+  - `static_frontend` reconstruido para próximo deploy estable
 
 ## Remaining Tasks
 1. **P1 - Generar 3 conversaciones demo**: Simular conversaciones WhatsApp vía webhook
