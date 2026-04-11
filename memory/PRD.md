@@ -264,6 +264,10 @@ CRM para ventas comerciales con WhatsApp Business que integra bot IA (GPT-5.2), 
   - **Causa raíz**: `days` parámetro controlado por usuario usado directamente en `range(days)` sin validación → loop de millones de iteraciones + queries MongoDB masivas
   - **Fix**: `restricted_days = max(1, min(90, days))` — limita rango a 1-90 días
   - **Verificado**: 6/6 tests (normal, default, max, DoS attack, zero, negative) todos correctos
+- [x] **P0 - Orden incorrecto de middleware CORS** - Abr 2026:
+  - **Causa raíz**: `CORSMiddleware` se agregaba ANTES de `SecurityHeadersMiddleware` y `RequestSizeLimitMiddleware`. En FastAPI el orden es inverso (último agregado = capa externa), así que CORS quedaba como capa interna y sus headers no se aplicaban a respuestas de los otros middlewares
+  - **Fix**: Reordenado: primero `SecurityHeaders` + `RequestSizeLimit`, luego `CORSMiddleware` como última llamada (capa más externa)
+  - **Verificado**: Headers `access-control-allow-origin: *` presentes en preflight OPTIONS, POST login, y GET protegido
 
 ## Remaining Tasks
 1. **P1 - Generar 3 conversaciones demo**: Simular conversaciones WhatsApp vía webhook

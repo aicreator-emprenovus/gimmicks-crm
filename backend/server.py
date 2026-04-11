@@ -3971,18 +3971,17 @@ _backend_url = os.environ.get('REACT_APP_BACKEND_URL', '').strip()
 if _backend_url and _backend_url not in _cors_origins:
     _cors_origins.append(_backend_url)
 
-# CORS: Allow all origins. Auth is handled via Bearer token in Authorization header,
-# NOT cookies, so allow_credentials is not needed. This works in ALL browsers.
+# Middleware order: FastAPI executes in REVERSE add order (last added = outermost layer).
+# CORSMiddleware MUST be added LAST so it wraps all other middleware,
+# ensuring CORS headers are present on ALL responses (including errors from inner middleware).
+app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(RequestSizeLimitMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
-
-# Security middlewares
-app.add_middleware(SecurityHeadersMiddleware)
-app.add_middleware(RequestSizeLimitMiddleware)
 
 # Serve uploaded product images
 from fastapi.staticfiles import StaticFiles
