@@ -259,10 +259,18 @@ CRM para ventas comerciales con WhatsApp Business que integra bot IA (GPT-5.2), 
   - **Fix**: `asyncio.to_thread()` para PDF, ThreadPoolExecutor(5 workers) para imágenes, timeout 15s global
   - **Verificado**: Server responde en 12-79ms DURANTE generación de PDF con 67 items
 
+## Resolved Issues (Security)
+- [x] **P0 - Vulnerabilidad DoS en activity-chart** - Abr 2026:
+  - **Causa raíz**: `days` parámetro controlado por usuario usado directamente en `range(days)` sin validación → loop de millones de iteraciones + queries MongoDB masivas
+  - **Fix**: `restricted_days = max(1, min(90, days))` — limita rango a 1-90 días
+  - **Verificado**: 6/6 tests (normal, default, max, DoS attack, zero, negative) todos correctos
+
 ## Remaining Tasks
-1. **P2 - Refactor bot_service.py**: Split into smaller modules
-2. **P2 - Refactor large frontend components**: Extract modals
-3. **P3 - Asesor permission audit**: Full audit of role permissions
+1. **P1 - Generar 3 conversaciones demo**: Simular conversaciones WhatsApp vía webhook
+2. **P1 - Re-subir productos válidos**: Restaurar ~700 productos desde backup
+3. **P2 - Refactor bot_service.py**: Split into smaller modules
+4. **P2 - Refactor large frontend components**: Extract modals
+5. **P3 - Asesor permission audit**: Full audit of role permissions
 
 ## Resolved Issues
 - [x] **P0 - Investigación y limpieza de 5,412 productos en producción** - Abr 6, 2026:

@@ -77,10 +77,11 @@ async def get_activity_chart(request: Request, days: int = 30, authorization: st
     user = await get_user_from_token(authorization, request)
     if not user:
         raise HTTPException(status_code=401, detail="No autorizado")
+    restricted_days = max(1, min(90, days))
     now = datetime.now(timezone.utc)
-    start_date = (now - timedelta(days=days - 1)).replace(hour=0, minute=0, second=0, microsecond=0)
+    start_date = (now - timedelta(days=restricted_days - 1)).replace(hour=0, minute=0, second=0, microsecond=0)
     chart_data = []
-    for i in range(days):
+    for i in range(restricted_days):
         day = start_date + timedelta(days=i)
         day_start = day.replace(hour=0, minute=0, second=0, microsecond=0)
         day_end = day_start + timedelta(days=1)
