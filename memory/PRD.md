@@ -284,7 +284,10 @@ CRM para ventas comerciales con WhatsApp Business que integra bot IA (GPT-5.2), 
   - **Sync bidireccional**: Nueva función `_sync_rules_to_production()` — cada CRUD en el panel replica INMEDIATAMENTE a producción
   - El bot en producción AHORA lee las mismas reglas del panel del usuario
   - Backup guardado en `/app/backups/reglas_backup_antes_limpieza.xlsx`
-- [x] **Diagnóstico WhatsApp sin respuesta del bot** - Abr 2026:
+- [x] **P0 - Error autenticación tras deploy Railway** - Abr 2026:
+  - **Causa raíz**: `static_frontend` se construía con `REACT_APP_BACKEND_URL=https://...preview.emergentagent.com` del preview → en producción Railway, el frontend enviaba API calls al preview en vez del servidor local
+  - **Fix**: Build con `REACT_APP_BACKEND_URL=""` → rutas relativas (`/api/...`) que funcionan en cualquier dominio
+  - Verificado: 0 referencias a preview URL en el build, rutas API relativas confirmadas
   - 3 mensajes de producción (18:21-18:26) no recibieron respuesta del bot
   - **Causa**: Redeploy automático de Railway durante cambios de código (servidor reiniciándose)
   - **Verificado**: Webhook funcional, LLM (GPT-5.2) funcional, API WhatsApp funcional, flujo completo testeado
