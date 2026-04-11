@@ -1005,9 +1005,23 @@ async def _process_ai_conversation_inner(
                 upsert=True
             )
 
-        # If transferred to human, don't process (human handles it)
+        # If transferred to human, reactivate when client sends a new message
+        # (client is initiating a new conversation)
         if state.get("transferred_to_human"):
-            return
+            last_user_msg = await db.messages.find_one(
+                {"conversation_id": conversation_id, "sender": "user"},
+                {"_id": 0, "timestamp": 1},
+                sort=[("timestamp", -1)]
+            )
+            last_bot_transfer = state.get("transfer_timestamp", "")
+            # Reset state - client wants to talk again
+            logger.info(f"Reactivating transferred conversation for {phone_number}")
+            state["transferred_to_human"] = False
+            state["transfer_timestamp"] = None
+            await db.conversation_states.update_one(
+                {"phone_number": phone_number},
+                {"$set": {"transferred_to_human": False, "transfer_timestamp": None}}
+            )
 
         # Reactivate if lead was "perdido"
         lead = await db.leads.find_one({"phone_number": phone_number}, {"_id": 0})
