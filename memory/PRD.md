@@ -272,6 +272,11 @@ CRM para ventas comerciales con WhatsApp Business que integra bot IA (GPT-5.2), 
   - **Fix 2**: Post-procesamiento: regex reemplaza `[LINK]`, `[link]`, `(link)`, `{link}` por la URL real del catálogo
   - **Fix 3**: Regla de automatización "Link catalogo obligatorio - prohibido [LINK]" creada en panel
   - **Triple red de seguridad**: (1) Prompt prohíbe placeholders, (2) regex los reemplaza, (3) fallback appends URL si falta
+- [x] **Feature - Gestión masiva de Reglas de Automatización** - Abr 2026:
+  - **Descargar Excel**: `GET /api/automation-rules/export-excel` genera .xlsx con estilo, todas las columnas
+  - **Cargar Excel**: `POST /api/automation-rules/import-excel` importa reglas desde .xlsx (agrega a existentes)
+  - **Borrar Todas**: `DELETE /api/automation-rules-bulk/delete-all` elimina todas las reglas con confirmación
+  - Frontend: 3 botones en panel Configuración > Automatización con confirmaciones y toasts
 
 ## Remaining Tasks
 1. **P1 - Generar 3 conversaciones demo**: Simular conversaciones WhatsApp vía webhook

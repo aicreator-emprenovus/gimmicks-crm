@@ -34,7 +34,10 @@ import {
   Webhook,
   Key,
   AlertTriangle,
-  Pencil
+  Pencil,
+  Download,
+  Upload,
+  XCircle
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -155,6 +158,56 @@ export default function Settings() {
       fetchRules();
     } catch (error) {
       toast.error("Error al eliminar regla");
+    }
+  };
+
+  const exportRulesExcel = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/api/automation-rules/export-excel`, {
+        headers: getAuthHeaders(),
+        responseType: "blob"
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "reglas_automatizacion.xlsx";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+      toast.success("Excel descargado");
+    } catch (error) {
+      toast.error("Error al exportar");
+    }
+  };
+
+  const importRulesExcel = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const formPayload = new FormData();
+    formPayload.append("file", file);
+    try {
+      const res = await axios.post(`${API_URL}/api/automation-rules/import-excel`, formPayload, {
+        headers: { ...getAuthHeaders(), "Content-Type": "multipart/form-data" }
+      });
+      toast.success(res.data.message);
+      fetchRules();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Error al importar");
+    }
+    e.target.value = "";
+  };
+
+  const deleteAllRules = async () => {
+    if (!confirm(`¿Eliminar TODAS las ${rules.length} reglas? Esta acción no se puede deshacer. Se recomienda descargar el Excel primero.`)) return;
+    try {
+      const res = await axios.delete(`${API_URL}/api/automation-rules-bulk/delete-all`, {
+        headers: getAuthHeaders()
+      });
+      toast.success(res.data.message);
+      fetchRules();
+    } catch (error) {
+      toast.error("Error al eliminar reglas");
     }
   };
 
@@ -327,6 +380,50 @@ export default function Settings() {
                 </Button>
               </DialogContent>
             </Dialog>
+          </div>
+
+          {/* Bulk actions bar */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5 text-zinc-700 border-zinc-300 hover:bg-zinc-50"
+              onClick={exportRulesExcel}
+              disabled={rules.length === 0}
+              data-testid="export-rules-btn"
+            >
+              <Download size={15} />
+              Descargar Excel
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5 text-zinc-700 border-zinc-300 hover:bg-zinc-50 relative"
+              onClick={() => document.getElementById('import-rules-file').click()}
+              data-testid="import-rules-btn"
+            >
+              <Upload size={15} />
+              Cargar Excel
+            </Button>
+            <input
+              id="import-rules-file"
+              type="file"
+              accept=".xlsx,.xls"
+              className="hidden"
+              onChange={importRulesExcel}
+            />
+            {rules.length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5 text-red-600 border-red-200 hover:bg-red-50 ml-auto"
+                onClick={deleteAllRules}
+                data-testid="delete-all-rules-btn"
+              >
+                <XCircle size={15} />
+                Borrar Todas
+              </Button>
+            )}
           </div>
 
           {/* Edit Dialog */}

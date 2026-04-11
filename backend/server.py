@@ -1718,6 +1718,135 @@ async def delete_automation_rule(rule_id: str, current_user: dict = Depends(get_
                        "rule_delete", f"Regla eliminada: {rule.get('name', '') if rule else rule_id}")
     return {"message": "Regla eliminada exitosamente"}
 
+@api_router.get("/automation-rules/export-excel")
+async def export_automation_rules_excel(current_user: dict = Depends(get_current_user)):
+    """Export all automation rules as Excel file"""
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    from fastapi.responses import StreamingResponse
+
+    rules = await db.automation_rules.find({}, {"_id": 0}).to_list(500)
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Reglas de Automatización"
+
+    headers = ["name", "trigger_type", "trigger_value", "action_type", "action_value", "is_active", "created_at"]
+    header_labels = ["Nombre", "Tipo Trigger", "Valor Trigger", "Tipo Acción", "Valor Acción", "Activa", "Fecha Creación"]
+
+    header_fill = PatternFill(start_color="63AC9A", end_color="63AC9A", fill_type="solid")
+    header_font = Font(bold=True, color="FFFFFF", size=11)
+    thin_border = Border(
+        left=Side(style='thin'), right=Side(style='thin'),
+        top=Side(style='thin'), bottom=Side(style='thin')
+    )
+
+    for col, label in enumerate(header_labels, 1):
+        cell = ws.cell(row=1, column=col, value=label)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = Alignment(horizontal="center")
+        cell.border = thin_border
+
+    for row_idx, rule in enumerate(rules, 2):
+        for col_idx, key in enumerate(headers, 1):
+            val = rule.get(key, "")
+            if key == "is_active":
+                val = "SI" if val else "NO"
+            cell = ws.cell(row=row_idx, column=col_idx, value=str(val) if val is not None else "")
+            cell.border = thin_border
+            if key == "action_value":
+                cell.alignment = Alignment(wrap_text=True)
+
+    ws.column_dimensions['A'].width = 35
+    ws.column_dimensions['B'].width = 16
+    ws.column_dimensions['C'].width = 20
+    ws.column_dimensions['D'].width = 18
+    ws.column_dimensions['E'].width = 60
+    ws.column_dimensions['F'].width = 10
+    ws.column_dimensions['G'].width = 22
+
+    buffer = io.BytesIO()
+    wb.save(buffer)
+    buffer.seek(0)
+
+    await log_activity(current_user.get("email", ""), current_user.get("name", ""),
+                       "rules_export", f"Exportadas {len(rules)} reglas a Excel")
+
+    return StreamingResponse(
+        buffer,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": "attachment; filename=reglas_automatizacion.xlsx"}
+    )
+
+@api_router.post("/automation-rules/import-excel")
+async def import_automation_rules_excel(
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user)
+):
+    """Import automation rules from Excel file (adds to existing rules)"""
+    from openpyxl import load_workbook
+
+    if not file.filename.endswith(('.xlsx', '.xls')):
+        raise HTTPException(status_code=400, detail="Solo se permiten archivos Excel (.xlsx)")
+
+    contents = await file.read()
+    wb = load_workbook(io.BytesIO(contents), read_only=True)
+    ws = wb.active
+
+    rows = list(ws.iter_rows(min_row=2, values_only=True))
+    if not rows:
+        raise HTTPException(status_code=400, detail="El archivo está vacío")
+
+    header_map = ["name", "trigger_type", "trigger_value", "action_type", "action_value", "is_active", "created_at"]
+    imported = 0
+    skipped = 0
+    now = datetime.now(timezone.utc)
+
+    for row in rows:
+        if not row or not row[0]:
+            continue
+        data = {}
+        for i, key in enumerate(header_map):
+            data[key] = str(row[i]).strip() if i < len(row) and row[i] is not None else ""
+
+        name = data.get("name", "")
+        if not name:
+            skipped += 1
+            continue
+
+        is_active_val = data.get("is_active", "SI").upper()
+        is_active = is_active_val in ("SI", "TRUE", "1", "YES", "VERDADERO")
+
+        rule_doc = {
+            "id": str(uuid.uuid4()),
+            "name": name,
+            "trigger_type": data.get("trigger_type", "keyword"),
+            "trigger_value": data.get("trigger_value", "") or None,
+            "action_type": data.get("action_type", "ai_response"),
+            "action_value": data.get("action_value", ""),
+            "is_active": is_active,
+            "created_at": now.isoformat()
+        }
+        await db.automation_rules.insert_one(rule_doc)
+        imported += 1
+
+    wb.close()
+    await log_activity(current_user.get("email", ""), current_user.get("name", ""),
+                       "rules_import", f"Importadas {imported} reglas desde Excel (omitidas: {skipped})")
+
+    return {"message": f"{imported} reglas importadas exitosamente", "imported": imported, "skipped": skipped}
+
+@api_router.delete("/automation-rules-bulk/delete-all")
+async def delete_all_automation_rules(current_user: dict = Depends(get_current_user)):
+    """Delete ALL automation rules"""
+    count = await db.automation_rules.count_documents({})
+    if count == 0:
+        return {"message": "No hay reglas para eliminar", "deleted": 0}
+    result = await db.automation_rules.delete_many({})
+    await log_activity(current_user.get("email", ""), current_user.get("name", ""),
+                       "rules_delete_all", f"Eliminadas TODAS las reglas ({result.deleted_count})")
+    return {"message": f"{result.deleted_count} reglas eliminadas", "deleted": result.deleted_count}
+
 # ============== DASHBOARD ROUTES ==============
 
 @api_router.get("/dashboard/metrics", response_model=DashboardMetrics)
