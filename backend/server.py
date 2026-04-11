@@ -31,6 +31,16 @@ db_name = os.environ.get('DB_NAME', 'gimmicks_crm')
 client = AsyncIOMotorClient(mongo_url)
 db = client[db_name]
 
+# Production DB helper for syncing automation rules
+def get_prod_db():
+    """Get production database connection if configured."""
+    prod_url = os.environ.get('PROD_MONGO_URL')
+    if not prod_url:
+        return None
+    prod_db_name = os.environ.get('PROD_DB_NAME', 'gimmicks_crm')
+    prod_client = AsyncIOMotorClient(prod_url, serverSelectionTimeoutMS=5000)
+    return prod_client[prod_db_name]
+
 # JWT Config
 JWT_SECRET = os.environ.get('JWT_SECRET_KEY') or secrets.token_hex(32)
 JWT_ALGORITHM = "HS256"
@@ -1666,6 +1676,8 @@ async def create_automation_rule(rule_data: AutomationRuleCreate, current_user: 
     await db.automation_rules.insert_one(rule_doc)
     await log_activity(current_user.get("email", ""), current_user.get("name", ""),
                        "rule_create", f"Regla creada: {rule_data.name}")
+    # Sync to production
+    await _sync_rules_to_production()
     return AutomationRuleResponse(
         id=rule_id,
         name=rule_data.name,
@@ -1706,6 +1718,8 @@ async def update_automation_rule(
         raise HTTPException(status_code=404, detail="Regla no encontrada")
     await log_activity(current_user.get("email", ""), current_user.get("name", ""),
                        "rule_update", f"Regla actualizada: {rule_id}")
+    # Sync to production
+    await _sync_rules_to_production()
     return {"message": "Regla actualizada"}
 
 @api_router.delete("/automation-rules/{rule_id}")
@@ -1716,6 +1730,8 @@ async def delete_automation_rule(rule_id: str, current_user: dict = Depends(get_
         raise HTTPException(status_code=404, detail="Regla no encontrada")
     await log_activity(current_user.get("email", ""), current_user.get("name", ""),
                        "rule_delete", f"Regla eliminada: {rule.get('name', '') if rule else rule_id}")
+    # Sync to production
+    await _sync_rules_to_production()
     return {"message": "Regla eliminada exitosamente"}
 
 @api_router.get("/automation-rules/export-excel")
@@ -1833,8 +1849,23 @@ async def import_automation_rules_excel(
     wb.close()
     await log_activity(current_user.get("email", ""), current_user.get("name", ""),
                        "rules_import", f"Importadas {imported} reglas desde Excel (omitidas: {skipped})")
-
+    # Sync to production
+    await _sync_rules_to_production()
     return {"message": f"{imported} reglas importadas exitosamente", "imported": imported, "skipped": skipped}
+
+async def _sync_rules_to_production():
+    """Push all local automation_rules to production DB (full replace)."""
+    try:
+        prod_db = get_prod_db()
+        if prod_db is None:
+            return
+        local_rules = await db.automation_rules.find({}, {"_id": 0}).to_list(500)
+        await prod_db.automation_rules.delete_many({})
+        if local_rules:
+            await prod_db.automation_rules.insert_many(local_rules)
+        logger.info(f"Synced {len(local_rules)} automation rules to production")
+    except Exception as e:
+        logger.warning(f"Failed to sync rules to production: {e}")
 
 @api_router.delete("/automation-rules-bulk/delete-all")
 async def delete_all_automation_rules(current_user: dict = Depends(get_current_user)):
@@ -1845,6 +1876,8 @@ async def delete_all_automation_rules(current_user: dict = Depends(get_current_u
     result = await db.automation_rules.delete_many({})
     await log_activity(current_user.get("email", ""), current_user.get("name", ""),
                        "rules_delete_all", f"Eliminadas TODAS las reglas ({result.deleted_count})")
+    # Sync to production
+    await _sync_rules_to_production()
     return {"message": f"{result.deleted_count} reglas eliminadas", "deleted": result.deleted_count}
 
 # ============== DASHBOARD ROUTES ==============

@@ -11,7 +11,9 @@ from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
 
 logger = logging.getLogger(__name__)
 
-COLLECTIONS_TO_SYNC = ["leads", "conversations", "messages", "automation_rules"]
+# automation_rules are managed via the panel and pushed TO production.
+# They should NOT be pulled FROM production to avoid overwriting user edits.
+COLLECTIONS_TO_SYNC = ["leads", "conversations", "messages"]
 
 
 async def sync_from_production(local_db: AsyncIOMotorDatabase) -> dict:
@@ -45,26 +47,13 @@ async def sync_from_production(local_db: AsyncIOMotorDatabase) -> dict:
                 if not doc_id:
                     continue
 
-                # For automation_rules, match by name to avoid duplicates
-                if collection_name == "automation_rules":
-                    existing = await local_coll.find_one({"name": doc.get("name")})
-                else:
-                    existing = await local_coll.find_one({"id": doc_id})
-
+                existing = await local_coll.find_one({"id": doc_id})
                 if existing:
-                    if collection_name == "automation_rules":
-                        # Don't overwrite local rules with prod versions
-                        updated += 1
-                    else:
-                        await local_coll.replace_one({"id": doc_id}, doc)
-                        updated += 1
+                    await local_coll.replace_one({"id": doc_id}, doc)
+                    updated += 1
                 else:
-                    if collection_name == "automation_rules":
-                        # Skip inserting prod rules that don't exist locally
-                        pass
-                    else:
-                        await local_coll.insert_one(doc)
-                        inserted += 1
+                    await local_coll.insert_one(doc)
+                    inserted += 1
 
             stats[collection_name] = {"inserted": inserted, "updated": updated, "total_prod": len(prod_docs)}
 

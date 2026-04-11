@@ -280,7 +280,9 @@ CRM para ventas comerciales con WhatsApp Business que integra bot IA (GPT-5.2), 
 - [x] **P0 - Limpieza de reglas de automatización + fix sync duplicación** - Abr 2026:
   - Eliminadas 68 reglas (masivamente duplicadas por sync_service que re-insertaba 18 reglas de producción)
   - Curadas exactamente 12 reglas esenciales para el flujo del bot
-  - **Fix sync_service**: `automation_rules` ahora se compara por `name` en vez de `id`, y NO inserta reglas de producción que no existan localmente
+  - **Fix sync_service**: `automation_rules` removido de COLLECTIONS_TO_SYNC (ya no se pull de producción)
+  - **Sync bidireccional**: Nueva función `_sync_rules_to_production()` — cada CRUD en el panel replica INMEDIATAMENTE a producción
+  - El bot en producción AHORA lee las mismas reglas del panel del usuario
   - Backup guardado en `/app/backups/reglas_backup_antes_limpieza.xlsx`
 - [x] **Diagnóstico WhatsApp sin respuesta del bot** - Abr 2026:
   - 3 mensajes de producción (18:21-18:26) no recibieron respuesta del bot
