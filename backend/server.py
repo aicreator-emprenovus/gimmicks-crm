@@ -1957,6 +1957,51 @@ async def verify_whatsapp_webhook(request: Request):
     logger.warning(f"Webhook verification failed: mode={hub_mode}, token_match={hub_verify_token == verify_token}")
     return Response(content="Verification failed", status_code=403, media_type="text/plain")
 
+@api_router.get("/webhook/whatsapp/diagnostics")
+async def whatsapp_diagnostics(current_user: dict = Depends(get_current_user)):
+    """Diagnostic endpoint to test the full WhatsApp bot pipeline"""
+    results = {}
+    
+    # 1. Check WhatsApp credentials
+    wa_token = os.environ.get("WHATSAPP_ACCESS_TOKEN", "")
+    wa_phone_id = os.environ.get("WHATSAPP_PHONE_NUMBER_ID", "")
+    results["whatsapp_token"] = "configured" if len(wa_token) > 10 else "MISSING"
+    results["whatsapp_phone_id"] = wa_phone_id if wa_phone_id else "MISSING"
+    
+    # 2. Check LLM key
+    llm_key = os.environ.get("EMERGENT_LLM_KEY", "")
+    results["emergent_llm_key"] = "configured" if len(llm_key) > 5 else "MISSING"
+    
+    # 3. Test LLM call
+    try:
+        from emergentintegrations.llm.chat import LlmChat, UserMessage
+        chat_obj = LlmChat(api_key=llm_key, session_id="diag-test", system_message="Respond OK")
+        chat_obj.with_model("openai", "gpt-4o")
+        resp = await chat_obj.send_message(UserMessage(text="Test"))
+        results["llm_test"] = f"OK: {resp[:30]}"
+    except Exception as e:
+        results["llm_test"] = f"FAILED: {type(e).__name__}: {e}"
+    
+    # 4. Test bot import
+    try:
+        from bot_service import process_ai_conversation
+        results["bot_import"] = "OK"
+    except Exception as e:
+        results["bot_import"] = f"FAILED: {type(e).__name__}: {e}"
+    
+    # 5. Check automation rules
+    rules_count = await db.automation_rules.count_documents({"is_active": True})
+    results["active_rules"] = rules_count
+    
+    # 6. Check DB connectivity
+    try:
+        conv_count = await db.conversations.count_documents({})
+        results["db_conversations"] = conv_count
+    except Exception as e:
+        results["db_error"] = str(e)
+    
+    return results
+
 @api_router.post("/webhook/whatsapp")
 async def handle_whatsapp_webhook(request_data: dict):
     """Handle incoming WhatsApp messages - returns 200 immediately, processes in background"""
@@ -1981,106 +2026,109 @@ async def process_incoming_message(message: dict, metadata: dict):
     timestamp = message.get("timestamp")
     message_type = message.get("type", "text")
     
-    # === DEDUP: Skip if this wamid was already processed ===
-    if message_id:
-        existing = await db.messages.find_one({"whatsapp_message_id": message_id}, {"_id": 1})
-        if existing:
-            logger.info(f"Duplicate wamid {message_id} from {phone_number}, skipping")
-            return
-    
-    now = datetime.now(timezone.utc)
-    
-    # Extract content based on message type
-    if message_type == "text":
-        content = {"text": message.get("text", {}).get("body", "")}
-    else:
-        content = {"raw": message}
-    
-    # Find or create conversation
-    conversation = await db.conversations.find_one({"phone_number": phone_number}, {"_id": 0})
-    
-    if not conversation:
-        conv_id = str(uuid.uuid4())
-        conversation = {
-            "id": conv_id,
-            "phone_number": phone_number,
-            "contact_name": None,
-            "last_message": content.get("text", ""),
-            "last_message_time": now.isoformat(),
-            "status": "active",
-            "unread_count": 1,
-            "lead_id": None,
-            "created_at": now.isoformat()
-        }
-        await db.conversations.insert_one(conversation)
+    try:
+        # === DEDUP: Skip if this wamid was already processed ===
+        if message_id:
+            existing = await db.messages.find_one({"whatsapp_message_id": message_id}, {"_id": 1})
+            if existing:
+                logger.info(f"Duplicate wamid {message_id} from {phone_number}, skipping")
+                return
         
-        # Also create a lead
-        lead_id = str(uuid.uuid4())
-        lead_doc = {
-            "id": lead_id,
-            "phone_number": phone_number,
-            "name": None,
-            "source": "whatsapp",
-            "status": "active",
-            "funnel_stage": "lead",
-            "classification": "frio",
-            "notes": None,
-            "created_at": now.isoformat(),
-            "updated_at": now.isoformat(),
-            "last_message_at": now.isoformat()
-        }
-        await db.leads.insert_one(lead_doc)
+        now = datetime.now(timezone.utc)
         
-        await db.conversations.update_one({"id": conv_id}, {"$set": {"lead_id": lead_id}})
-    else:
-        await db.conversations.update_one(
-            {"id": conversation["id"]},
-            {
-                "$set": {
-                    "last_message": content.get("text", "")[:100],
-                    "last_message_time": now.isoformat()
-                },
-                "$inc": {"unread_count": 1}
+        # Extract content based on message type
+        if message_type == "text":
+            content = {"text": message.get("text", {}).get("body", "")}
+        else:
+            content = {"raw": message}
+        
+        # Find or create conversation
+        conversation = await db.conversations.find_one({"phone_number": phone_number}, {"_id": 0})
+        
+        if not conversation:
+            conv_id = str(uuid.uuid4())
+            conversation = {
+                "id": conv_id,
+                "phone_number": phone_number,
+                "contact_name": None,
+                "last_message": content.get("text", ""),
+                "last_message_time": now.isoformat(),
+                "status": "active",
+                "unread_count": 1,
+                "lead_id": None,
+                "created_at": now.isoformat()
             }
-        )
-        
-        # Update lead last_message_at
-        if conversation.get("lead_id"):
-            await db.leads.update_one(
-                {"id": conversation["lead_id"]},
-                {"$set": {"last_message_at": now.isoformat(), "updated_at": now.isoformat()}}
+            await db.conversations.insert_one(conversation)
+            
+            # Also create a lead
+            lead_id = str(uuid.uuid4())
+            lead_doc = {
+                "id": lead_id,
+                "phone_number": phone_number,
+                "name": None,
+                "source": "whatsapp",
+                "status": "active",
+                "funnel_stage": "lead",
+                "classification": "frio",
+                "notes": None,
+                "created_at": now.isoformat(),
+                "updated_at": now.isoformat(),
+                "last_message_at": now.isoformat()
+            }
+            await db.leads.insert_one(lead_doc)
+            
+            await db.conversations.update_one({"id": conv_id}, {"$set": {"lead_id": lead_id}})
+        else:
+            await db.conversations.update_one(
+                {"id": conversation["id"]},
+                {
+                    "$set": {
+                        "last_message": content.get("text", "")[:100],
+                        "last_message_time": now.isoformat()
+                    },
+                    "$inc": {"unread_count": 1}
+                }
             )
-    
-    # Store message
-    msg_doc = {
-        "id": str(uuid.uuid4()),
-        "conversation_id": conversation["id"],
-        "phone_number": phone_number,
-        "sender": "user",
-        "message_type": message_type,
-        "content": content,
-        "status": "received",
-        "whatsapp_message_id": message_id,
-        "timestamp": now.isoformat()
-    }
-    await db.messages.insert_one(msg_doc)
-    
-    logger.info(f"Message processed from {phone_number}")
-    
-    # Only text messages trigger the bot
-    message_text = content.get("text", "")
-    if not message_text.strip():
-        return
-    
-    # Process with AI-powered bot
-    from bot_service import process_ai_conversation
-    await process_ai_conversation(
-        db=db,
-        phone_number=phone_number,
-        message_text=message_text,
-        conversation_id=conversation["id"],
-        send_message_fn=send_bot_message
-    )
+            
+            # Update lead last_message_at
+            if conversation.get("lead_id"):
+                await db.leads.update_one(
+                    {"id": conversation["lead_id"]},
+                    {"$set": {"last_message_at": now.isoformat(), "updated_at": now.isoformat()}}
+                )
+        
+        # Store message
+        msg_doc = {
+            "id": str(uuid.uuid4()),
+            "conversation_id": conversation["id"],
+            "phone_number": phone_number,
+            "sender": "user",
+            "message_type": message_type,
+            "content": content,
+            "status": "received",
+            "whatsapp_message_id": message_id,
+            "timestamp": now.isoformat()
+        }
+        await db.messages.insert_one(msg_doc)
+        
+        logger.info(f"Message processed from {phone_number}")
+        
+        # Only text messages trigger the bot
+        message_text = content.get("text", "")
+        if not message_text.strip():
+            return
+        
+        # Process with AI-powered bot
+        from bot_service import process_ai_conversation
+        await process_ai_conversation(
+            db=db,
+            phone_number=phone_number,
+            message_text=message_text,
+            conversation_id=conversation["id"],
+            send_message_fn=send_bot_message
+        )
+    except Exception as e:
+        logger.error(f"CRITICAL: process_incoming_message failed for {phone_number}: {type(e).__name__}: {e}", exc_info=True)
 
 # ============== INTELLIGENT BOT FUNCTIONS ==============
 
