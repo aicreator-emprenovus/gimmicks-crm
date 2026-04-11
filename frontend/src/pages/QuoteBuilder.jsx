@@ -799,7 +799,7 @@ function ProductDetailModal({ product, index, total, onClose, onAdd, onPrev, onN
 
           {product.categories?.length > 0 && (
             <div className="flex flex-wrap gap-1 mt-3">
-              {product.categories.map(c => (
+              {(Array.isArray(product.categories) ? product.categories : (typeof product.categories === 'string' ? product.categories.split(',').map(c => c.trim()).filter(Boolean) : [])).map(c => (
                 <span key={c} className="bg-[#63AC9A] text-white text-xs px-2 py-0.5 rounded">{c}</span>
               ))}
             </div>

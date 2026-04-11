@@ -455,9 +455,10 @@ function CategoryManagerModal({ onClose }) {
 
 function CategoryCell({ categories }) {
   const [expanded, setExpanded] = useState(false);
-  if (!categories.length) return <span className="text-gray-300 text-xs">-</span>;
-  const visible = expanded ? categories : categories.slice(0, 3);
-  const hasMore = categories.length > 3;
+  const cats = Array.isArray(categories) ? categories : (typeof categories === 'string' && categories ? categories.split(',').map(c => c.trim()).filter(Boolean) : []);
+  if (!cats.length) return <span className="text-gray-300 text-xs">-</span>;
+  const visible = expanded ? cats : cats.slice(0, 3);
+  const hasMore = cats.length > 3;
 
   return (
     <div className="flex items-center gap-1 max-w-[220px]">
@@ -468,7 +469,7 @@ function CategoryCell({ categories }) {
       </div>
       {hasMore && (
         <button onClick={() => setExpanded(!expanded)} className="flex-shrink-0 text-gray-400 hover:text-gray-600 p-0.5" data-testid="expand-categories-btn">
-          {expanded ? <ChevronUp size={13} /> : <span className="text-[10px] text-gray-400 whitespace-nowrap">+{categories.length - 3}</span>}
+          {expanded ? <ChevronUp size={13} /> : <span className="text-[10px] text-gray-400 whitespace-nowrap">+{cats.length - 3}</span>}
         </button>
       )}
     </div>
