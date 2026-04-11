@@ -58,8 +58,9 @@ Cuando el cliente escribe por primera vez o saluda (hola, buenas, buenos dias, e
 PASO 2 - PRODUCTO (PRIORIDAD MAXIMA - OBLIGATORIO):
 Si el cliente PIDE o MENCIONA un tipo de producto (termos, jarros, gorras, tazas, esferos, etc.) o pregunta si tienes algo:
 - De manera INMEDIATA busca en el inventario interno del sistema. Pon catalog_search con la palabra clave del producto.
-- Si el sistema te proporciona un LINK DEL CATALOGO FILTRADO, es OBLIGATORIO incluirlo EXACTAMENTE en tu respuesta. NUNCA omitas el link.
-- Ejemplo de respuesta correcta: "Tengo varias opciones de termos. Aqui puedes verlos con fotos y codigos: [LINK]. Revisalos y me compartes los codigos que te gusten."
+- Si el sistema te proporciona un LINK DEL CATALOGO FILTRADO (una URL real que empieza con https://), es OBLIGATORIO copiar y pegar esa URL EXACTA en tu respuesta. NUNCA escribas "[LINK]" ni "[link]" ni ningun placeholder. Usa la URL completa tal como aparece.
+- Ejemplo: si el sistema te da "https://ejemplo.com/catalog?q=termos", tu respuesta debe incluir esa URL exacta: "Tengo varias opciones de termos. Aqui puedes verlos con fotos y codigos: https://ejemplo.com/catalog?q=termos - Revisalos y me compartes los codigos que te gusten."
+- PROHIBIDO escribir [LINK], [link], [Link], (link), {link} o cualquier placeholder. SIEMPRE la URL real.
 - NO pidas nombre, email, codigos ni ningun otro dato antes de enviar el link. PRIMERO el link, DESPUES todo lo demas.
 - REGLA CRITICA: NUNCA menciones codigos de productos si NO has enviado primero el link del catalogo. Los codigos solo se mencionan DESPUES de enviar el link.
 - REGLA CRITICA: NUNCA digas "un agente te enviara el catalogo" si el sistema encontro productos. Esa frase SOLO se usa cuando NO hay productos en el inventario del sistema.
@@ -1089,7 +1090,7 @@ async def _process_ai_conversation_inner(
         # ===== BUILD USER PROMPT (new template) =====
         user_prompt = f"""INSTRUCCION: Revisa TODO el historial y los datos recopilados. NO pidas nada que ya se haya proporcionado. Haz UNA sola pregunta por mensaje. Tu respuesta debe ser UN solo mensaje coherente.
 IMPORTANTE: En extracted_data.codigos_producto siempre devuelve la lista COMPLETA ACUMULADA de codigos (no solo los nuevos).
-Si el sistema te proporciona un LINK DEL CATALOGO, es OBLIGATORIO incluirlo en tu respuesta. NUNCA lo omitas. Ejemplo: "Aqui puedes ver las opciones: [link]"
+Si el sistema te proporciona un LINK DEL CATALOGO (URL real con https://), es OBLIGATORIO copiar esa URL EXACTA en tu respuesta. PROHIBIDO escribir [LINK] o [link] o cualquier placeholder. Usa la URL completa.
 NUNCA menciones codigos de productos si no has incluido el link del catalogo en tu respuesta. Los codigos solo se presentan junto con o despues del link.
 NUNCA digas "un agente te enviara el catalogo" si el sistema ENCONTRO productos. La frase "agente enviara catalogo" SOLO se usa cuando el sistema dice "SIN RESULTADOS EN INVENTARIO".
 Si el cliente saluda, responde SOLO con un saludo y "en que puedo ayudarte hoy". NO pidas codigos, NO menciones cotizaciones pendientes.
@@ -1171,6 +1172,10 @@ MENSAJE ACTUAL DEL CLIENTE: {message_text}"""
 
         # ===== SEND RESPONSE =====
         if not will_generate_quote:
+            # Replace [LINK] / [link] / (link) placeholders with actual catalog URL
+            if response_text and catalog_link:
+                response_text = re.sub(r'\[LINK\]|\[link\]|\[Link\]|\(LINK\)|\(link\)|\{LINK\}|\{link\}', catalog_link, response_text)
+
             # Remove any external/invented URLs (keep only our catalog link)
             if response_text:
                 if catalog_link:
