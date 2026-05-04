@@ -13,7 +13,8 @@ logger = logging.getLogger(__name__)
 
 # automation_rules are managed via the panel and pushed TO production.
 # They should NOT be pulled FROM production to avoid overwriting user edits.
-COLLECTIONS_TO_SYNC = ["leads", "conversations", "messages"]
+# product_images MUST be synced from production (user uploads images there).
+COLLECTIONS_TO_SYNC = ["leads", "conversations", "messages", "product_images"]
 
 
 async def sync_from_production(local_db: AsyncIOMotorDatabase) -> dict:
