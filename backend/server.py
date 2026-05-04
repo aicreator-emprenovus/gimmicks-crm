@@ -2015,6 +2015,11 @@ async def whatsapp_diagnostics(current_user: dict = Depends(get_current_user)):
     try:
         conv_count = await db.conversations.count_documents({})
         results["db_conversations"] = conv_count
+        prod_count = await db.products.count_documents({})
+        results["db_products"] = prod_count
+        img_count = await db.product_images.count_documents({})
+        results["db_product_images"] = img_count
+        results["db_name"] = db.name
     except Exception as e:
         results["db_error"] = str(e)
     
