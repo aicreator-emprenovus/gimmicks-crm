@@ -3362,6 +3362,18 @@ async def public_catalog_categories():
     except:
         return []
 
+@api_router.get("/catalog/public/health")
+async def public_catalog_health():
+    """Public diagnostic - shows DB source info."""
+    prod_count = await db.products.count_documents({})
+    img_count = await db.product_images.count_documents({})
+    return {
+        "db_name": db.name,
+        "products_count": prod_count,
+        "product_images_count": img_count,
+        "mongo_host": db.client.address[0] if db.client.address else "unknown"
+    }
+
 # ============== QUOTES MANAGEMENT ROUTES ==============
 
 class QuoteResponse(BaseModel):
