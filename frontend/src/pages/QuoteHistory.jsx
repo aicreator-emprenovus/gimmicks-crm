@@ -164,6 +164,13 @@ export default function QuoteHistory() {
 
   useEffect(() => { fetchQuotes(); }, [fetchQuotes]);
 
+  // Reset all filters when navigating between sections
+  useEffect(() => {
+    setSearch("");
+    setSelectedClient("");
+    setSelectedProduct("");
+  }, [isPO]);
+
   useEffect(() => {
     const fetchClients = async () => {
       try {
