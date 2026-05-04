@@ -8,6 +8,11 @@ const LOGO_URL = "https://customer-assets.emergentagent.com/job_quote-crafter-1/
 
 function fixDriveUrl(url) {
   if (!url) return url;
+  // Handle relative API paths - prepend API_URL
+  if (url.startsWith('/api/')) {
+    const base = process.env.REACT_APP_BACKEND_URL || '';
+    return `${base}${url}`;
+  }
   let m = url.match(/drive\.google\.com\/file\/d\/([^/]+)/);
   if (m) return `https://lh3.googleusercontent.com/d/${m[1]}`;
   m = url.match(/drive\.google\.com\/open\?id=([^&]+)/);
