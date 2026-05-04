@@ -22,7 +22,8 @@ import {
   AlertCircle,
   CheckCircle2,
   ArrowRight,
-  X
+  X,
+  RotateCcw
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -71,6 +72,7 @@ export default function Inbox() {
   const [searchTerm, setSearchTerm] = useState("");
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showClearDialog, setShowClearDialog] = useState(false);
+  const [showResetDialog, setShowResetDialog] = useState(false);
   const [filterStarred, setFilterStarred] = useState(false);
   const [filterStage, setFilterStage] = useState(null);
   const [syncIndicator, setSyncIndicator] = useState(false);
@@ -202,6 +204,22 @@ export default function Inbox() {
       toast.error("Error al limpiar mensajes");
     }
     setShowClearDialog(false);
+  };
+
+  const resetConversation = async () => {
+    if (!selectedConv) return;
+    try {
+      await axios.post(
+        `${API_URL}/api/conversations/${selectedConv.id}/reset-bot`,
+        {},
+        { headers: getAuthHeaders() }
+      );
+      toast.success("Conversación reseteada. El bot iniciará desde cero.");
+      fetchConversations();
+    } catch (error) {
+      toast.error("Error al resetear conversación");
+    }
+    setShowResetDialog(false);
   };
 
   const toggleStar = async () => {
@@ -458,6 +476,14 @@ export default function Inbox() {
                       <>
                         <DropdownMenuSeparator className="bg-gray-100" />
                         <DropdownMenuItem 
+                          onClick={() => setShowResetDialog(true)}
+                          className="cursor-pointer hover:bg-blue-50"
+                          data-testid="reset-conversation-btn"
+                        >
+                          <RotateCcw className="w-4 h-4 mr-2 text-blue-600" />
+                          <span className="text-blue-600 font-medium">Resetear conversación</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
                           onClick={() => setShowClearDialog(true)}
                           className="cursor-pointer hover:bg-orange-50"
                           data-testid="clear-messages-btn"
@@ -698,6 +724,27 @@ export default function Inbox() {
               className="bg-orange-600 hover:bg-orange-700"
             >
               Limpiar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Reset Conversation Dialog */}
+      <AlertDialog open={showResetDialog} onOpenChange={setShowResetDialog}>
+        <AlertDialogContent className="bg-white border-gray-200">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-gray-800">¿Resetear conversación?</AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-500">
+              El bot iniciará desde cero con este contacto. Se borrará el estado interno (datos recopilados, etapa actual) pero los mensajes se mantienen visibles.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200">Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={resetConversation}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              Resetear
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

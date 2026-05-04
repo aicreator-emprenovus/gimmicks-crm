@@ -1097,7 +1097,7 @@ async def _process_ai_conversation_inner(
                 rules_lines = []
                 for rule in active_rules:
                     rules_lines.append(f"- {rule['name']}: {rule['action_value']}")
-                automation_rules_text = "=== REGLAS DE AUTOMATIZACION DEL SISTEMA (OBLIGATORIAS) ===\nEstas reglas fueron configuradas por el administrador. DEBES seguirlas estrictamente:\n" + "\n".join(rules_lines)
+                automation_rules_text = "=== REGLAS DE AUTOMATIZACION DEL SISTEMA (OBLIGATORIAS - PRIORIDAD MAXIMA) ===\nEstas reglas fueron configuradas por el administrador y tienen PRIORIDAD sobre cualquier otra instruccion. DEBES seguirlas al pie de la letra, sin excepciones:\n" + "\n".join(rules_lines)
         except Exception as e:
             logger.warning(f"Could not load automation rules: {e}")
 

@@ -1299,6 +1299,24 @@ async def toggle_star_conversation(
                        action, f"Conversacion {'guardada' if new_starred else 'quitada de guardados'}: {conv.get('contact_name', conversation_id)}")
     return {"is_starred": new_starred, "message": "Conversación guardada" if new_starred else "Conversación quitada de guardados"}
 
+@api_router.post("/conversations/{conversation_id}/reset-bot")
+async def reset_bot_conversation(
+    conversation_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Reset bot state for a conversation so it starts fresh."""
+    conv = await db.conversations.find_one({"id": conversation_id}, {"_id": 0})
+    if not conv:
+        raise HTTPException(status_code=404, detail="Conversación no encontrada")
+    
+    phone_number = conv.get("phone_number")
+    if phone_number:
+        await db.conversation_states.delete_one({"phone_number": phone_number})
+    
+    await log_activity(current_user.get("email", ""), current_user.get("name", ""),
+                       "conversation_reset", f"Conversacion reseteada: {conv.get('contact_name', phone_number)}")
+    return {"message": "Conversación reseteada. El bot iniciará desde cero."}
+
 @api_router.get("/conversations/{conversation_id}/messages", response_model=List[MessageResponse])
 async def get_conversation_messages(
     conversation_id: str,
