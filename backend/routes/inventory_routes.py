@@ -362,12 +362,32 @@ async def upload_product_image(image: UploadFile = File(...)):
         image_bytes = buf.getvalue()
         
         image_id = str(uuid.uuid4())
-        await db.product_images.insert_one({
+
+        # Primary: store in secure Object Storage
+        storage_path = None
+        try:
+            import asyncio
+            from services.object_storage import put_object, build_path
+            path = build_path(image_id, "jpg")
+            result = await asyncio.to_thread(put_object, path, image_bytes, "image/jpeg")
+            storage_path = result.get("path", path)
+        except Exception as e:
+            # Fallback: store binary in MongoDB so the system never loses an image
+            print(f"[upload-image] Object Storage unavailable, falling back to MongoDB: {e}")
+
+        doc = {
             "id": image_id,
-            "data": image_bytes,
             "content_type": "image/jpeg",
-            "created_at": datetime.now(timezone.utc).isoformat()
-        })
+            "size": len(image_bytes),
+            "is_deleted": False,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        }
+        if storage_path:
+            doc["storage_path"] = storage_path
+        else:
+            doc["data"] = image_bytes
+
+        await db.product_images.insert_one(doc)
         
         image_url = f"/api/inventory/images/{image_id}"
         return {"image_url": image_url, "message": "Imagen subida exitosamente"}
@@ -377,12 +397,34 @@ async def upload_product_image(image: UploadFile = File(...)):
 @router.get("/images/{image_id}")
 async def get_product_image(image_id: str):
     from fastapi.responses import Response
-    doc = await db.product_images.find_one({"id": image_id}, {"_id": 0, "data": 1, "content_type": 1})
+    doc = await db.product_images.find_one(
+        {"id": image_id, "is_deleted": {"$ne": True}},
+        {"_id": 0, "data": 1, "content_type": 1, "storage_path": 1}
+    )
     if not doc:
         raise HTTPException(status_code=404, detail="Imagen no encontrada")
+
+    content_type = doc.get("content_type", "image/jpeg")
+    data = doc.get("data")
+
+    # Prefer Object Storage if a storage_path was saved
+    storage_path = doc.get("storage_path")
+    if storage_path and not data:
+        try:
+            import asyncio
+            from services.object_storage import get_object
+            data, ct = await asyncio.to_thread(get_object, storage_path)
+            if ct:
+                content_type = ct
+        except Exception as e:
+            raise HTTPException(status_code=502, detail=f"Storage error: {e}")
+
+    if not data:
+        raise HTTPException(status_code=404, detail="Imagen no encontrada")
+
     return Response(
-        content=doc["data"],
-        media_type=doc.get("content_type", "image/jpeg"),
+        content=data,
+        media_type=content_type,
         headers={
             "Cache-Control": "public, max-age=31536000, immutable",
             "ETag": f'"{image_id}"',

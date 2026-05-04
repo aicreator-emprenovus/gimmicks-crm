@@ -301,6 +301,16 @@ CRM para ventas comerciales con WhatsApp Business que integra bot IA (GPT-5.2), 
 5. **P3 - Asesor permission audit**: Full audit of role permissions
 
 ## Resolved Issues (May 2026 - Copia alterna en Emergent)
+- [x] **Imágenes de productos migradas a Emergent Object Storage** - May 4, 2026:
+  - Causa: Las URLs `/api/inventory/images/<UUID>` del Excel apuntaban a binarios que no existían en MongoDB local ni en Railway. Los binarios sí existían en otra instancia de Emergent (`merged-platform-3.emergent.host`)
+  - Implementado **Emergent Object Storage** (`services/object_storage.py`) — almacenamiento seguro en la nube, escalable, separado de MongoDB
+  - `init_storage()` se llama una vez al startup; `storage_key` reutilizable en memoria
+  - Endpoint `POST /api/inventory/upload-image` ahora guarda primero en Object Storage, con fallback a MongoDB si Object Storage no disponible
+  - Endpoint `GET /api/inventory/images/{id}` lee de Object Storage si hay `storage_path`, si no usa el binario en Mongo (compatibilidad total con flujo existente)
+  - Migración: 1,520/1,520 (100%) imágenes copiadas desde `merged-platform-3` → Object Storage. 0 errores tras retry
+  - Esquema `product_images` ahora: `{id, storage_path, content_type, size, is_deleted, created_at}` + soft-delete soportado
+  - Verificado: catálogo público, página Inventario y endpoints de imagen funcionan en 200 con tiempos ~300ms (más cache de 1 año en navegador via Cache-Control header)
+
 - [x] **Eliminada dependencia de Railway** - May 4, 2026:
   - Removido `services/sync_service.py` y `BackgroundSyncTask` (que jalaba leads/conversations/messages/product_images desde Railway cada 120s)
   - Removido `get_prod_db()` y `_sync_rules_to_production()` ahora es no-op

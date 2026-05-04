@@ -4048,6 +4048,12 @@ async def start_followup_task():
     await fix_old_image_urls()
     # Ensure MongoDB indexes for performance
     await ensure_indexes()
+    # Initialize Emergent Object Storage (secure image storage)
+    try:
+        from services.object_storage import init_storage
+        await asyncio.to_thread(init_storage)
+    except Exception as e:
+        logger.warning(f"Object Storage init failed (images will fall back to MongoDB): {e}")
 
 
 async def ensure_indexes():
