@@ -270,7 +270,7 @@ def build_report():
     
     elements.append(Paragraph("3.3 Proteccion de Datos en Reposo", h2))
     bullets_rest = [
-        "<b>Base de datos en la nube:</b> MongoDB alojado en Railway con acceso restringido por credenciales unicas.",
+        "<b>Base de datos en la nube:</b> MongoDB con acceso restringido por credenciales unicas.",
         "<b>Imagenes persistentes:</b> Las imagenes de productos se almacenan directamente en la base de datos (no en archivos temporales), evitando perdida de datos tras actualizaciones.",
         "<b>Variables de entorno:</b> Todas las credenciales sensibles (tokens de WhatsApp, claves de API, contrasenas de correo) se almacenan como variables de entorno, nunca en el codigo fuente.",
         "<b>Limite de tamano de archivos:</b> Proteccion contra subida de archivos maliciosos con limite de 25 MB.",
@@ -295,11 +295,11 @@ def build_report():
         ["Componente", "Tecnologia", "Descripcion"],
         ["Servidor", "FastAPI (Python)", "Motor principal que procesa todas las solicitudes"],
         ["Interfaz Web", "React + TailwindCSS", "Aplicacion web moderna y responsiva"],
-        ["Base de Datos", "MongoDB (Railway)", "Almacenamiento de datos en la nube"],
+        ["Base de Datos", "MongoDB", "Almacenamiento de datos en la nube"],
         ["Inteligencia Artificial", "GPT-5.2 (OpenAI)", "Modelo de lenguaje para el bot conversacional"],
         ["Mensajeria", "WhatsApp Cloud API", "Conexion oficial con WhatsApp Business"],
         ["Correo", "Gmail SMTP", "Envio automatizado de cotizaciones y notificaciones"],
-        ["Hosting", "Railway", "Plataforma de despliegue en la nube"],
+        ["Hosting", "Emergent", "Plataforma de despliegue en la nube"],
     ]
     arch_table = Table(arch_data, colWidths=[3*cm, 4*cm, 8*cm])
     arch_table.setStyle(TableStyle([

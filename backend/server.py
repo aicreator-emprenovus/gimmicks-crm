@@ -31,15 +31,8 @@ db_name = os.environ.get('DB_NAME', 'gimmicks_crm')
 client = AsyncIOMotorClient(mongo_url)
 db = client[db_name]
 
-# Production DB helper for syncing automation rules
-def get_prod_db():
-    """Get production database connection if configured."""
-    prod_url = os.environ.get('PROD_MONGO_URL')
-    if not prod_url:
-        return None
-    prod_db_name = os.environ.get('PROD_DB_NAME', 'gimmicks_crm')
-    prod_client = AsyncIOMotorClient(prod_url, serverSelectionTimeoutMS=5000)
-    return prod_client[prod_db_name]
+# NOTE: Railway production sync was removed. This is a standalone Emergent
+# instance that uses ONLY the local MongoDB (MONGO_URL).
 
 # JWT Config
 JWT_SECRET = os.environ.get('JWT_SECRET_KEY') or secrets.token_hex(32)
@@ -56,7 +49,7 @@ LOGIN_WINDOW_SECONDS = 300  # 5 minutes
 
 
 def get_client_ip(request: Request) -> str:
-    """Get real client IP behind proxies (Railway, Nginx, etc.)."""
+    """Get real client IP behind proxies (Nginx, etc.)."""
     forwarded = request.headers.get("x-forwarded-for")
     if forwarded:
         return forwarded.split(",")[0].strip()
@@ -1872,18 +1865,9 @@ async def import_automation_rules_excel(
     return {"message": f"{imported} reglas importadas exitosamente", "imported": imported, "skipped": skipped}
 
 async def _sync_rules_to_production():
-    """Push all local automation_rules to production DB (full replace)."""
-    try:
-        prod_db = get_prod_db()
-        if prod_db is None:
-            return
-        local_rules = await db.automation_rules.find({}, {"_id": 0}).to_list(500)
-        await prod_db.automation_rules.delete_many({})
-        if local_rules:
-            await prod_db.automation_rules.insert_many(local_rules)
-        logger.info(f"Synced {len(local_rules)} automation rules to production")
-    except Exception as e:
-        logger.warning(f"Failed to sync rules to production: {e}")
+    """No-op. Railway production sync was removed. Kept as a stub so existing
+    callers don't need to change. Local MongoDB is the only source of truth."""
+    return
 
 @api_router.delete("/automation-rules-bulk/delete-all")
 async def delete_all_automation_rules(current_user: dict = Depends(get_current_user)):
@@ -3912,29 +3896,18 @@ async def import_quotes_endpoint(file: UploadFile = File(...), doc_type: str = "
     return result
 
 
-# ============== PRODUCTION SYNC ROUTES ==============
+# ============== PRODUCTION SYNC ROUTES (REMOVED) ==============
+# Railway production sync was removed. This Emergent instance uses ONLY
+# the local MongoDB. Endpoints below are kept as stubs that return a clear
+# message so any old frontend/admin call doesn't 404.
 
 @api_router.post("/sync/production")
 async def trigger_production_sync(current_user: dict = Depends(get_current_user)):
-    """Manually trigger a sync from production MongoDB"""
-    from services.sync_service import sync_from_production
-    result = await sync_from_production(db)
-    return result
+    return {"synced": False, "disabled": True, "message": "Railway sync deshabilitado. Esta instancia usa solo la base de datos local de Emergent."}
 
 @api_router.get("/sync/status")
 async def get_sync_status(current_user: dict = Depends(get_current_user)):
-    """Get the status of the background sync task"""
-    global _bg_sync
-    if _bg_sync:
-        return {
-            "running": _bg_sync._task is not None and not _bg_sync._task.done(),
-            "interval_seconds": _bg_sync.interval,
-            "last_sync": _bg_sync.last_sync,
-            "last_result": _bg_sync.last_result
-        }
-    return {"running": False, "last_sync": None}
-
-_bg_sync = None
+    return {"running": False, "disabled": True, "message": "Railway sync deshabilitado. Esta instancia usa solo la base de datos local de Emergent."}
 
 app.include_router(api_router)
 
@@ -4069,11 +4042,6 @@ async def followup_background_task():
 async def start_followup_task():
     asyncio.create_task(followup_background_task())
     await seed_system_automation_rules()
-    # Start background sync from production
-    from services.sync_service import BackgroundSyncTask
-    global _bg_sync
-    _bg_sync = BackgroundSyncTask(db, interval_seconds=120)
-    _bg_sync.start()
     # Seed developer user
     await seed_developer_user()
     # Fix old deployment image URLs
@@ -4234,7 +4202,7 @@ uploads_dir = ROOT_DIR / "uploads" / "products"
 uploads_dir.mkdir(parents=True, exist_ok=True)
 app.mount("/api/uploads/products", StaticFiles(directory=str(uploads_dir)), name="product_uploads")
 
-# Serve React frontend build (for production/Railway deployment)
+# Serve React frontend build (for Emergent production deployment)
 static_frontend_dir = ROOT_DIR / "static_frontend"
 if static_frontend_dir.exists():
     from fastapi.responses import FileResponse

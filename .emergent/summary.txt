@@ -1,130 +1,196 @@
 <analysis>**original_problem_statement**: 
-The core project is a full-stack CRM (FastAPI + React + MongoDB) with an integrated WhatsApp Business AI Bot (GPT-5.2). The user has requested multiple urgent bug fixes (Production Auth CORS issue) and several feature enhancements, including a complete system activity log, mandatory periodic inventory downloads, and a Catalog PDF manager that integrates directly into the WhatsApp bot's conversational flow.
+The core project is a full-stack CRM (FastAPI + React + MongoDB) with an integrated WhatsApp Business AI Bot (GPT-5.2/4o). The user requested to resolve multiple critical issues and add features: Fix a P0 DoS vulnerability in , correct the bot's behavior where it was sending the literal string  instead of the actual catalog URL, implement bulk management for automation rules (export, import, delete all), fix a bug where the bot stopped replying to users entirely, replace the inventory with an exact 1284-product list from a provided Excel, fix UI bugs in Inventory and Quote History, add product-based filtering for Quotes/POs, and fix an issue where images are not loading in the Public Catalog.
 
-**User's preferred language**: Spanish (You MUST automatically detect the user's primary language from their messages inside the <trajectory> tag and INSTRUCT next agent to respond in the user's preferred language only) -> **RESPOND ONLY IN SPANISH**.
+**User's preferred language**: Spanish (INSTRUCT NEXT AGENT TO RESPOND IN SPANISH ONLY)
 
 **what currently exists?** 
-A fully functional FastAPI + React CRM. The production authentication issue (CORS + old React build) was fully resolved. The system now features a robust Activity Log tracking ~30 actions, a mandatory 15-day inventory download policy, and a Catalog PDF manager with unrestricted file size limits. The WhatsApp bot has been updated to remove external links () and provide catalog access, but the specific mechanism of sending the PDF is currently being modified.
+A highly customized FastAPI + React CRM. The DoS vulnerability is fixed. The WhatsApp bot dynamically injects the catalog URL, accurately detects vague queries (like producto fanpage) to avoid bad inventory searches, and resumes conversations correctly even if they were previously marked as . The UI has been enhanced with bulk settings for Automation Rules, a Reset Conversation feature in the Inbox, invoice numbers on the Purchase Orders list, and dynamic product-based filters that correctly reset on navigation. 
 
 **Last working item**: 
-    - **Last item agent was working**: Modifying the bot to send the uploaded Catalog PDF URL in the chat text instead of trying to attach the document via the WhatsApp API. The document attachment fails in some deployment environments because the URL might not be publicly accessible to WhatsApp's servers. The user requested that the bot simply share the link directly in the message without referencing any external URLs (like gimmicks.com.ec).
-    - **Status**: IN PROGRESS
-    - **Agent Testing Done**: N
-    - **Which testing method agent to use?**: backend testing agent or curl testing (simulating a webhook payload to trigger the bot's catalog response).
+    - **Last item agent was working**: Troubleshooting missing images in the Public Catalog and a data discrepancy regarding product counts. The user reported that images do not load in the Public Catalog (they show Sin imagen). The agent modified  to prepend the  to relative image paths (), but the images still return 404 because the binary data does not exist in the  collection in the production MongoDB. Additionally, the user insists their inventory has 1575 products and the images load fine for them, but the production MongoDB strictly contains exactly 1284 products and 0 .
+    - **Status**: BLOCKED (Waiting on user clarification regarding the database/data discrepancy).
+    - **Agent Testing Done**: Y (Agent tested DB queries, API endpoints, and took screenshots).
+    - **Which testing method agent to use?**: backend testing agent or manual curl / screenshot tool to verify public catalog images once the database source is clarified.
     - **User Testing Done**: N
 
 **All Pending/In progress Issue list**:
-  - **Issue 1: P0 - Bot fails to attach PDF, needs to send internal URL via text** 
-     - **Attempted fixes**: The agent was reviewing  to identify where  is evaluated and where the document was previously being attached.
+  - **Issue 1: P0 - Public Catalog Images not loading & Database Data Discrepancy**
+     - **Attempted fixes**: The agent updated  in  to prepend  for relative image paths. This fixed the frontend logic. However, the  collection in MongoDB is completely empty (0 documents). The user claims to see 1575 products with working images in production, but the  collection on Railway has exactly 1284 products and 0 images.
      - **Next debug checklist**: 
-        1. In  (around line 1000 and 1130), modify the logic so that instead of using the  API, the bot appends the internal  (e.g., ) directly to its text response.
-        2. Ensure the prompt explicitly instructs the LLM *not* to invent external URLs but to rely on the appended system URL.
-     - **Why fix this issue and what will be achieved with the fix?**: Ensures users receive the catalog reliably without WhatsApp API download failures.
-     - **Status**: IN PROGRESS
-     - **Is recurring issue?**: N
-     - **Should Test frontend/backend/both after fix?**: Backend (Bot webhook simulation)
-     - **Blocked on other issue**: None
+        1. Wait for the user's response regarding the 1575 products. (Could they be looking at a different Railway environment/project, or is there a hard caching issue on their browser?).
+        2. If the data is indeed lost from the DB, guide the user on how to re-upload the missing 1575-product Excel file containing the images, or run a script to restore  if a valid backup is provided.
+        3. Verify  properly renders images once the binary data actually exists in MongoDB.
+     - **Why fix this issue and what will be achieved with the fix?**: Customers receiving the catalog link via WhatsApp cannot see product images, directly impacting sales.
+     - **Status**: BLOCKED
+     - **Is recurring issue?**: Y
+     - **Should Test frontend/backend/both after fix?**: Both
 
 **In progress Task List**:
-  - None currently.
-
-**Upcoming and Future Tasks**
-    - **Upcoming Task 1: P1 - Generate 3 Demo Conversations**: Use  to simulate three full WhatsApp conversations via the webhook endpoint to populate the system with demo data.
-    - **Upcoming Task 2: P1 - Re-upload Valid Products**: Restore ~700 valid products to production from the backup file located at .
-    - **Future Task 1: P2 - Refactor large React Components and Backend Logic**: Split components >300 lines (, , ) and refactor  (currently >1200 lines).
-    - **Future Task 2: P3 - Asesor Permission Audit**: Audit the Asesor role to ensure no permissions were over-granted.
-    - **Future Task 3: P3 - Missing React Hook Dependencies**: Add missing dependencies to  and  arrays in various frontend components to prevent stale closures.
-
-**Completed work in this session**
-- Fixed P0 Production Auth Bug: Corrected CORS and rebuilt  to use httpOnly cookies instead of  (DONE)
-- Fixed Settings Rules Form: Extracted  to prevent input focus loss on continuous typing (DONE)
-- Implemented Catálogo PDF feature in main menu for Admin/Asesor (upload, list, delete) without file size limits (DONE)
-- Implemented Historial de Actividad tracking ~30 distinct system actions with User and Action dropdown filters (DONE)
-- Implemented periodic inventory download enforcement: Uploads are blocked if the user hasn't downloaded the inventory in the last 15 days (DONE)
-- Removed all hardcoded references to  in the bot's logic and system prompts (DONE)
-
-**Earlier issues found/mentioned but not fixed**
-   - None
-
-**Known issue recurrence from previous fork**
   - None
 
-**Code Architecture**
+**Upcoming and Future Tasks**:
+    - **Task 1: P1 - Generate 3 Demo Conversations**: Use  to simulate three full WhatsApp conversations via the webhook endpoint to populate the system with demo data.
+    - **Task 2: P2 - Refactor bot_service.py**: Split  into smaller modules (currently handles LLM logic, state, DB ops, and prompts).
+    - **Task 3: P2 - Refactor large React Components**: Split frontend components >300 lines.
+    - **Task 4: P3 - Asesor Permission Audit**: Audit the Asesor role to ensure no permissions were over-granted.
+
+**Completed work in this session**:
+- Bounded  parameter in  to fix DoS vulnerability (DONE).
+- Fixed bot sending literal , now replaces placeholders with actual catalog URLs in  (DONE).
+- Implemented bulk export/import/delete-all functionality for Automation Rules (DONE).
+- Prevented  from infinitely duplicating Automation Rules (DONE).
+- Fixed production bot unresponsiveness by clearing the  flag when a user initiates a new message (DONE).
+- Overwrote the inventory with the correct 1284 products via provided Excel (DONE).
+- Fixed  crash in Inventory by normalizing the  string to an array in  (DONE).
+- Updated Factura button in Quote/PO lists to dynamically show the actual invoice number (DONE).
+- Added a dynamic Todos los productos filter dropdown to Quotes and Purchase Orders, and fixed an issue where filters incorrectly persisted across pages (DONE).
+- Added a Resetear conversación feature in the Inbox UI + backend endpoint (DONE).
+- Enhanced bot logic () to correctly ask for product specifics instead of searching literal phrases like producto fanpage (DONE).
+
+**Earlier issues found/mentioned but not fixed**:
+  - None
+
+**Known issue recurrence from previous fork**:
+  - None
+
+**Code Architecture**:
 
 
-**Key Technical Concepts**
-- FastAPI + React SPA architecture.
-- Frontend is built and served statically by FastAPI from . Whenever React code changes, a yarn run v1.22.22
-info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this command. is required before FastAPI can serve it correctly in production-like environments.
-- JWT Authentication via , ,  cookies.
-- WhatsApp Cloud API Webhooks.
-- MongoDB with Motor (Async).
+**Key Technical Concepts**:
+- FastAPI backend + React SPA.
+- The Bot logic strictly relies on  to search for inventory; if the DB is empty or mismatched, the bot will instruct the user to wait for an agent.
+-  requires absolute URLs to render images correctly because it is accessed externally without the React app's base path context.
 
-**key DB schema**
-  - , , , , , , , , , .
+**Key DB schema**:
+  - : 
+  - : 
+  - :  (Currently completely empty in production DB, causing image 404s).
 
-**changes in tech stack**
-  - Upload size limit removed in FastAPI middleware () to support massive PDF uploads.
+**Changes in tech stack**:
+  - Modified frontend component structures and state management for dynamic filtering across nested routes.
 
-**All files of reference**
-  - : Contains the conversational AI state machine. You are currently modifying  and the AI prompts here.
-  - : Contains the  helper and the actual  endpoints.
-  - : Frontend interface for managing the PDF.
+**All files of reference**:
+  - : Heavily updated.
+  - : Image URL resolution updated.
+  - : Inbox endpoints and automation rules modified.
+  - : Filters and UI adjustments added.
 
-**Areas that need refactoring**
-  -  is becoming a monolith (>1200 lines).
-  - Frontend components > 300 lines.
+**Areas that need refactoring**:
+  -  is quite large and handles multiple responsibilities (LLM mapping, DB updates, formatting).
 
-**key api endpoints**
-  -  (Bypasses size limits)
-  -  (Serves the actual PDF file)
-  -  (Fetches tracked system actions)
-  -  (Resets the 15-day upload lock timer)
+**Key api endpoints**:
+  -  (Public catalog retrieval)
+  -  (Image binary retrieval)
+  -  (New endpoint to wipe conversation state)
 
-**Critical Info for New Agent**
-  - **LANGUAGE REQUIREMENT**: You MUST converse with the user entirely in SPANISH.
-  - **Bot PDF URL Fix**: The user explicitly requested that the bot provide the URL of the catalog inline within its text message instead of attaching the PDF file. You must modify  to stop using the document-sending API and instead cleanly append the generated  (from the backend) to the LLM response text. Also ensure the LLM prompt forbids the generation of external URLs.
-  - **Frontend Building**: When modifying React files, if you want to test the production flow, you must run yarn run v1.22.22
-info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this command. in  and ensure  is updated, as Railway serves from there.
+**Critical Info for New Agent**:
+  - **Language**: MUST communicate with the user in **SPANISH**.
+  - **Database Mismatch Context**: The agent spent significant time debugging why images were not showing. The  collection in Railway is empty. The user is seeing 1575 products and working images on their end, likely due to heavy browser caching or looking at a different deployment environment. **Do not blindly execute DB wipe scripts** without understanding where the user is looking. Wait for their clarification.
+  - **Environment Routing**: Do NOT share preview URLs or Railway deployment URLs in any summary.
+  - **Frontend Building**: If you modify any React code, you MUST run yarn run v1.22.22
+$ craco build
+Creating an optimized production build...
+Compiled with warnings.
 
-**documents and test reports created in this job**
-  -  to 
-  - 
+[eslint] 
+src/pages/ActivityLog.jsx
+  Line 113:54:  React Hook useEffect has missing dependencies: 'fetchActions' and 'fetchUsers'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
 
-**Last 10 User Messages and any pending HUMAN messages** 
- - User: instala un visor de pdf en una ventana emergente (Agent added modal) -> DONE
- - User: elimina la función ver de Catálogo PDF (Agent removed modal) -> DONE
- - User: El Historial de Actividad debe tener todas las acciones que puede realizar un usuario... (Agent added ~30 actions) -> DONE
- - User: en historial de resultados cuando se elige todos los usuarios la información queda en blanco... (Agent fixed the 'all' filter bug) -> DONE
- - User: Rectifica el flujo de conversación del BOT para enviar el PDF subido en Catálogo Actual cuando pregunte exclusivamente por catálogo o no encuentre coincidencias (Agent updated bot triggers and prompts) -> DONE
- - User: el BOT no logra adjuntar el PDF subido, en lugar de enviarlo haz que el BOT comparta con el cliente la url para que pueda verlo en línea, esta url tiene que tomarse del catálogo subido en el sistema, no debe enviar a ningún enlace externo. -> **IN PROGRESS (You need to implement this URL sharing logic inside )**
+src/pages/Clients.jsx
+  Line 64:6:   React Hook useCallback has a missing dependency: 'headers'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  Line 349:6:  React Hook useEffect has a missing dependency: 'headers'. Either include it or remove the dependency array    react-hooks/exhaustive-deps
 
-**Project Health Check:**
-- Functional, with one specific Bot API bug (Document attachment failing, pending URL-share rewrite).
+src/pages/Dashboard.jsx
+  Line 54:6:  React Hook useCallback has a missing dependency: 'headers'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  Line 69:6:  React Hook useCallback has a missing dependency: 'headers'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
 
-**3rd Party Integrations**
-  - OpenAI GPT-5.2 — uses Emergent LLM Key
+src/pages/Inbox.jsx
+  Line 245:6:  React Hook useEffect has a missing dependency: 'fetchConversations'. Either include it or remove the dependency array                    react-hooks/exhaustive-deps
+  Line 256:6:  React Hook useEffect has missing dependencies: 'selectedConv' and 'setSearchParams'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+  Line 264:6:  React Hook useEffect has a missing dependency: 'fetchMessages'. Either include it or remove the dependency array                         react-hooks/exhaustive-deps
+
+src/pages/Interesados.jsx
+  Line 34:6:  React Hook useCallback has a missing dependency: 'headers'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src/pages/Inventory.jsx
+  Line 50:6:    React Hook useCallback has a missing dependency: 'headers'. Either include it or remove the dependency array                                    react-hooks/exhaustive-deps
+  Line 60:66:   React Hook useEffect has missing dependencies: 'checkDownloadStatus' and 'fetchCategories'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+  Line 354:37:  React Hook useEffect has a missing dependency: 'fetchCats'. Either include it or remove the dependency array                                    react-hooks/exhaustive-deps
+
+src/pages/Leads.jsx
+  Line 222:6:  React Hook useEffect has a missing dependency: 'fetchLeads'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src/pages/QuoteBuilder.jsx
+  Line 68:6:   React Hook useEffect has missing dependencies: 'fetchCategories', 'fetchClients', and 'loadExisting'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+  Line 123:6:  React Hook useCallback has a missing dependency: 'headers'. Either include it or remove the dependency array                                              react-hooks/exhaustive-deps
+
+src/pages/QuoteHistory.jsx
+  Line 163:6:  React Hook useCallback has a missing dependency: 'headers'. Either include it or remove the dependency array                                               react-hooks/exhaustive-deps
+  Line 182:6:  React Hook useEffect has a missing dependency: 'headers'. Either include it or remove the dependency array                                                 react-hooks/exhaustive-deps
+  Line 569:6:  React Hook useEffect has missing dependencies: 'headers', 'quote.client_email', and 'quote.client_id'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+
+src/pages/Settings.jsx
+  Line 221:6:  React Hook useEffect has a missing dependency: 'fetchRules'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src/pages/Users.jsx
+  Line 161:6:  React Hook useEffect has a missing dependency: 'fetchUsers'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+Search for the keywords to learn more about each warning.
+To ignore, add // eslint-disable-next-line to the line before.
+
+File sizes after gzip:
+
+  310.39 kB (+150 B)  build/static/js/main.f5e9c466.js
+  92.46 kB            build/static/js/238.43d8b2d6.chunk.js
+  20.07 kB            build/static/js/641.327de076.chunk.js
+  14.68 kB            build/static/css/main.7defa25d.css
+
+The project was built assuming it is hosted at /.
+You can control this with the homepage field in your package.json.
+
+The build folder is ready to be deployed.
+You may serve it with a static server:
+
+  yarn global add serve
+  serve -s build
+
+Find out more about deployment here:
+
+  https://cra.link/deployment
+
+Done in 24.68s. to update .
+
+**Documents and test reports created in this job**:
+  - : Updated with resolved tasks and features.
+  - : Contains Developer and Admin credentials.
+
+**Last 10 User Messages and any pending HUMAN messages**:
+ - User: error en el sistema: Uncaught runtime errors... visible.map is not a function (Agent fixed CategoryCell bug) -> DONE
+ - User: Verificar URL del catálogo en producción Railway pasos exactos (Agent provided instructions) -> DONE
+ - User: deploy exitoso, qué prosigue? (Agent verified prod was running OK) -> DONE
+ - User: En órdenes de compra haz... el botón factura cambia por el Número o código (Agent updated QuoteHistory) -> DONE
+ - User: En cotizaciones... Agrega en el buscador... un desplegable que muestre los ítems del inventario cotizados (Agent added Product Filter) -> DONE
+ - User: Si el usuario filtra algún artículo... permanece filtrado... Haz que se limpien automáticamente (Agent added path dependency to reset filters) -> DONE
+ - User: Agrega Resetear conversación... revisa que Reglas de Automatización sean tomadas (Agent added feature and verified prompt) -> DONE
+ - User: hay dos problemas... entorno de desarrollo envía el link... pero las fotos no cargan... bot interpreta producto que vi en su fanpage como keyword (Agent fixed vague query bug, investigated images) -> DONE
+ - User: Incorrecto! los artículos SÍ tienen imágenes... NO TOQUES NI DAÑES EL INVENTARIO (Agent tried to map URLs correctly but found DB empty) -> DONE
+ - User: ESTÁS EN LO INCORRECTO... NO SABES de donde tomar el inventario... quiero que me des el dato exacto. -> **PENDING/BLOCKED**: Agent verified the MongoDB configuration and confirmed only 1284 products and 0 images exist. Agent is blocked waiting for user to realize/explain the discrepancy.
+
+**Project Health Check**:
+- Broken: Public Catalog image rendering (due to missing binary data in MongoDB).
+- Working: Rest of CRM, webhook processing, ChatGPT bot logic.
+
+**3rd Party Integrations**:
+  - OpenAI GPT-5.2 / GPT-4o — uses Emergent LLM Key ()
   - WhatsApp Cloud API — requires User API Key
 
-**Testing status**
-  - Testing agent used after significant changes: YES (Passed up to iteration 23)
-  - Troubleshoot agent used after agent stuck in loop: NO
-  - Test files created: None new in this specific session.
-  - Known regressions: None.
+**Testing status**:
+  - Testing agent used after significant changes: NO (Used extensive manual testing & screenshot tool due to UI-specific validation).
+  - Troubleshoot agent used after agent stuck in loop: NO.
+  - Known regressions: Public Catalog images returning 404.
 
-**Credentials to test flow:**
-  - Admin:  / 
-  - Developer:  / 
-  *(Note: Check  if further auth details are needed).*
+**Credentials to test flow**:
+  - Reference  for Admin and Dev accounts.
 
-**What agent forgot to execute**
-  - The previous agent did not start the P1 pending tasks (Demo conversations & Valid products restore).
-  - The agent was interrupted while fixing the Bot's PDF URL logic.
-
-**Debugging checklist for current issue**
-    Issue: Bot attempts to attach PDF via WhatsApp API, which fails. User wants the URL shared inside the chat text instead.
-
-    Backend files to check:
-    - : Look at . Ensure it generates a valid URL pointing to . 
-    - Look around lines ~1100-1150 in . Remove the call to  (or the equivalent logic that attempts to attach the file).
-    - Append the  to the AI's final text message, OR feed the URL into the  and forcefully instruct the LLM to output it exactly as provided without mentioning . Ensure it's gracefully integrated into the text response.</analysis>
+**What agent forgot to execute**:
+  - The previous agent did not run the testing subagent due to the visual-heavy nature of the frontend requests and immediately prioritizing the user's DB discrepancy bug, but it should be run once the image issue is resolved.</analysis>

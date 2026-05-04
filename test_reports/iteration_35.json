@@ -39,7 +39,7 @@
       "✓ base_url reads REACT_APP_BACKEND_URL from os.environ FIRST",
       "✓ base_url fallback order: REACT_APP_BACKEND_URL -> CATALOG_BASE_URL -> frontend/.env",
       "✓ REACT_APP_BACKEND_URL is set in backend/.env",
-      "✓ REACT_APP_BACKEND_URL = https://catalog-pdf-fix.preview.emergentagent.com"
+      "✓ REACT_APP_BACKEND_URL = https://crm-bot-hub.preview.emergentagent.com"
     ],
     "system_prompt_rules": [
       "✓ SYSTEM_PROMPT mentions reading historial with 20 mensajes",
@@ -77,7 +77,7 @@
         "base_url = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')",
         "if not base_url: base_url = os.environ.get('CATALOG_BASE_URL', '').rstrip('/')",
         "if not base_url: try reading frontend/.env",
-        "REACT_APP_BACKEND_URL=https://catalog-pdf-fix.preview.emergentagent.com in backend/.env"
+        "REACT_APP_BACKEND_URL=https://crm-bot-hub.preview.emergentagent.com in backend/.env"
       ]
     },
     "fix_3_should_search_no_has_name": {

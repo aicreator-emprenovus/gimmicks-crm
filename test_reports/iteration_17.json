@@ -55,7 +55,7 @@
       "✓ No GIMK codes in injected data"
     ],
     "build_catalog_url": [
-      "✓ Uses CATALOG_BASE_URL from env: https://catalog-pdf-fix.preview.emergentagent.com",
+      "✓ Uses CATALOG_BASE_URL from env: https://crm-bot-hub.preview.emergentagent.com",
       "✓ Handles multiple keywords (uses first)"
     ],
     "per_phone_concurrency_lock": [
@@ -103,7 +103,7 @@
     "product_search_jarro": "Returns JARVID00020, JARPOR00391-BLA, JARPOR00250-PLA (current catalog)",
     "product_search_gorra": "Returns HT2PR2, SC5CRNB, SC5BR, HX002R (current catalog)",
     "old_gimk_products_removed": "0 GIMK-* products in database",
-    "catalog_url": "https://catalog-pdf-fix.preview.emergentagent.com/catalog?q={keyword}"
+    "catalog_url": "https://crm-bot-hub.preview.emergentagent.com/catalog?q={keyword}"
   },
 
   "seed_data_creation": "No seed data created - tested with existing lead data for phone 593963266566 (José Silva, Emprenovus)",

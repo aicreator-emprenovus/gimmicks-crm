@@ -17,7 +17,7 @@ import os
 import ast
 import re
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://catalog-pdf-fix.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://crm-bot-hub.preview.emergentagent.com').rstrip('/')
 
 
 class TestHealthAndAuth:

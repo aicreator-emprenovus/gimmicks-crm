@@ -7,7 +7,7 @@ CRM para ventas comerciales con WhatsApp Business que integra bot IA (GPT-5.2), 
 - **Backend**: FastAPI + MongoDB + emergentintegrations (GPT-5.2)
 - **Frontend**: React + Shadcn/UI + TailwindCSS
 - **Email**: Gmail SMTP
-- **Production DB**: Railway MongoDB
+- **Database**: Emergent-managed MongoDB (local). Esta copia alterna ya NO depende de Railway.
 
 ## Roles y Permisos
 
@@ -294,11 +294,21 @@ CRM para ventas comerciales con WhatsApp Business que integra bot IA (GPT-5.2), 
   - `static_frontend` reconstruido para próximo deploy estable
 
 ## Remaining Tasks
-1. **P1 - Generar 3 conversaciones demo**: Simular conversaciones WhatsApp vía webhook
-2. **P1 - Re-subir productos válidos**: Restaurar ~700 productos desde backup
+1. **P0 - Re-subir inventario con imágenes**: Esta copia alterna usa solo Emergent local. Las imágenes de los 1,284 productos referencian UUIDs que no existen en `product_images`. Re-cargar Excel + imágenes vía la página de Inventario.
+2. **P1 - Validación end-to-end del bot**: Confirmar que el bot consulta inventario solo desde la DB local y que el link del catálogo muestra los productos esperados.
 3. **P2 - Refactor bot_service.py**: Split into smaller modules
 4. **P2 - Refactor large frontend components**: Extract modals
 5. **P3 - Asesor permission audit**: Full audit of role permissions
+
+## Resolved Issues (May 2026 - Copia alterna en Emergent)
+- [x] **Eliminada dependencia de Railway** - May 4, 2026:
+  - Removido `services/sync_service.py` y `BackgroundSyncTask` (que jalaba leads/conversations/messages/product_images desde Railway cada 120s)
+  - Removido `get_prod_db()` y `_sync_rules_to_production()` ahora es no-op
+  - Removidas variables de entorno `PROD_MONGO_URL` / `PROD_DB_NAME` del `backend/.env`
+  - Removidos archivos de Railway: `railway.toml`, `Procfile`, `start.py`
+  - Endpoints `/api/sync/production` y `/api/sync/status` retornan ahora `{"disabled": true, "message": "Railway sync deshabilitado..."}` (mantenidos como stubs para no romper UI antiguo)
+  - Esta instancia ahora usa **únicamente** la MongoDB local de Emergent (`MONGO_URL`)
+  - El sistema de producción (publicado) NO fue tocado
 
 ## Resolved Issues
 - [x] **P0 - Investigación y limpieza de 5,412 productos en producción** - Abr 6, 2026:
