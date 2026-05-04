@@ -43,6 +43,7 @@ export default function QuoteHistory() {
   const [facturaModal, setFacturaModal] = useState(null);
   const [facturaFields, setFacturaFields] = useState({});
   const [savingPOHeader, setSavingPOHeader] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState("");
 
   const openFacturaModal = async (q) => {
     // First try to load saved PO header data
@@ -226,13 +227,26 @@ export default function QuoteHistory() {
     } catch { toast.error("Error al cargar actividades"); }
   };
 
+  const quotedProducts = React.useMemo(() => {
+    const map = new Map();
+    for (const q of quotes) {
+      for (const it of (q.items || [])) {
+        if (it.code && it.name && !map.has(it.code)) {
+          map.set(it.code, it.name);
+        }
+      }
+    }
+    return Array.from(map.entries()).sort((a, b) => a[1].localeCompare(b[1]));
+  }, [quotes]);
+
   const filtered = quotes.filter(q => {
     const matchesSearch = !search ||
       q.client_name?.toLowerCase().includes(search.toLowerCase()) ||
       q.quote_number?.includes(search) ||
       q.client_email?.toLowerCase().includes(search.toLowerCase());
     const matchesClient = !selectedClient || q.client_id === selectedClient;
-    return matchesSearch && matchesClient;
+    const matchesProduct = !selectedProduct || (q.items || []).some(it => it.code === selectedProduct);
+    return matchesSearch && matchesClient && matchesProduct;
   });
 
   return (
@@ -291,6 +305,17 @@ export default function QuoteHistory() {
           <option value="">Todos los clientes</option>
           {clients.map(c => (
             <option key={c.id} value={c.id}>{c.name}</option>
+          ))}
+        </select>
+        <select
+          value={selectedProduct}
+          onChange={e => setSelectedProduct(e.target.value)}
+          className="h-9 border rounded-md px-3 text-sm bg-white text-gray-700 min-w-[200px]"
+          data-testid="product-filter-select"
+        >
+          <option value="">Todos los productos</option>
+          {quotedProducts.map(([code, name]) => (
+            <option key={code} value={code}>{code} - {name}</option>
           ))}
         </select>
       </div>
