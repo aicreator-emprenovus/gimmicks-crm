@@ -804,9 +804,27 @@ async def _build_conversation_context(db, phone_number, collected_data, message_
         (len(msg_words) <= 3 and msg_words & {'hola', 'buenas', 'buenos', 'hey', 'saludos'})
     )
 
+    # Detect vague queries that mention "product" generically without naming a specific type
+    VAGUE_PATTERNS = [
+        'un producto', 'producto que', 'productos que', 'algo que',
+        'vi en', 'fanpage', 'facebook', 'instagram', 'redes sociales',
+        'publicacion', 'publicidad', 'anuncio', 'post',
+        'quiero saber si tienen', 'tienen algo', 'que productos tienen',
+        'que opciones', 'que hay', 'que tienen disponible',
+    ]
+    is_vague_query = any(p in msg_lower for p in VAGUE_PATTERNS) and not any(
+        kw in msg_lower for kw in [
+            'jarro', 'termo', 'gorra', 'esfero', 'boligrafo', 'taza', 'mug',
+            'camiseta', 'camisa', 'mochila', 'bolso', 'libreta', 'agenda',
+            'llavero', 'tomatodo', 'botella', 'vaso', 'copa', 'plato',
+            'parlante', 'audifono', 'usb', 'power bank', 'cargador',
+            'mouse pad', 'mousepad', 'delantal', 'paraguas', 'sombrilla',
+        ]
+    )
+
     no_products_found = False
     catalog_link = ""
-    should_search = not is_data_input and not has_code_pattern and not is_greeting
+    should_search = not is_data_input and not has_code_pattern and not is_greeting and not is_vague_query
     if should_search:
         products_found = await search_products_by_keyword(db, message_text.strip(), limit=8)
         if products_found:
