@@ -91,6 +91,7 @@ export default function QuoteHistory() {
     try {
       await axios.put(`${API_URL}/api/quotes-v2/${facturaModal.id}/po-header`, facturaFields, { headers });
       toast.success("Datos guardados");
+      fetchQuotes();
     } catch { toast.error("Error al guardar"); }
     setSavingPOHeader(false);
   };
@@ -339,7 +340,7 @@ export default function QuoteHistory() {
                     </Button>
                     {q.doc_type === "PO" && (
                       <Button variant="ghost" size="sm" onClick={() => openFacturaModal(q)} className="text-xs text-orange-600" data-testid={`factura-btn-${q.id}`}>
-                        <FileText size={14} className="mr-1" /> Factura
+                        <FileText size={14} className="mr-1" /> {q.factura || (q.po_header_data?.factura) || "no asignado"}
                       </Button>
                     )}
                     <Button variant="ghost" size="sm" onClick={() => setSendModal(q)} className="text-xs text-blue-600" data-testid={`send-btn-${q.id}`}>
