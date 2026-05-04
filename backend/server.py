@@ -1317,10 +1317,14 @@ async def get_conversation_messages(
     limit: int = 100,
     current_user: dict = Depends(get_current_user)
 ):
+    # Return the LATEST `limit` messages (sorted DESC) and reverse to
+    # chronological order so the chat shows the most recent messages by default.
+    # Older messages can be loaded via skip pagination.
     messages = await db.messages.find(
         {"conversation_id": conversation_id},
         {"_id": 0}
-    ).sort("timestamp", 1).skip(skip).limit(limit).to_list(limit)
+    ).sort("timestamp", -1).skip(skip).limit(limit).to_list(limit)
+    messages.reverse()
     
     result = []
     for msg in messages:

@@ -994,22 +994,10 @@ async def _process_ai_conversation_inner(
     try:
         now = datetime.now(timezone.utc)
 
-        # === COOLDOWN: Skip if bot responded in the last 8 seconds ===
-        last_bot = await db.messages.find_one(
-            {"conversation_id": conversation_id, "sender": {"$in": ["bot", "business"]}},
-            {"_id": 0, "timestamp": 1},
-            sort=[("timestamp", -1)]
-        )
-        if last_bot and last_bot.get("timestamp"):
-            try:
-                last_ts = datetime.fromisoformat(last_bot["timestamp"].replace("Z", "+00:00"))
-                if last_ts.tzinfo is None:
-                    last_ts = last_ts.replace(tzinfo=timezone.utc)
-                if (now - last_ts).total_seconds() < 8:
-                    logger.info(f"Cooldown active for {phone_number}, skipping bot response")
-                    return
-            except Exception:
-                pass
+        # NOTE: webhook duplicate-delivery dedup is handled upstream via
+        # whatsapp_message_id (process_incoming_message). The previous 8-second
+        # bot-cooldown was dropping legitimate fast follow-up messages from real
+        # users, so it has been removed. Each incoming user message gets a reply.
 
         # Get or create conversation state
         state = await db.conversation_states.find_one({"phone_number": phone_number}, {"_id": 0})
