@@ -424,11 +424,27 @@ def serialize_doc(doc: dict) -> dict:
 
 # ============== WHATSAPP API FUNCTIONS ==============
 
+# Active phone_number_id from the incoming webhook is read here. By default it
+# falls back to the env var WHATSAPP_PHONE_NUMBER_ID. The webhook handler sets
+# this contextvar so the bot replies FROM the same number that received the
+# message, regardless of how many numbers are linked to the WhatsApp Business
+# Account or which one is set in the env var.
+import contextvars as _ctxvars
+_ACTIVE_WA_PHONE_ID = _ctxvars.ContextVar("active_wa_phone_id", default="")
+
+
+def _active_phone_number_id() -> str:
+    try:
+        return _ACTIVE_WA_PHONE_ID.get() or ""
+    except Exception:
+        return ""
+
+
 async def send_whatsapp_message(to_phone: str, message_text: str) -> str:
     """Send a text message via WhatsApp Business API"""
     import aiohttp
     
-    phone_number_id = os.environ.get("WHATSAPP_PHONE_NUMBER_ID")
+    phone_number_id = _active_phone_number_id() or os.environ.get("WHATSAPP_PHONE_NUMBER_ID")
     access_token = os.environ.get("WHATSAPP_ACCESS_TOKEN")
     
     if not phone_number_id or not access_token:
@@ -473,7 +489,7 @@ async def send_whatsapp_template(to_phone: str, template_name: str, language_cod
     """Send a template message via WhatsApp Business API (works outside 24h window)."""
     import aiohttp
 
-    phone_number_id = os.environ.get("WHATSAPP_PHONE_NUMBER_ID")
+    phone_number_id = _active_phone_number_id() or os.environ.get("WHATSAPP_PHONE_NUMBER_ID")
     access_token = os.environ.get("WHATSAPP_ACCESS_TOKEN")
 
     if not phone_number_id or not access_token:
@@ -541,7 +557,7 @@ async def send_whatsapp_document(to_phone: str, document_url: str, caption: str,
     """Send a document (PDF) via WhatsApp Business API"""
     import aiohttp
 
-    phone_number_id = os.environ.get("WHATSAPP_PHONE_NUMBER_ID")
+    phone_number_id = _active_phone_number_id() or os.environ.get("WHATSAPP_PHONE_NUMBER_ID")
     access_token = os.environ.get("WHATSAPP_ACCESS_TOKEN")
 
     if not phone_number_id or not access_token:
@@ -2032,19 +2048,26 @@ async def whatsapp_diagnostics(current_user: dict = Depends(get_current_user)):
 
 @api_router.post("/webhook/whatsapp")
 async def handle_whatsapp_webhook(request_data: dict):
-    """Handle incoming WhatsApp messages - returns 200 immediately, processes in background"""
+    """Handle incoming WhatsApp messages - returns 200 immediately, processes in background.
+
+    The bot will reply FROM the same phone_number_id that received the message
+    (taken from the webhook metadata), so the WhatsApp Business Account can have
+    multiple numbers linked and each one keeps its own conversations.
+    """
     if request_data.get("object") == "whatsapp_business_account":
         for entry in request_data.get("entry", []):
             for change in entry.get("changes", []):
                 value = change.get("value", {})
-                incoming_phone_id = value.get("metadata", {}).get("phone_number_id", "")
-                configured_phone_id = os.environ.get("WHATSAPP_PHONE_NUMBER_ID", "")
-                if incoming_phone_id and configured_phone_id and incoming_phone_id != configured_phone_id:
-                    continue
+                metadata = value.get("metadata", {}) or {}
+                incoming_phone_id = metadata.get("phone_number_id", "")
                 messages = value.get("messages", [])
                 for message in messages:
-                    asyncio.create_task(process_incoming_message(message, value.get("metadata", {})))
-    
+                    async def _process(msg=message, meta=metadata, pid=incoming_phone_id):
+                        # Set the active phone_number_id for THIS task only
+                        if pid:
+                            _ACTIVE_WA_PHONE_ID.set(pid)
+                        await process_incoming_message(msg, meta)
+                    asyncio.create_task(_process())
     return {"status": "ok"}
 
 async def process_incoming_message(message: dict, metadata: dict):
@@ -2069,7 +2092,11 @@ async def process_incoming_message(message: dict, metadata: dict):
             content = {"text": message.get("text", {}).get("body", "")}
         else:
             content = {"raw": message}
-        
+
+        # Capture the phone_number_id that received this message so the bot
+        # can reply from the SAME number (in case multiple numbers are linked).
+        active_phone_id = (metadata or {}).get("phone_number_id", "") or _active_phone_number_id()
+
         # Find or create conversation
         conversation = await db.conversations.find_one({"phone_number": phone_number}, {"_id": 0})
         
@@ -2084,6 +2111,7 @@ async def process_incoming_message(message: dict, metadata: dict):
                 "status": "active",
                 "unread_count": 1,
                 "lead_id": None,
+                "wa_phone_number_id": active_phone_id,
                 "created_at": now.isoformat()
             }
             await db.conversations.insert_one(conversation)
@@ -2138,8 +2166,16 @@ async def process_incoming_message(message: dict, metadata: dict):
             "timestamp": now.isoformat()
         }
         await db.messages.insert_one(msg_doc)
-        
-        logger.info(f"Message processed from {phone_number}")
+
+        # Persist the receiving phone_number_id on the conversation so any
+        # follow-up / background task can know which number to reply from.
+        if active_phone_id and conversation.get("wa_phone_number_id") != active_phone_id:
+            await db.conversations.update_one(
+                {"id": conversation["id"]},
+                {"$set": {"wa_phone_number_id": active_phone_id}}
+            )
+
+        logger.info(f"Message processed from {phone_number} (via phone_id={active_phone_id or 'env'})")
         
         # Only text messages trigger the bot
         message_text = content.get("text", "")
