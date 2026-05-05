@@ -130,6 +130,22 @@ async def create_quote(request: Request, quote: Quote, authorization: str = Head
     if _log_activity and user:
         await _log_activity(user.get("email", ""), user.get("name", ""),
                             "quote_create", f"{action_type} creada #{quote.quote_number} para {quote.client_name}")
+    # Notify the human WhatsApp agent (only for QUOTEs, not POs)
+    if quote.doc_type != "PO":
+        try:
+            from bot_service import notify_agent_quote_event
+            phone = ""
+            if quote.client_id:
+                client = await db.clients.find_one({"id": quote.client_id}, {"_id": 0, "phone": 1})
+                phone = (client or {}).get("phone", "") or ""
+            collected = {
+                "nombre": quote.client_name or "",
+                "correo": quote.client_email or "",
+                "empresa": quote.client_name or "",
+            }
+            await notify_agent_quote_event(db, phone, collected, is_update=False, quote_number=quote.quote_number)
+        except Exception:
+            pass
     return quote
 
 @router.get("/activities/all")
@@ -188,6 +204,22 @@ async def update_quote(id: str, request: Request, quote: Quote, authorization: s
     if _log_activity and user:
         await _log_activity(user.get("email", ""), user.get("name", ""),
                             "quote_update", f"{action_type} actualizada #{quote.quote_number} - {quote.client_name}")
+    # Notify the human WhatsApp agent (only for QUOTEs, not POs)
+    if quote.doc_type != "PO":
+        try:
+            from bot_service import notify_agent_quote_event
+            phone = ""
+            if quote.client_id:
+                client = await db.clients.find_one({"id": quote.client_id}, {"_id": 0, "phone": 1})
+                phone = (client or {}).get("phone", "") or ""
+            collected = {
+                "nombre": quote.client_name or "",
+                "correo": quote.client_email or "",
+                "empresa": quote.client_name or "",
+            }
+            await notify_agent_quote_event(db, phone, collected, is_update=True, quote_number=quote.quote_number)
+        except Exception:
+            pass
     quote.id = quote_dict['id']
     return quote
 

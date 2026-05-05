@@ -631,6 +631,113 @@ def _new_state(phone_number: str, now: datetime) -> dict:
 
 STAFF_NOTIFICATION_PHONE = "593963560326"
 
+# Human agent that takes over conversations when:
+#   - Customer asks for full catalog / all products
+#   - A new quote is created or an existing one is modified
+HUMAN_AGENT_PHONE = "593999440910"
+
+# Patterns that indicate the customer wants the FULL catalog (handed off to agent)
+FULL_CATALOG_PATTERNS = [
+    'catalogo completo', 'catálogo completo',
+    'catalogo entero', 'catálogo entero',
+    'catalogo total', 'catálogo total',
+    'todo el catalogo', 'todo el catálogo',
+    'todo el inventario', 'todos sus productos',
+    'todos tus productos', 'todos los productos',
+    'lista completa', 'lista entera',
+    'inventario completo', 'inventario entero',
+    'mostrar todo', 'ver todo el',
+    'envia el catalogo', 'envíame el catálogo',
+    'enviame el catalogo', 'mandame el catalogo', 'mándame el catálogo',
+    'todo lo que tienen', 'todo lo que ofrecen', 'todo lo que venden',
+]
+
+
+def detect_full_catalog_request(message_text: str) -> bool:
+    """Return True if the customer is asking for the full catalog / all products."""
+    msg = (message_text or "").lower().strip()
+    if not msg:
+        return False
+    for pattern in FULL_CATALOG_PATTERNS:
+        if pattern in msg:
+            return True
+    return False
+
+
+async def _send_to_human_agent(notification_text: str, template_params: list, db: AsyncIOMotorDatabase):
+    """Send a notification to the human agent (HUMAN_AGENT_PHONE).
+
+    Tries a normal text message first; if Meta refuses due to the 24h
+    re-engagement window, falls back to a Meta-approved template.
+
+    template_params is a list of strings used to fill the template variables
+    (in order) when the fallback is needed.
+    """
+    from server import send_whatsapp_message, send_whatsapp_template
+    try:
+        await send_whatsapp_message(HUMAN_AGENT_PHONE, notification_text)
+        logger.info(f"Human agent notified (text): {HUMAN_AGENT_PHONE}")
+        return True
+    except Exception as send_err:
+        error_str = str(send_err).lower()
+        if "131047" in error_str or "131026" in error_str or "24 hour" in error_str or "re-engagement" in error_str:
+            logger.info(f"24h window expired for agent {HUMAN_AGENT_PHONE}, using template fallback")
+            try:
+                await send_whatsapp_template(
+                    HUMAN_AGENT_PHONE,
+                    "alerta_agente_humano",
+                    "es",
+                    template_params,
+                )
+                logger.info(f"Human agent notified (template): {HUMAN_AGENT_PHONE}")
+                return True
+            except Exception as tmpl_err:
+                logger.error(f"Template send to agent failed: {tmpl_err}")
+                return False
+        logger.error(f"Failed to notify human agent: {send_err}")
+        return False
+
+
+async def notify_agent_full_catalog(db: AsyncIOMotorDatabase, phone_number: str, collected_data: Dict):
+    """Notify the human agent that a customer wants the full catalog."""
+    client_name = (collected_data or {}).get("nombre", "Cliente sin nombre")
+    notification = (
+        f"CLIENTE PIDIO CATALOGO COMPLETO\n\n"
+        f"Cliente: {client_name}\n"
+        f"Telefono: {phone_number}\n\n"
+        f"Enviar catalogo completo manualmente. Conversacion en CRM."
+    )
+    await _send_to_human_agent(
+        notification,
+        ["Cliente pidio catalogo completo", client_name, phone_number, "Enviar manualmente"],
+        db,
+    )
+
+
+async def notify_agent_quote_event(db: AsyncIOMotorDatabase, phone_number: str, collected_data: Dict, is_update: bool, quote_number: str = ""):
+    """Notify the human agent when a quote is created or modified."""
+    action = "COTIZACION ACTUALIZADA" if is_update else "NUEVA COTIZACION"
+    client_name = (collected_data or {}).get("nombre", "Cliente sin nombre")
+    empresa = (collected_data or {}).get("empresa", "")
+    correo = (collected_data or {}).get("correo", "")
+    detalle_lines = []
+    if quote_number:
+        detalle_lines.append(f"Numero: {quote_number}")
+    if empresa:
+        detalle_lines.append(f"Empresa: {empresa}")
+    if correo:
+        detalle_lines.append(f"Email: {correo}")
+    detalle = " | ".join(detalle_lines) if detalle_lines else "Revisar en CRM"
+
+    notification = (
+        f"{action}\n\n"
+        f"Cliente: {client_name}\n"
+        f"Telefono: {phone_number}\n"
+        f"{detalle}\n\n"
+        f"Revisar y atender en CRM."
+    )
+    await _send_to_human_agent(notification, [action, client_name, phone_number, detalle], db)
+
 
 async def notify_staff_new_quote(db: AsyncIOMotorDatabase, phone_number: str, collected_data: Dict, is_update: bool, send_message_fn):
     try:
@@ -1069,6 +1176,34 @@ async def _process_ai_conversation_inner(
         collected_data = state.get("collected_data", {})
         msg_count = state.get("message_count", 0) + 1
 
+        # ===== FULL CATALOG REQUEST → IMMEDIATE HANDOFF TO HUMAN AGENT =====
+        # If the customer asks for the entire catalog, the bot acknowledges
+        # politely and silently transfers the conversation to the human agent.
+        if detect_full_catalog_request(message_text) and not state.get("transferred_to_human"):
+            nombre = collected_data.get("nombre", "")
+            saludo = f"{nombre}, l" if nombre else "L"
+            ack_msg = (
+                f"{saludo}isto. En un momento te envio lo solicitado."
+            )
+            await send_message_fn(phone_number, conversation_id, ack_msg)
+            message_sent = True
+            try:
+                await notify_agent_full_catalog(db, phone_number, collected_data)
+            except Exception as e:
+                logger.error(f"notify_agent_full_catalog failed: {e}")
+            await db.conversation_states.update_one(
+                {"phone_number": phone_number},
+                {"$set": {
+                    "transferred_to_human": True,
+                    "transfer_reason": "catalogo_completo",
+                    "transfer_timestamp": now.isoformat(),
+                    "message_count": msg_count,
+                    "last_interaction": now.isoformat(),
+                }}
+            )
+            await update_lead_from_ai(db, phone_number, collected_data, "tibio", "catalogo", "cliente_potencial")
+            return
+
         # ===== PRE-AI ESCALATION DETECTION =====
         escalation_reason = detect_escalation(message_text)
         if escalation_reason:
@@ -1259,12 +1394,30 @@ MENSAJE ACTUAL DEL CLIENTE: {message_text}"""
         if will_generate_quote:
             existing_quote = await db.quotes_v2.find_one(
                 {"phone_number": phone_number, "status": "pending", "is_deleted": False},
-                {"_id": 0, "items": 1, "client_name": 1}
+                {"_id": 0, "items": 1, "client_name": 1, "quote_number": 1}
             )
             await upsert_quote(db, phone_number, collected_data, conversation_id)
             state_quote = True
 
             await notify_staff_new_quote(db, phone_number, collected_data, existing_quote is not None, send_message_fn)
+            # Also notify the human agent so they can take over
+            try:
+                await notify_agent_quote_event(
+                    db, phone_number, collected_data,
+                    is_update=existing_quote is not None,
+                    quote_number=(existing_quote or {}).get("quote_number", ""),
+                )
+            except Exception as e:
+                logger.error(f"notify_agent_quote_event failed: {e}")
+            # Hand off the conversation to the human agent for follow-up
+            await db.conversation_states.update_one(
+                {"phone_number": phone_number},
+                {"$set": {
+                    "transferred_to_human": True,
+                    "transfer_reason": "cotizacion_generada",
+                    "transfer_timestamp": now.isoformat(),
+                }}
+            )
 
             correo = collected_data.get("correo", "tu correo")
             nombre = collected_data.get("nombre", "")
