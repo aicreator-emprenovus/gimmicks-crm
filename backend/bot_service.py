@@ -204,8 +204,15 @@ async def search_products_by_keyword(db: AsyncIOMotorDatabase, keyword: str, lim
         "para", "por", "con", "sin", "que", "como", "pero", "mas", "muy",
         "ese", "esa", "esos", "esas", "este", "esta", "estos", "estas",
         "al", "en", "es", "son", "ser", "hay", "ya", "yo", "tu", "su",
+        "tus", "sus", "nuestro", "nuestra", "nuestros", "nuestras",
         "me", "te", "se", "le", "lo", "mi", "nos", "les", "hola", "buenas",
         "necesito", "quiero", "busco", "tengo", "puede", "puedo", "favor",
+        # Generic terms that match too many products if used as keywords
+        "producto", "productos", "articulo", "articulos", "item", "items",
+        "catalogo", "catalogos", "opciones", "opcion", "lista", "listado",
+        "todo", "todos", "toda", "todas", "ver", "mostrar", "muestrame",
+        "envia", "envie", "enviar", "muestra", "ofrecen", "ofreces",
+        "tienen", "tienes", "vende", "venden", "vendes",
     }
     words = keyword.strip().split()
     stems = set()
@@ -813,6 +820,13 @@ async def _build_conversation_context(db, phone_number, collected_data, message_
         'publicacion', 'publicidad', 'anuncio', 'post',
         'quiero saber si tienen', 'tienen algo', 'que productos tienen',
         'que opciones', 'que hay', 'que tienen disponible',
+        # Generic catalog/products requests without specifying a type
+        'sus productos', 'tus productos', 'los productos', 'todos los productos',
+        'ver productos', 'mostrar productos', 'ver opciones', 'ver todo',
+        'su catalogo', 'tu catalogo', 'el catalogo', 'mi catalogo',
+        'que tienen', 'que vende', 'que venden', 'que ofrecen',
+        'que ofreces', 'que ofrece', 'todo lo que tienen',
+        'ver lo que tienen', 'mostrar todo', 'ver el catalogo',
     ]
     is_vague_query = any(p in msg_lower for p in VAGUE_PATTERNS) and not any(
         kw in msg_lower for kw in [
@@ -855,6 +869,12 @@ async def _build_conversation_context(db, phone_number, collected_data, message_
                 "cotizar", "cotizacion", "ver", "enviar", "envie", "opciones",
                 "saber", "tienen", "tener", "tienes", "hay", "donde",
                 "queria", "quisiera", "podria", "puedes", "pueden",
+                # Generic terms that should not become a literal catalog filter
+                "sus", "tus", "su", "tu", "nuestro", "nuestra",
+                "producto", "productos", "articulo", "articulos",
+                "catalogo", "catalogos", "lista", "listado",
+                "todo", "todos", "toda", "todas", "mostrar", "muestrame",
+                "ofrecen", "ofreces", "vende", "venden", "vendes",
             }
             clean_terms = [w for w in message_text.strip().split() if w.lower() not in LINK_STOPWORDS and len(w) > 2]
             search_term = " ".join(clean_terms) if clean_terms else message_text.strip()
