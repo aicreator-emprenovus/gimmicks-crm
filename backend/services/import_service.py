@@ -324,6 +324,19 @@ async def import_quotes(file: UploadFile, db, doc_type: str = "QUOTE",
         return {"inserted": 0, "skipped": 0, "deleted": 0, "mode": mode,
                 "message": "No se encontraron cotizaciones/órdenes válidas en el archivo."}
 
+    # Build code -> image_url map from inventory so imported items render
+    # thumbnails in PDFs (PDF generator reads item.image_url).
+    code_to_image: dict[str, str] = {}
+    needed_codes = {it["code"] for q in quotes_data.values() for it in q["items"] if it.get("code")}
+    if needed_codes:
+        async for prod in db.products.find(
+            {"code": {"$in": list(needed_codes)}},
+            {"_id": 0, "code": 1, "image_url": 1}
+        ):
+            url = (prod.get("image_url") or "").strip()
+            if url:
+                code_to_image[prod["code"]] = url
+
     deleted = 0
     if mode == "replace":
         result = await db.quotes_v2.update_many(
@@ -384,19 +397,6 @@ async def import_quotes(file: UploadFile, db, doc_type: str = "QUOTE",
             "status": str(info.get("status", "draft")).lower() if info.get("status") else "draft",
             "payment_terms": str(info.get("payment_terms", "")),
             "validity": str(info.get("validity", "15 días")),
-            "delivery_time": str(info.get("delivery_time", "")),
-            "factura": str(info.get("factura", "")) if info.get("factura") else "",
-            "is_deleted": False,
-            "deleted_at": None,
-            "created_by_id": user.get("id", "") if user else "",
-            "created_by_name": user.get("name", "") if user else "",
-            "created_at": created_at,
-        }
-        await db.quotes_v2.insert_one(quote)
-        inserted += 1
-
-    return {"inserted": inserted, "skipped": skipped, "deleted": deleted, "mode": mode}
-),
             "delivery_time": str(info.get("delivery_time", "")),
             "factura": str(info.get("factura", "")) if info.get("factura") else "",
             "is_deleted": False,
