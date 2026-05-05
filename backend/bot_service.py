@@ -709,7 +709,11 @@ async def notify_agent_full_catalog(db: AsyncIOMotorDatabase, phone_number: str,
     )
     await _send_to_human_agent(
         notification,
-        ["Cliente pidio catalogo completo", client_name, phone_number, "Enviar manualmente"],
+        [
+            "Cliente pidio catalogo completo",
+            f"{client_name} ({phone_number})",
+            "Enviar catalogo completo manualmente",
+        ],
         db,
     )
 
@@ -736,7 +740,15 @@ async def notify_agent_quote_event(db: AsyncIOMotorDatabase, phone_number: str, 
         f"{detalle}\n\n"
         f"Revisar y atender en CRM."
     )
-    await _send_to_human_agent(notification, [action, client_name, phone_number, detalle], db)
+    await _send_to_human_agent(
+        notification,
+        [
+            action,
+            f"{client_name} ({phone_number})",
+            detalle,
+        ],
+        db,
+    )
 
 
 async def notify_staff_new_quote(db: AsyncIOMotorDatabase, phone_number: str, collected_data: Dict, is_update: bool, send_message_fn):
