@@ -1963,9 +1963,26 @@ async def verify_whatsapp_webhook(request: Request):
     logger.warning(f"Webhook verification failed: mode={hub_mode}, token_match={hub_verify_token == verify_token}")
     return Response(content="Verification failed", status_code=403, media_type="text/plain")
 
+@api_router.get("/webhook/whatsapp/info")
+async def whatsapp_webhook_info(request: Request, current_user: dict = Depends(get_current_user)):
+    """Public-facing info shown in Settings → WhatsApp panel.
+    Returns the values the user must paste into Meta Developer Console."""
+    verify_token = os.environ.get("WHATSAPP_VERIFY_TOKEN", "")
+    phone_id = os.environ.get("WHATSAPP_PHONE_NUMBER_ID", "")
+    # Build the webhook URL using the same origin the user is accessing the panel from
+    scheme = request.headers.get("x-forwarded-proto") or request.url.scheme or "https"
+    host = request.headers.get("x-forwarded-host") or request.headers.get("host") or ""
+    base = f"{scheme}://{host}" if host else ""
+    return {
+        "webhook_url": f"{base}/api/webhook/whatsapp" if base else "",
+        "verify_token": verify_token,
+        "phone_number_id": phone_id,
+        "configured": bool(verify_token and phone_id),
+    }
+
+
 @api_router.get("/webhook/whatsapp/diagnostics")
 async def whatsapp_diagnostics(current_user: dict = Depends(get_current_user)):
-    """Diagnostic endpoint to test the full WhatsApp bot pipeline"""
     results = {}
     
     # 1. Check WhatsApp credentials

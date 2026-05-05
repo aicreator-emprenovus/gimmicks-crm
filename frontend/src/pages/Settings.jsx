@@ -74,6 +74,28 @@ export default function Settings() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingRule, setEditingRule] = useState(null);
   const [formData, setFormData] = useState({ ...EMPTY_FORM });
+  const [waInfo, setWaInfo] = useState({ webhook_url: "", verify_token: "", phone_number_id: "" });
+
+  const fetchWaInfo = async () => {
+    try {
+      const r = await axios.get(`${API_URL}/api/webhook/whatsapp/info`, { headers: getAuthHeaders() });
+      // Use the public origin the user sees rather than the backend host
+      const url = r.data.webhook_url || `${window.location.origin}/api/webhook/whatsapp`;
+      setWaInfo({
+        webhook_url: url.replace(/^https?:\/\/[^/]+/, window.location.origin),
+        verify_token: r.data.verify_token || "",
+        phone_number_id: r.data.phone_number_id || "",
+      });
+    } catch (e) {
+      // fallback if endpoint not yet deployed
+      setWaInfo({
+        webhook_url: `${window.location.origin}/api/webhook/whatsapp`,
+        verify_token: "",
+        phone_number_id: "",
+      });
+    }
+  };
+  useEffect(() => { fetchWaInfo(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchRules = async () => {
     try {
@@ -558,20 +580,27 @@ export default function Settings() {
                 <div className="space-y-2">
                   <Label>Webhook URL</Label>
                   <Input
-                    value={`${API_URL}/api/webhook/whatsapp`}
+                    value={waInfo.webhook_url}
                     readOnly
                     className="bg-zinc-50 font-mono text-sm"
+                    data-testid="wa-webhook-url"
                   />
                 </div>
                 <div className="space-y-2">
                   <Label>Verify Token</Label>
                   <Input
-                    value="gimmicks-whatsapp-verify-token"
+                    value={waInfo.verify_token || "(no configurado en el servidor)"}
                     readOnly
                     className="bg-zinc-50 font-mono text-sm"
+                    data-testid="wa-verify-token"
                   />
                 </div>
               </div>
+              {waInfo.phone_number_id && (
+                <p className="text-xs text-zinc-500 mt-2 font-mono">
+                  Phone Number ID actual: {waInfo.phone_number_id}
+                </p>
+              )}
               
               <p className="text-sm text-zinc-500">
                 Usa esta URL y token de verificación al configurar el webhook en Meta for Developers.
