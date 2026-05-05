@@ -4086,8 +4086,10 @@ async def followup_background_task():
 async def start_followup_task():
     asyncio.create_task(followup_background_task())
     await seed_system_automation_rules()
-    # Seed developer user
+    # Seed developer + admin users
     await seed_developer_user()
+    # Auto-restore data on a fresh deploy (idempotent / safe if data already present)
+    await auto_restore_from_backup()
     # Fix old deployment image URLs
     await fix_old_image_urls()
     # Ensure MongoDB indexes for performance
@@ -4142,6 +4144,73 @@ async def seed_developer_user():
         logger.info("Developer user seeded")
     elif existing.get("role") != "desarrollador":
         await db.users.update_one({"email": dev_email}, {"$set": {"role": "desarrollador", "is_protected": True}})
+
+    # Also ensure the default admin exists so the user can always login.
+    admin_email = "admin@gimmicks.com"
+    if not await db.users.find_one({"email": admin_email}):
+        await db.users.insert_one({
+            "id": str(uuid.uuid4()),
+            "email": admin_email,
+            "password": hash_password("admin123456"),
+            "name": "Administrador",
+            "role": "admin",
+            "is_active": True,
+            "is_protected": True,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        })
+        logger.info("Admin user seeded")
+
+
+async def auto_restore_from_backup():
+    """If the database looks empty (e.g. after a fresh deploy), restore data
+    from the bundled backup file. Idempotent and safe: never overwrites a
+    populated database, only fills in missing collections.
+    """
+    backup_path = "/app/backups/emergent_full_export.json"
+    if not os.path.exists(backup_path):
+        return
+
+    products_count = await db.products.count_documents({})
+    if products_count > 100:
+        # DB already has substantial data; do not touch.
+        return
+
+    logger.info(f"DB looks empty (products={products_count}); auto-restoring from {backup_path}")
+    try:
+        import json as _json
+        with open(backup_path, "r", encoding="utf-8") as f:
+            payload = _json.load(f)
+
+        # Per-collection unique key for upserts
+        key_map = {
+            "products": "code",
+            "conversations": "phone_number",
+            "conversation_states": "phone_number",
+            "users": "email",
+        }
+        total = 0
+        for name, docs in (payload.get("collections") or {}).items():
+            if not docs:
+                continue
+            existing = await db[name].count_documents({})
+            if existing > 0 and name in ("users", "automation_rules"):
+                # Don't replace users/rules if they already exist — only fill the rest
+                continue
+            if existing > 0 and name not in ("products", "product_images"):
+                # Other collections: skip if already populated
+                continue
+            key = key_map.get(name, "id")
+            inserted = 0
+            for d in docs:
+                if key not in d:
+                    continue
+                await db[name].replace_one({key: d[key]}, d, upsert=True)
+                inserted += 1
+            logger.info(f"  restored {name}: {inserted}")
+            total += inserted
+        logger.info(f"Auto-restore complete: {total} documents")
+    except Exception as e:
+        logger.error(f"Auto-restore failed: {e}")
 
 
 async def fix_old_image_urls():
