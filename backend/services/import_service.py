@@ -311,7 +311,7 @@ async def import_quotes(file: UploadFile, db, doc_type: str = "QUOTE",
                 "quantity": qty,
                 "unit_price": price,
                 "total_price": qty * price,
-                "image_url": "",
+                "image_url": "",  # populated below from inventory lookup
                 "categories": [],
                 "discount_amount": 0,
                 "discount_type": "none",
@@ -358,6 +358,11 @@ async def import_quotes(file: UploadFile, db, doc_type: str = "QUOTE",
         tax = subtotal * 0.15
         total = subtotal + tax
 
+        # Hydrate items with the inventory's image_url so PDFs render thumbs
+        for it in items:
+            if not it.get("image_url") and it.get("code"):
+                it["image_url"] = code_to_image.get(it["code"], "")
+
         created_at = info.get("created_at")
         if not created_at:
             # Stagger so the file order is preserved in DESC listing
@@ -379,6 +384,19 @@ async def import_quotes(file: UploadFile, db, doc_type: str = "QUOTE",
             "status": str(info.get("status", "draft")).lower() if info.get("status") else "draft",
             "payment_terms": str(info.get("payment_terms", "")),
             "validity": str(info.get("validity", "15 días")),
+            "delivery_time": str(info.get("delivery_time", "")),
+            "factura": str(info.get("factura", "")) if info.get("factura") else "",
+            "is_deleted": False,
+            "deleted_at": None,
+            "created_by_id": user.get("id", "") if user else "",
+            "created_by_name": user.get("name", "") if user else "",
+            "created_at": created_at,
+        }
+        await db.quotes_v2.insert_one(quote)
+        inserted += 1
+
+    return {"inserted": inserted, "skipped": skipped, "deleted": deleted, "mode": mode}
+),
             "delivery_time": str(info.get("delivery_time", "")),
             "factura": str(info.get("factura", "")) if info.get("factura") else "",
             "is_deleted": False,

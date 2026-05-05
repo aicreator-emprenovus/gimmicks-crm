@@ -316,9 +316,19 @@ def fetch_image(url, width_cm=None):
             if image_id:
                 try:
                     sync_db = _get_sync_db()
-                    doc = sync_db.product_images.find_one({"id": image_id}, {"_id": 0, "data": 1})
+                    doc = sync_db.product_images.find_one(
+                        {"id": image_id},
+                        {"_id": 0, "data": 1, "storage_path": 1}
+                    )
                     if doc and doc.get("data"):
                         raw_bytes = doc["data"] if isinstance(doc["data"], bytes) else doc["data"].encode()
+                    elif doc and doc.get("storage_path"):
+                        # Image lives in secure Emergent Object Storage
+                        try:
+                            from services.object_storage import get_object
+                            raw_bytes, _ = get_object(doc["storage_path"])
+                        except Exception:
+                            raw_bytes = None
                 except Exception:
                     pass
 
