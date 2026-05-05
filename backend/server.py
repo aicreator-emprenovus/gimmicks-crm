@@ -3884,19 +3884,42 @@ async def root_page():
 # ============== IMPORT ROUTES ==============
 
 @api_router.post("/import/clients")
-async def import_clients_endpoint(file: UploadFile = File(...), current_user: dict = Depends(require_admin)):
+async def import_clients_endpoint(
+    file: UploadFile = File(...),
+    mode: str = "replace",
+    current_user: dict = Depends(require_admin),
+):
     if not file.filename.endswith(".xlsx"):
         raise HTTPException(status_code=400, detail="Solo se aceptan archivos .xlsx")
+    if mode not in ("replace", "append"):
+        raise HTTPException(status_code=400, detail="mode debe ser 'replace' o 'append'")
     from services.import_service import import_clients
-    result = await import_clients(file, db)
+    result = await import_clients(file, db, mode=mode)
+    await log_activity(
+        current_user.get("email", ""), current_user.get("name", ""),
+        "clients_import",
+        f"Importados {result.get('inserted', 0)} clientes (modo={mode}, eliminados={result.get('deleted', 0)})",
+    )
     return result
 
 @api_router.post("/import/quotes")
-async def import_quotes_endpoint(file: UploadFile = File(...), doc_type: str = "QUOTE", current_user: dict = Depends(require_admin)):
+async def import_quotes_endpoint(
+    file: UploadFile = File(...),
+    doc_type: str = "QUOTE",
+    mode: str = "replace",
+    current_user: dict = Depends(require_admin),
+):
     if not file.filename.endswith(".xlsx"):
         raise HTTPException(status_code=400, detail="Solo se aceptan archivos .xlsx")
+    if mode not in ("replace", "append"):
+        raise HTTPException(status_code=400, detail="mode debe ser 'replace' o 'append'")
     from services.import_service import import_quotes
-    result = await import_quotes(file, db, doc_type, current_user)
+    result = await import_quotes(file, db, doc_type, current_user, mode=mode)
+    await log_activity(
+        current_user.get("email", ""), current_user.get("name", ""),
+        "quotes_import",
+        f"Importadas {result.get('inserted', 0)} {doc_type}s (modo={mode}, eliminadas={result.get('deleted', 0)})",
+    )
     return result
 
 
