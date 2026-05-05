@@ -104,7 +104,7 @@ export default function QuoteHistory() {
       const data = [];
       quotes.forEach(q => {
         (q.items || []).forEach(item => {
-          data.push({
+          const row = {
             "Número": q.quote_number,
             "Cliente": q.client_name,
             "Contacto": q.client_contact,
@@ -120,7 +120,11 @@ export default function QuoteHistory() {
             "Validez": q.validity,
             "Tiempo de Entrega": q.delivery_time,
             "Creado": q.created_at ? new Date(q.created_at).toLocaleDateString("es-EC") : ""
-          });
+          };
+          if (isPO) {
+            row["Factura"] = q.factura && q.factura.trim() ? q.factura : "No asignado";
+          }
+          data.push(row);
         });
       });
       const ws = XLSX.utils.json_to_sheet(data);
