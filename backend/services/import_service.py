@@ -196,7 +196,7 @@ async def import_clients(file: UploadFile, db, mode: str = "replace") -> dict:
             "is_deleted": False,
             "deleted_at": None,
             "created_at": data.get("created_at") or now_iso,
-            "source": "import",
+            "source": "manual",
         }
         await db.clients.insert_one(client)
         inserted += 1
@@ -380,7 +380,7 @@ async def import_quotes(file: UploadFile, db, doc_type: str = "QUOTE",
             "payment_terms": str(info.get("payment_terms", "")),
             "validity": str(info.get("validity", "15 días")),
             "delivery_time": str(info.get("delivery_time", "")),
-            "factura": str(info.get("factura", "")) if info.get("factura") else None,
+            "factura": str(info.get("factura", "")) if info.get("factura") else "",
             "is_deleted": False,
             "deleted_at": None,
             "created_by_id": user.get("id", "") if user else "",
