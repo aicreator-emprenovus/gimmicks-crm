@@ -48,8 +48,16 @@ SIEMPRE extrae TODOS los datos que el cliente proporcione, sin importar el paso.
 - correo
 - ciudad
 - producto (generico si no hay codigo)
+- caracteristicas_logotipo (texto: "1 color", "2 colores", "varios colores", "sin logotipo", etc.)
 
 Si el cliente pide QUITAR un codigo, devuelve la lista sin ese codigo. NUNCA repitas una recopilacion de datos; solo extraelos en silencio y pregunta por lo que falte.
+
+== CARACTERISTICAS DEL LOGOTIPO (REGLA OBLIGATORIA) ==
+Cuando ya conoces el o los productos que el cliente desea (ya tienes codigos_producto o producto generico definido), pregunta UNA SOLA VEZ:
+"Quieres con logotipo a uno o varios colores?"
+- Guarda la respuesta literal del cliente en extracted_data.caracteristicas_logotipo (ej. "1 color", "2 colores", "varios colores", "sin logotipo").
+- NO repitas esta pregunta si ya esta registrado el dato.
+- Esta pregunta es OBLIGATORIA antes de pedir cualquier dato personal (correo, empresa, etc.).
 
 == BUSQUEDA DE INVENTARIO (catalog_search) ==
 Cuando el cliente mencione un TIPO de producto concreto (termos, gorras, tazas, esferos, mugs, mochilas, etc.):
@@ -427,6 +435,21 @@ async def upsert_quote(db: AsyncIOMotorDatabase, phone_number: str, collected_da
     codes_raw = collected_data.get("codigos_producto", "")
     quote_items = []
 
+    # Logotipo characteristic — applied to every item in the quote
+    caracteristicas_logo = (collected_data.get("caracteristicas_logotipo") or "").strip()
+    item_characteristics: List[str] = []
+    if caracteristicas_logo:
+        low = caracteristicas_logo.lower()
+        if "sin" in low and "logo" in low:
+            label = "Sin logotipo"
+        elif any(k in low for k in ["varios", "muchos", "multi", "varias"]):
+            label = "Logotipo a varios colores"
+        elif any(d in low for d in ["1 color", "un color", "monocrom", "uno"]):
+            label = "Logotipo a 1 color"
+        else:
+            label = f"Logotipo: {caracteristicas_logo}"
+        item_characteristics = [label]
+
     if codes_raw:
         clean = str(codes_raw).replace("[", "").replace("]", "").replace("'", "").replace('"', '')
         code_list = [c.strip() for c in re.split(r'[,\s]+', clean) if c.strip()]
@@ -447,6 +470,7 @@ async def upsert_quote(db: AsyncIOMotorDatabase, phone_number: str, collected_da
                 "total_price": total_price,
                 "image_url": p.get("image_url", ""),
                 "categories": p.get("categories", []),
+                "selected_characteristics": list(item_characteristics),
                 "discount_amount": 0,
                 "discount_type": "$",
                 "additional_amount": 0,
@@ -472,6 +496,7 @@ async def upsert_quote(db: AsyncIOMotorDatabase, phone_number: str, collected_da
                 "total_price": total_price,
                 "image_url": p.get("image_url", ""),
                 "categories": p.get("categories", []),
+                "selected_characteristics": list(item_characteristics),
                 "discount_amount": 0,
                 "discount_type": "$",
                 "additional_amount": 0,
