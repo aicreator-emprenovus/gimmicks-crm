@@ -2056,12 +2056,22 @@ async def handle_whatsapp_webhook(request_data: dict):
     (taken from the webhook metadata), so the WhatsApp Business Account can have
     multiple numbers linked and each one keeps its own conversations.
     """
+    # Phone Number IDs that have been retired and must NEVER be processed.
+    # If Meta accidentally still sends webhooks from these numbers, ignore them silently.
+    RETIRED_PHONE_NUMBER_IDS = {"994356967089829"}
+
     if request_data.get("object") == "whatsapp_business_account":
         for entry in request_data.get("entry", []):
             for change in entry.get("changes", []):
                 value = change.get("value", {})
                 metadata = value.get("metadata", {}) or {}
                 incoming_phone_id = metadata.get("phone_number_id", "")
+                if incoming_phone_id in RETIRED_PHONE_NUMBER_IDS:
+                    logger.warning(
+                        f"Ignoring webhook from retired phone_number_id={incoming_phone_id} "
+                        f"(display={metadata.get('display_phone_number', '')})"
+                    )
+                    continue
                 messages = value.get("messages", [])
                 for message in messages:
                     async def _process(msg=message, meta=metadata, pid=incoming_phone_id):
