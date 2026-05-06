@@ -301,13 +301,17 @@ async def call_llm(system_msg: str, user_msg: str, phone_number: str = "") -> Op
         logger.error("No EMERGENT_LLM_KEY configured")
         return None
 
-    models = [("openai", "gpt-5.2"), ("openai", "gpt-4o")]
+    models = [("openai", "gpt-4o"), ("openai", "gpt-5.2")]
     for provider, model_name in models:
         try:
             session_id = f"gimmicks-{uuid.uuid4().hex[:12]}"
             chat = LlmChat(api_key=api_key, session_id=session_id, system_message=system_msg)
             chat.with_model(provider, model_name)
-            response_text = await chat.send_message(UserMessage(text=user_msg))
+            # Hard timeout so a hung LLM request never silently kills a reply
+            response_text = await asyncio.wait_for(
+                chat.send_message(UserMessage(text=user_msg)),
+                timeout=25.0,
+            )
 
             cleaned = re.sub(r'```json\s*', '', response_text)
             cleaned = re.sub(r'```\s*', '', cleaned).strip()
@@ -1149,19 +1153,21 @@ async def _process_ai_conversation_inner(
         # If transferred to human, reactivate when client sends a new message
         # (client is initiating a new conversation)
         if state.get("transferred_to_human"):
-            last_user_msg = await db.messages.find_one(
-                {"conversation_id": conversation_id, "sender": "user"},
-                {"_id": 0, "timestamp": 1},
-                sort=[("timestamp", -1)]
+            transfer_reason = state.get("transfer_reason", "unknown")
+            logger.info(
+                f"Reactivating transferred conversation for {phone_number} "
+                f"(was transferred for: {transfer_reason})"
             )
-            last_bot_transfer = state.get("transfer_timestamp", "")
-            # Reset state - client wants to talk again
-            logger.info(f"Reactivating transferred conversation for {phone_number}")
             state["transferred_to_human"] = False
             state["transfer_timestamp"] = None
+            state["transfer_reason"] = None
             await db.conversation_states.update_one(
                 {"phone_number": phone_number},
-                {"$set": {"transferred_to_human": False, "transfer_timestamp": None}}
+                {"$set": {
+                    "transferred_to_human": False,
+                    "transfer_timestamp": None,
+                    "transfer_reason": None,
+                }}
             )
 
         # Reactivate if lead was "perdido"

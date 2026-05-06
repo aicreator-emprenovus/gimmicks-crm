@@ -299,7 +299,7 @@ export default function Inbox() {
   };
 
   return (
-    <div className="flex h-screen" data-testid="inbox-page">
+    <div className="flex h-[calc(100vh-44px)] overflow-hidden" data-testid="inbox-page">
       {/* Conversations List */}
       <div className="w-80 border-r border-gray-200 flex flex-col bg-white">
         <div className="p-4 border-b border-gray-200">
