@@ -238,6 +238,7 @@ class MessageResponse(BaseModel):
     content: Dict[str, Any]
     status: str
     timestamp: datetime
+    needs_review: Optional[bool] = False
 
 # Conversation Models
 class ConversationResponse(BaseModel):
@@ -1356,7 +1357,8 @@ async def get_conversation_messages(
             message_type=msg.get("message_type", "text"),
             content=msg.get("content", {}),
             status=msg.get("status", "sent"),
-            timestamp=timestamp
+            timestamp=timestamp,
+            needs_review=bool(msg.get("needs_review", False))
         ))
     
     return result
@@ -2511,8 +2513,12 @@ async def transfer_to_human(phone_number: str, collected_data: Dict, conversatio
         logger.error(f"Error transferring to human: {e}")
         return "Un asesor te contactará pronto. ¡Gracias!"
 
-async def send_bot_message(phone_number: str, conversation_id: str, message: str):
-    """Send a message from the bot and save it to DB"""
+async def send_bot_message(phone_number: str, conversation_id: str, message: str, needs_review: bool = False):
+    """Send a message from the bot and save it to DB.
+
+    needs_review: when True, marks the message AND conversation as needing
+    human-agent review (an alert icon is shown in the Inbox for these).
+    """
     now = datetime.now(timezone.utc)
     
     # Always save to DB first
@@ -2525,16 +2531,21 @@ async def send_bot_message(phone_number: str, conversation_id: str, message: str
         "content": {"text": message},
         "status": "sent",
         "is_automated": True,
+        "needs_review": needs_review,
         "timestamp": now.isoformat()
     }
     try:
         await db.messages.insert_one(msg_doc)
+        conv_update = {
+            "last_message": message[:100],
+            "last_message_time": now.isoformat(),
+        }
+        if needs_review:
+            conv_update["needs_review"] = True
+            conv_update["needs_review_at"] = now.isoformat()
         await db.conversations.update_one(
             {"id": conversation_id},
-            {"$set": {
-                "last_message": message[:100],
-                "last_message_time": now.isoformat()
-            }}
+            {"$set": conv_update}
         )
     except Exception as e:
         logger.error(f"Error saving bot message to DB: {e}")

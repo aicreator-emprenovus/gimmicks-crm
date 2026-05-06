@@ -23,7 +23,8 @@ import {
   CheckCircle2,
   ArrowRight,
   X,
-  RotateCcw
+  RotateCcw,
+  AlertTriangle
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -616,12 +617,12 @@ export default function Inbox() {
                 {messages.map((msg) => (
                   <div
                     key={msg.id}
-                    className={`flex ${
+                    className={`flex items-end gap-2 ${
                       msg.sender === "business" ? "justify-end" : "justify-start"
                     }`}
                   >
                     <div
-                      className={`max-w-[70%] break-words overflow-hidden ${
+                      className={`max-w-[70%] break-words overflow-hidden relative ${
                         msg.sender === "business"
                           ? "msg-bubble-sent"
                           : "msg-bubble-received"
@@ -639,6 +640,15 @@ export default function Inbox() {
                         {formatTime(msg.timestamp)}
                       </p>
                     </div>
+                    {msg.needs_review && (
+                      <div
+                        title="Revisión por agente humano requerida"
+                        className="flex-shrink-0 w-7 h-7 rounded-full bg-amber-100 border border-amber-300 flex items-center justify-center shadow-sm"
+                        data-testid="msg-needs-review-icon"
+                      >
+                        <AlertTriangle className="w-4 h-4 text-amber-600" />
+                      </div>
+                    )}
                   </div>
                 ))}
                 <div ref={messagesEndRef} />

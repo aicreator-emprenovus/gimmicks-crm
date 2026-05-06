@@ -59,8 +59,16 @@ Cuando ya conoces el o los productos que el cliente desea (ya tienes codigos_pro
 - NO repitas esta pregunta si ya esta registrado el dato.
 - Esta pregunta es OBLIGATORIA antes de pedir cualquier dato personal (correo, empresa, etc.).
 
-== BUSQUEDA DE INVENTARIO (catalog_search) ==
-Cuando el cliente mencione un TIPO de producto concreto (termos, gorras, tazas, esferos, mugs, mochilas, etc.):
+== BUSQUEDA DE INVENTARIO (catalog_search) — REGLAS ESTRICTAS ==
+SOLO USA catalog_search cuando el cliente mencione EXPLICITAMENTE un TIPO de producto concreto (termos, gorras, tazas, esferos, mugs, mochilas, jarros, agendas, llaveros, libretas, etc.) y tu mensaje anterior NO era una pregunta abierta de seguimiento.
+
+NUNCA pongas valor en catalog_search en estos casos (deja catalog_search=null):
+- Cuando el cliente esta RESPONDIENDO una pregunta tuya (ej. respuestas como "un color", "varios colores", "serigrafia", "100", "1000", "1, 2", "primero 100 segundo 50", "si", "no", "ok").
+- Cuando el cliente envia cantidades (numeros) o codigos.
+- Cuando el cliente da datos personales (nombre, email, empresa, ciudad).
+- Cuando el cliente solo confirma o agradece.
+
+Cuando SI corresponda usar catalog_search:
 - Pon el termino en catalog_search (ejemplo: "termos").
 - El sistema te devolvera un link real (ej: https://cotizador.gimmicks.com.ec/catalog?q=termos).
 - Copia esa URL EXACTA en tu respuesta. PROHIBIDO escribir [LINK], [link], placeholders o URLs inventadas.
@@ -91,11 +99,19 @@ Marca needs_human=true cuando:
 Cuando marques needs_human=true, tu respuesta visible al cliente debe ser amable y breve: "Permiteme revisar eso y en un momento te atendemos." Sin mencionar que transfieres ni decir "voy a derivar la conversacion".
 
 == COTIZACION (needs_quote=true) ==
+La UNICA pregunta sobre caracteristicas que el bot hace es la del logotipo (ya cubierta arriba). NO preguntes JAMAS por tipo de personalizacion (serigrafia, bordado, UV, laser, sublimacion, grabado) — eso lo decide el agente humano despues.
+
 Marca needs_quote=true SOLO cuando tengas TODOS estos datos:
 - codigos de producto + cantidades + correo + empresa
 Los cuatro datos son obligatorios.
-Si el cliente cambia productos o cantidades despues de una cotizacion existente, marca needs_quote=true de nuevo.
-NUNCA menciones al cliente el numero de la cotizacion (ej. #4700); es dato interno.
+
+Cuando esten los cuatro datos, en una SOLA respuesta:
+- Confirma con un mensaje de cierre tipo: "Gracias [nombre], tu cotizacion ha sido registrada y sera enviada a [correo]. Nuestro equipo la revisara pronto."
+- Marca needs_quote=true.
+- NO sigas pidiendo mas datos despues de ese mensaje. Esa es la respuesta FINAL del bot en este flujo.
+- NUNCA menciones al cliente el numero de la cotizacion (ej. #4700); es dato interno.
+
+Si el cliente cambia productos o cantidades despues de una cotizacion existente, marca needs_quote=true de nuevo y vuelve a enviar el mensaje de cierre.
 
 == TONO Y CIERRE ==
 - Trata al cliente por su nombre cuando lo conozcas.
@@ -957,7 +973,45 @@ async def _build_conversation_context(db, phone_number, collected_data, message_
 
     no_products_found = False
     catalog_link = ""
-    should_search = not is_data_input and not has_code_pattern and not is_greeting and not is_vague_query
+
+    # Detect if the user is REPLYING to a previous bot question (e.g. "un color",
+    # "serigrafia", "100", "200 primero 50 segundo"). In that case, do NOT run
+    # the inventory search — those answers are not product searches.
+    is_answer_to_question = False
+    try:
+        last_bot_msg = await db.messages.find_one(
+            {"conversation_id": conversation_id, "sender": {"$in": ["bot", "business"]}},
+            {"_id": 0, "content": 1},
+            sort=[("timestamp", -1)],
+        )
+        last_bot_text = ""
+        if last_bot_msg:
+            c = last_bot_msg.get("content")
+            last_bot_text = (c.get("text", "") if isinstance(c, dict) else str(c or "")).strip()
+        if last_bot_text and "?" in last_bot_text and len(message_text.strip().split()) <= 6:
+            is_answer_to_question = True
+    except Exception:
+        pass
+
+    # Common short-answer markers that should never trigger a catalog search
+    SHORT_ANSWER_TOKENS = {
+        "si", "sí", "no", "ok", "okay", "vale", "perfecto", "claro",
+        "uno", "dos", "tres", "varios", "varias", "muchos", "todos",
+        "color", "colores", "1", "2", "3", "4", "5",
+        "serigrafia", "serigrafía", "bordado", "uv", "laser", "láser",
+        "sublimacion", "sublimación", "grabado",
+    }
+    msg_tokens = set(t.lower().strip(",.;:!?¿¡") for t in message_text.split())
+    if msg_tokens and msg_tokens.issubset(SHORT_ANSWER_TOKENS):
+        is_answer_to_question = True
+
+    should_search = (
+        not is_data_input
+        and not has_code_pattern
+        and not is_greeting
+        and not is_vague_query
+        and not is_answer_to_question
+    )
     if should_search:
         products_found = await search_products_by_keyword(db, message_text.strip(), limit=8)
         if products_found:
@@ -1197,7 +1251,7 @@ async def _process_ai_conversation_inner(
             ack_msg = (
                 f"{saludo}isto. En un momento te envio lo solicitado."
             )
-            await send_message_fn(phone_number, conversation_id, ack_msg)
+            await send_message_fn(phone_number, conversation_id, ack_msg, needs_review=True)
             message_sent = True
             try:
                 await notify_agent_full_catalog(db, phone_number, collected_data)
@@ -1399,7 +1453,7 @@ MENSAJE ACTUAL DEL CLIENTE: {message_text}"""
                             logger.info(f"Response too similar to last message for {phone_number} (overlap={overlap:.0%}), skipping")
                             return
 
-            await send_message_fn(phone_number, conversation_id, response_text)
+            await send_message_fn(phone_number, conversation_id, response_text, needs_review=needs_human)
             message_sent = True
 
         # ===== GENERATE QUOTE IF READY =====
@@ -1437,7 +1491,7 @@ MENSAJE ACTUAL DEL CLIENTE: {message_text}"""
                 f"Gracias{' ' + nombre if nombre else ''}, tu cotizacion ha sido registrada "
                 f"y sera enviada a {correo}. Nuestro equipo la revisara pronto."
             )
-            await send_message_fn(phone_number, conversation_id, confirm_msg)
+            await send_message_fn(phone_number, conversation_id, confirm_msg, needs_review=True)
             message_sent = True
         else:
             state_quote = state.get("quote_generated", False)
