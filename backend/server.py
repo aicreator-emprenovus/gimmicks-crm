@@ -4296,6 +4296,7 @@ async def seed_system_automation_rules():
     count = await db.automation_rules.count_documents({})
     if count > 0:
         logger.info(f"Automation rules already exist ({count}), skipping seed")
+        await ensure_objetivo_general_bot()
         return
     
     logger.info("No automation rules found, seeding defaults...")
@@ -4346,6 +4347,40 @@ async def seed_system_automation_rules():
         rule["created_at"] = now
     await db.automation_rules.insert_many(system_rules)
     logger.info(f"Seeded {len(system_rules)} automation rules")
+    await ensure_objetivo_general_bot()
+
+
+async def ensure_objetivo_general_bot():
+    """Idempotent seed: ensures the special rule OBJETIVO_GENERAL_BOT exists in DB.
+    This rule is injected at the TOP of the bot context as the first source of intent.
+    Does NOT overwrite if it already exists (admin can edit it from Configuración panel).
+    """
+    existing = await db.automation_rules.find_one(
+        {"name": {"$regex": "^OBJETIVO_GENERAL_BOT$", "$options": "i"}},
+        {"_id": 0, "id": 1}
+    )
+    if existing:
+        logger.info("OBJETIVO_GENERAL_BOT rule already present, leaving as-is")
+        return
+    now = datetime.now(timezone.utc).isoformat()
+    rule = {
+        "id": str(uuid.uuid4()),
+        "name": "OBJETIVO_GENERAL_BOT",
+        "trigger_type": "ai_intent",
+        "trigger_value": "objetivo_general",
+        "action_type": "ai_response",
+        "action_value": (
+            "Atender los requerimientos de los leads de manera proactiva: entregar cotizaciones "
+            "basándose en los códigos del catálogo online, resolver inquietudes, conectar al cliente "
+            "con los productos del catálogo virtual según lo que el cliente busca o derivar a humanos "
+            "para cerrar ventas. Esta directriz es la primera fuente de intención y orienta cada "
+            "decisión conversacional del bot."
+        ),
+        "is_active": True,
+        "created_at": now,
+    }
+    await db.automation_rules.insert_one(rule)
+    logger.info("Inserted special rule OBJETIVO_GENERAL_BOT (first source of intent)")
 
 
 # Build CORS origins: always include the preview URL and any CORS_ORIGINS from env

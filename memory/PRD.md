@@ -141,6 +141,21 @@ CRM para ventas comerciales con WhatsApp Business que integra bot IA (GPT-5.2), 
   - Testing: 13/13 backend + frontend completo 100% (iteration_20)
 
 ## Resolved Issues (Latest)
+- [x] **Bot rules update + OBJETIVO_GENERAL_BOT panel rule** - May 6, 2026:
+  - Nuevo bloque "OBJETIVO GENERAL DEL AGENTE" en `SYSTEM_PROMPT` como primera fuente de intención
+  - Mensaje de cierre de cotización actualizado: "Nuestro equipo se pondrá en contacto contigo para los siguientes pasos" (antes: "la revisará pronto"). Aplicado tanto en prompt como en cadena hardcoded `confirm_msg`.
+  - Máximo de líneas por mensaje: 3-4 → **5** (regla 2 de formato)
+  - URL del catálogo explicitada en prompt: `https://cotizador.gimmicks.com.ec/catalog?q=producto` como ejemplo literal de formato
+  - Lista ampliada de tipos de producto reconocidos (cuadernos, bolígrafos, camisetas, polos, paraguas, morrales, lapiceros, tomatodos, etc.)
+  - Refuerzo de tono y cierre: "Quedo atento si necesitas algo más." formalizado
+  - **Nueva regla del panel `OBJETIVO_GENERAL_BOT`** (insertada idempotentemente en startup vía `ensure_objetivo_general_bot()`):
+    - Aparece en Configuración → Automatización (editable sin tocar código)
+    - El bot la separa de las reglas regulares y la inyecta al **inicio** del `user_prompt` con la marca "PRIORIDAD MÁXIMA - PRIMERA FUENTE DE INTENCIÓN"
+    - Si el admin la edita, la siguiente conversación ya respeta la nueva directriz
+  - Test de regresión: `/app/backend/tests/test_objetivo_general_bot.py` (verifica BD + inyección en prompt + cambios SYSTEM_PROMPT)
+  - Smoke E2E vivo: bot saluda con tildes y envía link real del catálogo cuando cliente pide "quiero termos"
+
+## Resolved Issues
 - [x] **P0 - Bot dejó de enviar el link del catálogo cuando cliente pide producto** - May 6, 2026:
   - **Síntoma reportado**: tras el deploy, el bot decía "Aquí puedes ver las opciones de cuadernos en nuestro catálogo:" pero la URL no aparecía. Cliente confundido pregunta "¿dónde puedo ver?" y el bot escala a humano.
   - **Causa raíz #1**: la heurística `is_answer_to_question` (en `bot_service.py`) marcaba como "respuesta a pregunta" cualquier mensaje ≤6 palabras enviado después de un mensaje del bot que terminaba con "?". Esto bloqueaba `should_search` y dejaba `catalog_link=""`. El AI inventaba una URL del dominio (visto en el ejemplo del prompt) y el regex `re.sub(r'https?://\S+', '')` la borraba porque catalog_link estaba vacío.
