@@ -141,6 +141,14 @@ CRM para ventas comerciales con WhatsApp Business que integra bot IA (GPT-5.2), 
   - Testing: 13/13 backend + frontend completo 100% (iteration_20)
 
 ## Resolved Issues (Latest)
+- [x] **P0 - Bot no debe preguntar tipos de personalización adicionales después del logo** - May 6, 2026:
+  - **Regla**: una vez que el bot pregunta "¿logo a uno o varios colores?", PROHIBIDO preguntar por serigrafía, sublimación, bordado, grabado, vinil, tampografía, transfer, UV, láser, full color o cualquier otra técnica.
+  - **Fix 1 — System prompt**: bloque "REGLA ABSOLUTA — UNA SOLA PREGUNTA SOBRE PERSONALIZACIÓN" añadido en la sección "CARACTERÍSTICAS DEL LOGOTIPO" con lista exhaustiva de términos prohibidos. Refuerzo también en sección "COTIZACIÓN".
+  - **Fix 2 — Red de seguridad post-procesamiento**: nueva función `strip_forbidden_personalization()` que detecta menciones a esos términos en la respuesta del LLM y las elimina. Si toda la respuesta era sobre personalización, la sustituye por un mensaje seguro pidiendo el siguiente dato faltante (correo / empresa / cantidad).
+  - **Inteligencia URL-aware**: la red de seguridad NO confunde palabras dentro de URLs (ej. `?q=bordado` queda intacto). Solo limpia menciones en la prosa del bot.
+  - Verificado e2e: bot ya no pide "serigrafía o sublimación" cuando el cliente pregunta "¿qué más necesitas?".
+
+
 - [x] **P0 - Bot responde sin tildes / acentos en español** - May 6, 2026:
   - **Causa raíz**: el `user_prompt` enviado al LLM en cada turno (en `bot_service.py`) estaba escrito SIN tildes ("INSTRUCCION", "codigos", "agente enviara catalogo", "Dirigete", etc.). El modelo imitaba el estilo del prompt y respondía sin acentos.
   - **Fix 1 — User prompt**: reescrito con todas las tildes correctas (INSTRUCCIÓN, códigos, dirígete, había, quedó, etc.).

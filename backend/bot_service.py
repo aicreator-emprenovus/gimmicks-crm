@@ -67,6 +67,13 @@ Cuando ya conoces el o los productos que el cliente desea (ya tienes codigos_pro
 - NO repitas esta pregunta si ya está registrado el dato.
 - Esta pregunta es OBLIGATORIA antes de pedir cualquier dato personal (correo, empresa, etc.).
 
+REGLA ABSOLUTA — UNA SOLA PREGUNTA SOBRE PERSONALIZACIÓN:
+La ÚNICA pregunta sobre personalización que el bot hace en TODA la conversación es "¿Quieres con logotipo a uno o varios colores?". Una vez recibida la respuesta (o si el cliente dice "sin logotipo"):
+- PROHIBIDO preguntar por tipo de impresión, técnica de aplicación, método, ubicación del logo, tamaño del logo, posición, color del producto, color del logo (más allá de "uno o varios"), material, acabado, presentación o cualquier detalle adicional de personalización.
+- PROHIBIDO mencionar palabras como: serigrafía, sublimación, bordado, grabado láser, UV, tampografía, vinil, transfer, foil, termofijado, full color, pad printing, hot stamping, ni siquiera para confirmar.
+- Si el cliente menciona por su cuenta uno de estos términos, GUÁRDALO en extracted_data.caracteristicas_logotipo, agradécelo en una línea ("Perfecto, lo registramos") y NO preguntes nada más sobre personalización.
+- Después del logo (uno/varios colores) y la cantidad, el siguiente paso SIEMPRE es pedir el correo (luego empresa) y cerrar cotización. Nada de personalización adicional.
+
 == BÚSQUEDA DE INVENTARIO (catalog_search) — REGLAS ESTRICTAS ==
 SOLO USA catalog_search cuando el cliente mencione EXPLÍCITAMENTE un TIPO de producto concreto (termos, gorras, tazas, esferos, mugs, mochilas, jarros, agendas, llaveros, libretas, etc.) y tu mensaje anterior NO era una pregunta abierta de seguimiento.
 
@@ -107,7 +114,7 @@ Marca needs_human=true cuando:
 Cuando marques needs_human=true, tu respuesta visible al cliente debe ser amable y breve: "Permíteme revisar eso y en un momento te atendemos." Sin mencionar que transfieres ni decir "voy a derivar la conversación".
 
 == COTIZACIÓN (needs_quote=true) ==
-La ÚNICA pregunta sobre características que el bot hace es la del logotipo (ya cubierta arriba). NO preguntes JAMÁS por tipo de personalización (serigrafía, bordado, UV, láser, sublimación, grabado) — eso lo decide el agente humano después.
+La ÚNICA pregunta sobre características/personalización que el bot hace en TODA la conversación es la del logotipo (uno o varios colores, ya cubierta arriba). NO preguntes JAMÁS por tipo de personalización (serigrafía, bordado, UV, láser, sublimación, grabado, vinil, tampografía, transfer, etc.). Eso lo decide el agente humano después de la cotización inicial.
 
 Marca needs_quote=true SOLO cuando tengas TODOS estos datos:
 - códigos de producto + cantidades + correo + empresa
@@ -321,6 +328,76 @@ def fix_spanish_accents(text: str) -> str:
     # Apply interrogative fixes only inside questions
     result = _fix_in_questions(result)
     return result
+
+
+# ===== Forbidden personalization terms safety net =====
+# After the bot asks "¿logo a uno o varios colores?" it must NEVER ask about
+# any other type of personalization. If the LLM disobeys, this safety net
+# strips the offending sentence and substitutes a safe follow-up.
+_FORBIDDEN_PERSONALIZATION_REGEX = re.compile(
+    r"\b("
+    r"serigraf[íi]a|sublimaci[óo]n|bordad[oa]s?|grabad[oa]s?|"
+    r"tampograf[íi]a|pad\s*printing|hot\s*stamping|"
+    r"vinil(?:o|os)?|transfer|termofijad[oa]s?|"
+    r"l[áa]ser|impresi[óo]n\s+uv|uv\s+printing|full\s*color|"
+    r"tipo\s+de\s+personalizaci[óo]n|tipo\s+de\s+impresi[óo]n|"
+    r"m[ée]todo\s+de\s+impresi[óo]n|t[ée]cnica\s+de\s+impresi[óo]n|"
+    r"t[ée]cnica\s+de\s+personalizaci[óo]n|t[ée]cnica\s+de\s+aplicaci[óo]n"
+    r")\b",
+    re.IGNORECASE,
+)
+
+
+def strip_forbidden_personalization(text: str, missing_fields: Optional[List[str]] = None) -> str:
+    """Remove sentences that mention forbidden personalization techniques.
+    URLs are preserved as-is (forbidden terms inside URL query strings are ignored).
+    If the entire response was about that, replace with a safe follow-up
+    based on what's still missing (correo, empresa, cantidad)."""
+    if not text:
+        return text
+
+    # Mask URLs so the regex doesn't match query strings like ?q=bordado
+    url_re = re.compile(r'https?://\S+')
+    urls: List[str] = []
+
+    def _mask(match: re.Match) -> str:
+        urls.append(match.group(0))
+        return f"___URL_{len(urls) - 1}___"
+
+    masked = url_re.sub(_mask, text)
+
+    if not _FORBIDDEN_PERSONALIZATION_REGEX.search(masked):
+        return text  # nothing forbidden in actual prose
+
+    # Split into sentences keeping delimiters; drop any sentence with a forbidden term
+    parts = re.split(r'([.!?\n]+)', masked)
+    cleaned_parts: List[str] = []
+    for i in range(0, len(parts), 2):
+        sentence = parts[i]
+        delimiter = parts[i + 1] if i + 1 < len(parts) else ""
+        if not _FORBIDDEN_PERSONALIZATION_REGEX.search(sentence):
+            cleaned_parts.append(sentence + delimiter)
+    cleaned = "".join(cleaned_parts).strip()
+    cleaned = re.sub(r'\s{2,}', ' ', cleaned).strip()
+
+    # Restore URL placeholders
+    for idx, url in enumerate(urls):
+        cleaned = cleaned.replace(f"___URL_{idx}___", url)
+
+    # If we removed everything (or almost), substitute a safe follow-up
+    if len(cleaned) < 10:
+        missing = missing_fields or []
+        if "correo" in missing:
+            cleaned = "Para continuar con tu cotización, ¿me compartes tu correo electrónico?"
+        elif "empresa" in missing:
+            cleaned = "Para finalizar tu cotización, ¿cuál es el nombre de tu empresa?"
+        elif "cantidad" in missing or "cantidades_por_producto" in missing:
+            cleaned = "Para continuar, ¿cuántas unidades necesitas?"
+        else:
+            cleaned = "Perfecto, registramos tu requerimiento. Un asesor te contactará en breve."
+
+    logger.info(f"Stripped forbidden personalization terms from response. Original len={len(text)}, cleaned len={len(cleaned)}")
+    return cleaned
 
 
 async def search_products_by_keyword(db: AsyncIOMotorDatabase, keyword: str, limit: int = 8) -> List[Dict]:
@@ -1589,6 +1666,16 @@ MENSAJE ACTUAL DEL CLIENTE: {message_text}"""
                         if overlap > 0.7:
                             logger.info(f"Response too similar to last message for {phone_number} (overlap={overlap:.0%}), skipping")
                             return
+
+            # Strip any forbidden personalization terms the LLM may have leaked
+            still_missing = []
+            if not collected_data.get("correo"):
+                still_missing.append("correo")
+            if not collected_data.get("empresa"):
+                still_missing.append("empresa")
+            if not (collected_data.get("cantidades_por_producto") or collected_data.get("cantidad")):
+                still_missing.append("cantidad")
+            response_text = strip_forbidden_personalization(response_text, still_missing)
 
             await send_message_fn(phone_number, conversation_id, fix_spanish_accents(response_text), needs_review=needs_human)
             message_sent = True
