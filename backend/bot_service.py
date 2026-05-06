@@ -1186,6 +1186,28 @@ async def _build_conversation_context(db, phone_number, collected_data, message_
     no_products_found = False
     catalog_link = ""
 
+    # Product keywords that indicate the customer is asking about a product type.
+    # If any of these appear in the message we MUST run the catalog search even
+    # if the previous bot message ended with "?".
+    PRODUCT_KEYWORDS = {
+        'jarro', 'jarros', 'termo', 'termos', 'gorra', 'gorras',
+        'esfero', 'esferos', 'boligrafo', 'boligrafos', 'lapicero', 'lapiceros',
+        'taza', 'tazas', 'mug', 'mugs', 'camiseta', 'camisetas', 'camisa', 'camisas',
+        'polo', 'polos', 'chaqueta', 'chaquetas', 'gorro', 'gorros', 'visera', 'viseras',
+        'mochila', 'mochilas', 'bolso', 'bolsos', 'maleta', 'maletas',
+        'libreta', 'libretas', 'agenda', 'agendas',
+        'cuaderno', 'cuadernos', 'cartuchera', 'cartucheras',
+        'llavero', 'llaveros', 'tomatodo', 'tomatodos', 'botella', 'botellas',
+        'vaso', 'vasos', 'copa', 'copas', 'plato', 'platos',
+        'parlante', 'parlantes', 'audifono', 'audifonos', 'auricular', 'auriculares',
+        'usb', 'usbs', 'powerbank', 'cargador', 'cargadores',
+        'mousepad', 'delantal', 'delantales', 'paraguas', 'sombrilla', 'sombrillas',
+        'gafas', 'lentes', 'reloj', 'relojes', 'pulsera', 'pulseras',
+        'memoria', 'memorias',
+    }
+    msg_lower_words = set(msg_lower.split())
+    has_product_keyword = bool(msg_lower_words & PRODUCT_KEYWORDS)
+
     # Detect if the user is REPLYING to a previous bot question (e.g. "un color",
     # "serigrafia", "100", "200 primero 50 segundo"). In that case, do NOT run
     # the inventory search — those answers are not product searches.
@@ -1200,7 +1222,15 @@ async def _build_conversation_context(db, phone_number, collected_data, message_
         if last_bot_msg:
             c = last_bot_msg.get("content")
             last_bot_text = (c.get("text", "") if isinstance(c, dict) else str(c or "")).strip()
-        if last_bot_text and "?" in last_bot_text and len(message_text.strip().split()) <= 6:
+        # Only treat short messages as "answers" when they don't mention a
+        # product keyword. Otherwise messages like "quiero cuadernos" after the
+        # bot greeting were being skipped, and the catalog link never sent.
+        if (
+            last_bot_text
+            and "?" in last_bot_text
+            and len(message_text.strip().split()) <= 6
+            and not has_product_keyword
+        ):
             is_answer_to_question = True
     except Exception:
         pass
@@ -1214,7 +1244,7 @@ async def _build_conversation_context(db, phone_number, collected_data, message_
         "sublimacion", "sublimación", "grabado",
     }
     msg_tokens = set(t.lower().strip(",.;:!?¿¡") for t in message_text.split())
-    if msg_tokens and msg_tokens.issubset(SHORT_ANSWER_TOKENS):
+    if msg_tokens and msg_tokens.issubset(SHORT_ANSWER_TOKENS) and not has_product_keyword:
         is_answer_to_question = True
 
     should_search = (
@@ -1226,43 +1256,46 @@ async def _build_conversation_context(db, phone_number, collected_data, message_
     )
     if should_search:
         products_found = await search_products_by_keyword(db, message_text.strip(), limit=8)
-        if products_found:
-            # Build catalog link with search query
-            base_url = os.environ.get("REACT_APP_BACKEND_URL", "").rstrip("/")
-            if not base_url:
-                base_url = os.environ.get("CATALOG_BASE_URL", "").rstrip("/")
-            if not base_url:
-                # Last resort: read from frontend .env
-                try:
-                    fe_env = os.path.join(os.path.dirname(os.path.dirname(__file__)), "frontend", ".env")
-                    with open(fe_env) as f:
-                        for line in f:
-                            if line.startswith("REACT_APP_BACKEND_URL="):
-                                base_url = line.split("=", 1)[1].strip().rstrip("/")
-                                break
-                except Exception:
-                    pass
-            from urllib.parse import quote as url_quote
-            # Use only meaningful search terms (no stopwords) for the catalog link
-            LINK_STOPWORDS = {
-                "de", "del", "la", "las", "el", "los", "un", "una", "unos", "unas",
-                "para", "por", "con", "sin", "que", "como", "pero", "mas", "muy",
-                "necesito", "quiero", "busco", "tengo", "puede", "puedo", "favor",
-                "me", "te", "se", "le", "mi", "hola", "buenas", "buenos", "dias",
-                "cotizar", "cotizacion", "ver", "enviar", "envie", "opciones",
-                "saber", "tienen", "tener", "tienes", "hay", "donde",
-                "queria", "quisiera", "podria", "puedes", "pueden",
-                # Generic terms that should not become a literal catalog filter
-                "sus", "tus", "su", "tu", "nuestro", "nuestra",
-                "producto", "productos", "articulo", "articulos",
-                "catalogo", "catalogos", "lista", "listado",
-                "todo", "todos", "toda", "todas", "mostrar", "muestrame",
-                "ofrecen", "ofreces", "vende", "venden", "vendes",
-            }
-            clean_terms = [w for w in message_text.strip().split() if w.lower() not in LINK_STOPWORDS and len(w) > 2]
-            search_term = " ".join(clean_terms) if clean_terms else message_text.strip()
-            catalog_link = f"{base_url}/catalog?q={url_quote(search_term)}" if base_url else ""
 
+        # ALWAYS build the catalog link when we run a search, even if the DB
+        # returned 0 hits. Otherwise the bot ends up sending a message with the
+        # URL stripped out (because the regex below removes URLs when
+        # catalog_link is empty), and the customer never receives a link.
+        base_url = os.environ.get("REACT_APP_BACKEND_URL", "").rstrip("/")
+        if not base_url:
+            base_url = os.environ.get("CATALOG_BASE_URL", "").rstrip("/")
+        if not base_url:
+            try:
+                fe_env = os.path.join(os.path.dirname(os.path.dirname(__file__)), "frontend", ".env")
+                with open(fe_env) as f:
+                    for line in f:
+                        if line.startswith("REACT_APP_BACKEND_URL="):
+                            base_url = line.split("=", 1)[1].strip().rstrip("/")
+                            break
+            except Exception:
+                pass
+        from urllib.parse import quote as url_quote
+        # Use only meaningful search terms (no stopwords) for the catalog link
+        LINK_STOPWORDS = {
+            "de", "del", "la", "las", "el", "los", "un", "una", "unos", "unas",
+            "para", "por", "con", "sin", "que", "como", "pero", "mas", "muy",
+            "necesito", "quiero", "busco", "tengo", "puede", "puedo", "favor",
+            "me", "te", "se", "le", "mi", "hola", "buenas", "buenos", "dias",
+            "cotizar", "cotizacion", "ver", "enviar", "envie", "opciones",
+            "saber", "tienen", "tener", "tienes", "hay", "donde",
+            "queria", "quisiera", "podria", "puedes", "pueden",
+            # Generic terms that should not become a literal catalog filter
+            "sus", "tus", "su", "tu", "nuestro", "nuestra",
+            "producto", "productos", "articulo", "articulos",
+            "catalogo", "catalogos", "lista", "listado",
+            "todo", "todos", "toda", "todas", "mostrar", "muestrame",
+            "ofrecen", "ofreces", "vende", "venden", "vendes",
+        }
+        clean_terms = [w for w in message_text.strip().split() if w.lower() not in LINK_STOPWORDS and len(w) > 2]
+        search_term = " ".join(clean_terms) if clean_terms else message_text.strip()
+        catalog_link = f"{base_url}/catalog?q={url_quote(search_term)}" if base_url else ""
+
+        if products_found:
             prod_lines = []
             for p in products_found:
                 code = p.get("code", "S/C")
@@ -1281,12 +1314,26 @@ async def _build_conversation_context(db, phone_number, collected_data, message_
                 )
         elif len(message_text.strip()) > 3:
             no_products_found = True
-            catalog_availability = (
-                "SIN RESULTADOS EN INVENTARIO para esta busqueda.\n"
-                "INSTRUCCION: NO digas que no tienes el producto. "
-                "Responde que tienes muchas opciones y que un agente le enviara el catalogo completo, "
-                "que por favor espere unos minutos. NO pidas correo. NO menciones links externos."
-            )
+            if catalog_link:
+                # Even when the DB has no exact match, send the general catalog
+                # link so the customer can browse manually. Do NOT promise a
+                # human will send the catalog later — the link IS the catalog.
+                catalog_availability = (
+                    "SIN COINCIDENCIA EXACTA EN INVENTARIO, PERO EL CLIENTE PUEDE REVISAR EL CATALOGO COMPLETO.\n"
+                    f"LINK DEL CATALOGO (OBLIGATORIO ENVIAR): {catalog_link}\n"
+                    "INSTRUCCION: Es OBLIGATORIO incluir este link EXACTO en tu respuesta. "
+                    f"Ejemplo: 'Aqui tienes nuestro catalogo para que revises las opciones: {catalog_link}. "
+                    "Si encuentras algo de tu interes, comparteme los codigos.'. "
+                    "PROHIBIDO decir 'un agente te enviara el catalogo'. PROHIBIDO decir 'no tenemos'. "
+                    "Un asesor sera notificado en paralelo para apoyar."
+                )
+            else:
+                catalog_availability = (
+                    "SIN RESULTADOS EN INVENTARIO para esta busqueda.\n"
+                    "INSTRUCCION: NO digas que no tienes el producto. "
+                    "Responde que tienes muchas opciones y que un agente le enviara el catalogo completo, "
+                    "que por favor espere unos minutos. NO pidas correo. NO menciones links externos."
+                )
 
     # Validate and show currently selected codes
     if has_codes:

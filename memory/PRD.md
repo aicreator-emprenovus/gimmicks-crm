@@ -141,6 +141,15 @@ CRM para ventas comerciales con WhatsApp Business que integra bot IA (GPT-5.2), 
   - Testing: 13/13 backend + frontend completo 100% (iteration_20)
 
 ## Resolved Issues (Latest)
+- [x] **P0 - Bot dejó de enviar el link del catálogo cuando cliente pide producto** - May 6, 2026:
+  - **Síntoma reportado**: tras el deploy, el bot decía "Aquí puedes ver las opciones de cuadernos en nuestro catálogo:" pero la URL no aparecía. Cliente confundido pregunta "¿dónde puedo ver?" y el bot escala a humano.
+  - **Causa raíz #1**: la heurística `is_answer_to_question` (en `bot_service.py`) marcaba como "respuesta a pregunta" cualquier mensaje ≤6 palabras enviado después de un mensaje del bot que terminaba con "?". Esto bloqueaba `should_search` y dejaba `catalog_link=""`. El AI inventaba una URL del dominio (visto en el ejemplo del prompt) y el regex `re.sub(r'https?://\S+', '')` la borraba porque catalog_link estaba vacío.
+  - **Causa raíz #2**: incluso cuando la búsqueda en BD no encontraba coincidencia, no se construía un link general como fallback.
+  - **Fix #1**: agregada lista `PRODUCT_KEYWORDS` (60+ palabras: cuadernos, libretas, termos, gorras, etc.) y excepción en `is_answer_to_question`: si el mensaje contiene un keyword de producto, NO se considera respuesta a pregunta.
+  - **Fix #2**: `catalog_link` ahora se construye SIEMPRE que `should_search=True`, antes de evaluar si hay productos en BD. Si no hay coincidencia exacta, se sigue enviando el link al catálogo general (con el query del cliente) y el AI dice: "aquí está el catálogo, revísalo y comparte los códigos que te gusten".
+  - Verificado e2e: cliente saluda → bot saluda; cliente da nombre → bot pide producto sin link; cliente dice "quiero cuadernos" → bot envía link con `?q=cuadernos`.
+
+
 - [x] **P0 - Bot no debe preguntar tipos de personalización adicionales después del logo** - May 6, 2026:
   - **Regla**: una vez que el bot pregunta "¿logo a uno o varios colores?", PROHIBIDO preguntar por serigrafía, sublimación, bordado, grabado, vinil, tampografía, transfer, UV, láser, full color o cualquier otra técnica.
   - **Fix 1 — System prompt**: bloque "REGLA ABSOLUTA — UNA SOLA PREGUNTA SOBRE PERSONALIZACIÓN" añadido en la sección "CARACTERÍSTICAS DEL LOGOTIPO" con lista exhaustiva de términos prohibidos. Refuerzo también en sección "COTIZACIÓN".
