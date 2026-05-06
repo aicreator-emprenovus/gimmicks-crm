@@ -20,7 +20,7 @@ import time
 import uuid
 from datetime import datetime
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://crm-bot-hub.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://webhook-routing-2.preview.emergentagent.com').rstrip('/')
 WHATSAPP_PHONE_NUMBER_ID = "965777766626628"
 
 

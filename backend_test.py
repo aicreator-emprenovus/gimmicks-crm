@@ -5,7 +5,7 @@ from datetime import datetime
 import time
 
 class CRMAPITester:
-    def __init__(self, base_url="https://crm-bot-hub.preview.emergentagent.com"):
+    def __init__(self, base_url="https://webhook-routing-2.preview.emergentagent.com"):
         self.base_url = base_url
         self.token = None
         self.tests_run = 0

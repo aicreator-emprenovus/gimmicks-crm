@@ -1,5 +1,5 @@
 {
-  "summary": "Iteration 24: Catalog URL in Bot Response - All 11 tests passed. The bot now shares the catalog PDF URL directly in the text message instead of attempting to attach a document. When user asks for 'catalogo completo', the response contains the full URL (https://crm-bot-hub.preview.emergentagent.com/api/catalog/pdf) and does NOT contain gimmicks.com.ec.",
+  "summary": "Iteration 24: Catalog URL in Bot Response - All 11 tests passed. The bot now shares the catalog PDF URL directly in the text message instead of attempting to attach a document. When user asks for 'catalogo completo', the response contains the full URL (https://webhook-routing-2.preview.emergentagent.com/api/catalog/pdf) and does NOT contain gimmicks.com.ec.",
 
   "backend_issues": {
     "critical": [],
@@ -71,10 +71,10 @@
   "retest_needed": false,
   "should_main_agent_self_test": false,
 
-  "context_for_next_testing_agent": "Iteration 24 verified the catalog URL fix. When user asks for 'catalogo completo', the bot now includes the full catalog PDF URL (https://crm-bot-hub.preview.emergentagent.com/api/catalog/pdf) directly in the text message. The bot does NOT attempt to attach a document and does NOT mention gimmicks.com.ec. The catalog_config collection has a valid entry with filename='catalogo_gimmicks.pdf'. Normal product searches that return results do NOT include the catalog URL.",
+  "context_for_next_testing_agent": "Iteration 24 verified the catalog URL fix. When user asks for 'catalogo completo', the bot now includes the full catalog PDF URL (https://webhook-routing-2.preview.emergentagent.com/api/catalog/pdf) directly in the text message. The bot does NOT attempt to attach a document and does NOT mention gimmicks.com.ec. The catalog_config collection has a valid entry with filename='catalogo_gimmicks.pdf'. Normal product searches that return results do NOT include the catalog URL.",
 
   "verified_functionality": {
-    "catalog_url_in_response": "Bot response to 'catalogo completo' contains https://crm-bot-hub.preview.emergentagent.com/api/catalog/pdf",
+    "catalog_url_in_response": "Bot response to 'catalogo completo' contains https://webhook-routing-2.preview.emergentagent.com/api/catalog/pdf",
     "no_external_url": "Bot response does NOT contain gimmicks.com.ec",
     "no_document_attachment": "Bot uses URL in text instead of document attachment",
     "catalog_pdf_accessible": "GET /api/catalog/pdf returns 200 with 61MB PDF",
