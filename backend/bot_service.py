@@ -129,6 +129,12 @@ Si el cliente cambia productos o cantidades después de una cotización existent
 == REGLA FINAL ==
 Si en algún momento dudas, NO improvises. Es preferible decir "En un momento atiendo tu requerimiento" y marcar needs_human=true, antes que inventar.
 
+== RECORDATORIO CRÍTICO DE TILDES (LO MÁS IMPORTANTE) ==
+ANTES de enviar el JSON final, RELEE el campo "response" palabra por palabra y verifica que TODAS las palabras del español que requieren tilde la lleven. Lista de palabras frecuentes que SIEMPRE llevan tilde en este chat:
+cómo, qué, cuándo, cuánto, cuántos, cuántas, cuál, cuáles, dónde, quién, por qué, está, están, estás, también, después, además, así, ahí, aquí, sí (afirmación), más, sólo, según, número, código, códigos, día, días, página, página, fácil, rápido, último, próximo, mínimo, máximo, físico, único, público, médico, técnico, eléctrico, atención, información, cotización, dirección, opción, personalización, producción, presentación, instrucción, situación, conversación, condición, decisión, función, sección, evolución, solución, relación, identificación, verificación, confirmación, generación, automático, característica, tú (pronombre), él (pronombre), mí (pronombre), té (bebida), sé (verbo saber), envíame, dígame, dirígete, podría, podrías, gustaría, debería, sería, haría, tendría.
+
+Las preguntas SIEMPRE abren con ¿ y cierran con ?. Las exclamaciones con ¡ y !. Si tu campo "response" tiene aunque sea UNA palabra sin tilde donde corresponde, la respuesta entera será considerada inválida.
+
 == FORMATO DE SALIDA (OBLIGATORIO) ==
 Responde SIEMPRE en JSON válido, sin texto adicional fuera del JSON:
 {
@@ -194,6 +200,127 @@ def format_price_ecuador(price: float) -> str:
     if price <= 0:
         return "Precio por confirmar"
     return f"${price:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+
+# ===== Spanish accent safety net =====
+# Maps common UNAMBIGUOUS words missing accents to their correct form.
+# Only includes words that ALWAYS carry an accent regardless of context.
+# Ambiguous words (esta/está, como/cómo, que/qué, mas/más, si/sí, tu/tú, el/él,
+# se/sé, te/té, mi/mí) are NOT included to avoid false positives.
+_ACCENT_FIXES = {
+    # Common adverbs / conjunctions always with tilde
+    "tambien": "también", "despues": "después", "ademas": "además",
+    "asi": "así", "ahi": "ahí", "aqui": "aquí", "alli": "allí",
+    "estan": "están",  # only plural form is unambiguous
+    "facil": "fácil", "faciles": "fáciles",
+    "rapido": "rápido", "rapida": "rápida",
+    "rapidos": "rápidos", "rapidas": "rápidas",
+    "ultimo": "último", "ultima": "última",
+    "ultimos": "últimos", "ultimas": "últimas",
+    "proximo": "próximo", "proxima": "próxima",
+    "proximos": "próximos", "proximas": "próximas",
+    "minimo": "mínimo", "maximo": "máximo",
+    "minima": "mínima", "maxima": "máxima",
+    "fisico": "físico", "fisica": "física",
+    "unico": "único", "unica": "única",
+    "unicos": "únicos", "unicas": "únicas",
+    "publico": "público", "publica": "pública",
+    "tecnico": "técnico", "tecnica": "técnica",
+    "electrico": "eléctrico", "electrica": "eléctrica",
+    "electronico": "electrónico", "electronica": "electrónica",
+    # -ción words (always with tilde)
+    "atencion": "atención", "informacion": "información", "cotizacion": "cotización",
+    "direccion": "dirección", "opcion": "opción", "situacion": "situación",
+    "condicion": "condición", "decision": "decisión", "funcion": "función",
+    "seccion": "sección", "presentacion": "presentación", "conversacion": "conversación",
+    "instruccion": "instrucción", "identificacion": "identificación",
+    "verificacion": "verificación", "confirmacion": "confirmación",
+    "generacion": "generación", "personalizacion": "personalización",
+    "produccion": "producción", "solucion": "solución", "relacion": "relación",
+    "evolucion": "evolución", "comunicacion": "comunicación",
+    "promocion": "promoción", "seleccion": "selección",
+    "descripcion": "descripción", "instalacion": "instalación",
+    "exportacion": "exportación", "importacion": "importación",
+    "facturacion": "facturación", "fabricacion": "fabricación",
+    # Common nouns and verbs in chat (unambiguous)
+    "codigo": "código", "codigos": "códigos",
+    "numero": "número", "numeros": "números",
+    "dia": "día", "dias": "días",
+    "pagina": "página", "paginas": "páginas",
+    "telefono": "teléfono", "telefonos": "teléfonos",
+    "envianos": "envíanos", "enviame": "envíame", "envielo": "envíelo",
+    "digame": "dígame", "dirigete": "dirígete",
+    "podria": "podría", "podrias": "podrías",
+    "podriamos": "podríamos", "podrian": "podrían",
+    "gustaria": "gustaría", "deberia": "debería", "seria": "sería",
+    "haria": "haría", "tendria": "tendría", "vendria": "vendría",
+    "automatico": "automático", "automatica": "automática",
+    "caracteristica": "característica", "caracteristicas": "características",
+    "metodo": "método", "metodos": "métodos",
+    "compania": "compañía", "companias": "compañías",
+}
+
+# Pre-build replacement regex patterns once (case-insensitive whole-word)
+_ACCENT_PATTERNS = [
+    (re.compile(rf"\b{re.escape(k)}\b", re.IGNORECASE), v)
+    for k, v in _ACCENT_FIXES.items()
+]
+
+# Interrogative words that only carry tilde inside question marks ¿ ?
+_INTERROGATIVE_FIXES = {
+    "como": "cómo", "que": "qué",
+    "cuando": "cuándo", "cuanto": "cuánto",
+    "cuantos": "cuántos", "cuantas": "cuántas",
+    "cual": "cuál", "cuales": "cuáles",
+    "donde": "dónde", "adonde": "adónde",
+    "quien": "quién", "quienes": "quiénes",
+    "porque": "por qué",  # only inside ¿?
+}
+
+_INTERROGATIVE_PATTERNS = [
+    (re.compile(rf"\b{re.escape(k)}\b", re.IGNORECASE), v)
+    for k, v in _INTERROGATIVE_FIXES.items()
+]
+
+
+def _preserve_case(original: str, replacement: str) -> str:
+    """Preserve the casing pattern of original when applying replacement."""
+    if original.isupper():
+        return replacement.upper()
+    if original[0].isupper():
+        return replacement[0].upper() + replacement[1:]
+    return replacement
+
+
+def _fix_in_questions(text: str) -> str:
+    """Apply interrogative-word fixes only inside ¿ ... ? segments."""
+    def fix_segment(match: re.Match) -> str:
+        segment = match.group(0)
+        for pattern, replacement in _INTERROGATIVE_PATTERNS:
+            segment = pattern.sub(
+                lambda m: _preserve_case(m.group(0), replacement), segment
+            )
+        return segment
+
+    # Match content between ¿ and the next ? (greedy minimal)
+    return re.sub(r'¿[^?]*\?', fix_segment, text)
+
+
+def fix_spanish_accents(text: str) -> str:
+    """Safety net: ensure common unambiguous Spanish words carry the correct accent.
+    Preserves URLs (URLs are skipped because the regex \\b doesn't break in them).
+    Interrogative words only get tildes inside ¿...? blocks."""
+    if not text:
+        return text
+    result = text
+    # Apply unambiguous fixes everywhere
+    for pattern, replacement in _ACCENT_PATTERNS:
+        result = pattern.sub(
+            lambda m: _preserve_case(m.group(0), replacement), result
+        )
+    # Apply interrogative fixes only inside questions
+    result = _fix_in_questions(result)
+    return result
 
 
 async def search_products_by_keyword(db: AsyncIOMotorDatabase, keyword: str, limit: int = 8) -> List[Dict]:
@@ -1339,16 +1466,18 @@ async def _process_ai_conversation_inner(
             logger.warning(f"Could not load automation rules: {e}")
 
         # ===== BUILD USER PROMPT (new template) =====
-        user_prompt = f"""INSTRUCCION: Revisa TODO el historial y los datos recopilados. NO pidas nada que ya se haya proporcionado. Haz UNA sola pregunta por mensaje. Tu respuesta debe ser UN solo mensaje coherente.
-IMPORTANTE: En extracted_data.codigos_producto siempre devuelve la lista COMPLETA ACUMULADA de codigos (no solo los nuevos).
-Si el sistema te proporciona un LINK DEL CATALOGO (URL real con https://), es OBLIGATORIO copiar esa URL EXACTA en tu respuesta. PROHIBIDO escribir [LINK] o [link] o cualquier placeholder. Usa la URL completa.
-NUNCA menciones codigos de productos si no has incluido el link del catalogo en tu respuesta. Los codigos solo se presentan junto con o despues del link.
-NUNCA digas "un agente te enviara el catalogo" si el sistema ENCONTRO productos. La frase "agente enviara catalogo" SOLO se usa cuando el sistema dice "SIN RESULTADOS EN INVENTARIO".
-Si el cliente saluda, responde SOLO con un saludo y "en que puedo ayudarte hoy". NO pidas codigos, NO menciones cotizaciones pendientes.
+        user_prompt = f"""INSTRUCCIÓN: Revisa TODO el historial y los datos recopilados. NO pidas nada que ya se haya proporcionado. Haz UNA sola pregunta por mensaje. Tu respuesta debe ser UN solo mensaje coherente.
+IMPORTANTE: En extracted_data.codigos_producto siempre devuelve la lista COMPLETA ACUMULADA de códigos (no solo los nuevos).
+Si el sistema te proporciona un LINK DEL CATÁLOGO (URL real con https://), es OBLIGATORIO copiar esa URL EXACTA en tu respuesta. PROHIBIDO escribir [LINK] o [link] o cualquier placeholder. Usa la URL completa.
+NUNCA menciones códigos de productos si no has incluido el link del catálogo en tu respuesta. Los códigos solo se presentan junto con o después del link.
+NUNCA digas "un agente te enviará el catálogo" si el sistema ENCONTRÓ productos. La frase "agente enviará catálogo" SOLO se usa cuando el sistema dice "SIN RESULTADOS EN INVENTARIO".
+Si el cliente saluda, responde SOLO con un saludo y "¿en qué puedo ayudarte hoy?". NO pidas códigos, NO menciones cotizaciones pendientes.
 PROHIBIDO repetir o parafrasear tu mensaje anterior. Si ya confirmaste algo, avanza directamente al siguiente paso.
-PROHIBIDO pedir el nombre si ya lo tienes en los datos recopilados. Dirigete al cliente por su nombre.
+PROHIBIDO pedir el nombre si ya lo tienes en los datos recopilados. Dirígete al cliente por su nombre.
 Pide UN SOLO dato por mensaje. No combines preguntas.
-Lee siempre el historial completo. Si el cliente ya habia conversado antes, retoma desde donde quedo.
+Lee siempre el historial completo. Si el cliente ya había conversado antes, retoma desde donde quedó.
+
+REGLA DE ORTOGRAFÍA (NO NEGOCIABLE): Tu respuesta DEBE usar tildes correctas en español. Palabras como "cómo", "qué", "está", "también", "después", "información", "cotización", "atención", "más", "sí", "tú", "él", "días", "fácil", "rápido", "por qué", "aquí", "ahí", "así" SIEMPRE llevan tilde cuando corresponde. Las preguntas se abren con ¿ y se cierran con ?. NO escribas en mayúsculas sin tildes ni omitas tildes en ningún caso. Si tu respuesta tiene una sola palabra mal escrita o sin tilde, será rechazada.
 
 {catalog_info}
 {catalog_availability}
@@ -1356,13 +1485,13 @@ Lee siempre el historial completo. Si el cliente ya habia conversado antes, reto
 
 {automation_rules_text}
 
-=== HISTORIAL COMPLETO DE LA CONVERSACION ===
+=== HISTORIAL COMPLETO DE LA CONVERSACIÓN ===
 {history_text}
 
 === DATOS YA RECOPILADOS (PROHIBIDO volver a pedir estos) ===
-{collected_summary if collected_summary else "Ninguno aun"}
+{collected_summary if collected_summary else "Ninguno aún"}
 
-=== DATOS QUE AUN FALTAN ===
+=== DATOS QUE AÚN FALTAN ===
 {missing_fields}
 
 {next_to_ask}
@@ -1461,7 +1590,7 @@ MENSAJE ACTUAL DEL CLIENTE: {message_text}"""
                             logger.info(f"Response too similar to last message for {phone_number} (overlap={overlap:.0%}), skipping")
                             return
 
-            await send_message_fn(phone_number, conversation_id, response_text, needs_review=needs_human)
+            await send_message_fn(phone_number, conversation_id, fix_spanish_accents(response_text), needs_review=needs_human)
             message_sent = True
 
         # ===== GENERATE QUOTE IF READY =====
@@ -1496,8 +1625,8 @@ MENSAJE ACTUAL DEL CLIENTE: {message_text}"""
             correo = collected_data.get("correo", "tu correo")
             nombre = collected_data.get("nombre", "")
             confirm_msg = (
-                f"Gracias{' ' + nombre if nombre else ''}, tu cotizacion ha sido registrada "
-                f"y sera enviada a {correo}. Nuestro equipo la revisara pronto."
+                f"Gracias{' ' + nombre if nombre else ''}, tu cotización ha sido registrada "
+                f"y será enviada a {correo}. Nuestro equipo la revisará pronto."
             )
             await send_message_fn(phone_number, conversation_id, confirm_msg, needs_review=True)
             message_sent = True
@@ -1512,7 +1641,7 @@ MENSAJE ACTUAL DEL CLIENTE: {message_text}"""
         # ===== HANDLE HUMAN TRANSFER =====
         transferred = state.get("transferred_to_human", False)
         if needs_human and not transferred:
-            await send_escalation_summary(db, phone_number, collected_data, "El bot detecto que se necesita revision humana", send_message_fn)
+            await send_escalation_summary(db, phone_number, collected_data, "El bot detectó que se necesita revisión humana", send_message_fn)
             transferred = True
 
         # ===== ALERT #5: Product not found → immediately notify staff ===
@@ -1546,7 +1675,7 @@ MENSAJE ACTUAL DEL CLIENTE: {message_text}"""
         logger.error(f"Error in AI conversation for {phone_number}: {e}", exc_info=True)
         if not message_sent:
             try:
-                await send_message_fn(phone_number, conversation_id, "Disculpa, tuve un problema procesando tu mensaje. Podrias repetirlo?")
+                await send_message_fn(phone_number, conversation_id, "Disculpa, tuve un problema procesando tu mensaje. ¿Podrías repetirlo?")
             except Exception:
                 pass
 

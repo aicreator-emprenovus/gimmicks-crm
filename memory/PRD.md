@@ -141,6 +141,15 @@ CRM para ventas comerciales con WhatsApp Business que integra bot IA (GPT-5.2), 
   - Testing: 13/13 backend + frontend completo 100% (iteration_20)
 
 ## Resolved Issues (Latest)
+- [x] **P0 - Bot responde sin tildes / acentos en español** - May 6, 2026:
+  - **Causa raíz**: el `user_prompt` enviado al LLM en cada turno (en `bot_service.py`) estaba escrito SIN tildes ("INSTRUCCION", "codigos", "agente enviara catalogo", "Dirigete", etc.). El modelo imitaba el estilo del prompt y respondía sin acentos.
+  - **Fix 1 — User prompt**: reescrito con todas las tildes correctas (INSTRUCCIÓN, códigos, dirígete, había, quedó, etc.).
+  - **Fix 2 — System prompt**: añadido un bloque "RECORDATORIO CRÍTICO DE TILDES" justo antes del JSON de salida, con lista exhaustiva de palabras y obligación explícita de releer el campo "response" antes de responder.
+  - **Fix 3 — Red de seguridad post-procesamiento**: nueva función `fix_spanish_accents()` que reemplaza ~80 palabras unívocas sin tilde por su forma correcta (cotización, atención, también, después, código, día, etc.). Conservadora: NO toca palabras ambiguas (esta/está, como/cómo, mas/más). Las palabras interrogativas solo se corrigen dentro de bloques `¿...?`.
+  - **Fix 4 — Cadenas hardcodeadas**: `confirm_msg`, fallback de error y mensaje de escalamiento corregidos con tildes.
+  - Verificado con conversación e2e: bot ahora responde "¿En qué puedo ayudarte?", "códigos", "catálogo", "Cuántas unidades", etc.
+
+
 - [x] **P0 - Templates WhatsApp para mensajes fuera de 24h** - Abr 2026:
   - 3 plantillas creadas en Meta Business Manager: `alerta_producto_no_encontrado` (3 variables), `recordatorio_seguimiento_1`, `recordatorio_seguimiento_2`
   - Nueva función `send_whatsapp_template()` en server.py para enviar mensajes template via WhatsApp Cloud API
