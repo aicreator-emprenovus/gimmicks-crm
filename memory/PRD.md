@@ -141,7 +141,15 @@ CRM para ventas comerciales con WhatsApp Business que integra bot IA (GPT-5.2), 
   - Testing: 13/13 backend + frontend completo 100% (iteration_20)
 
 ## Resolved Issues (Latest)
-- [x] **P0 - Bot no enviaba link cuando cliente preguntaba con signo `?` pegado** - May 6, 2026:
+- [x] **P0 - Bot escalaba a humano cuando cliente decía "gracias" tras la cotización** - May 7, 2026:
+  - **Síntoma reportado en producción**: tras enviar el mensaje de cierre exitoso, el cliente respondió "gracias" y el bot replicó "Permíteme revisar eso y en un momento te atendemos." (frase reservada para `needs_human=true`).
+  - **Causa raíz**: tras generar la cotización, el estado queda `quote_generated=true` y `transferred_to_human=true`. La siguiente conversación reactiva el estado y llama al LLM. El LLM clasificaba un simple "gracias" como ambiguo → `needs_human=true` → escalado.
+  - **Fix**: handler determinístico ANTES del LLM en `_process_ai_conversation_inner`. Si `state.quote_generated` y el mensaje es un agradecimiento/despedida corta (`gracias`, `muchas gracias`, `ok`, `listo`, `perfecto`, `vale`, `chao`, `hasta luego`, etc., ≤3 tokens o frases en lista cerrada), responde con un cierre cordial: *"¡A ti, [nombre]! Quedo atento si necesitas algo más."* y NO llama al LLM.
+  - Tokenización limpia puntuación (`re.sub(r"[^\w\s]", " ", ...)`), por lo que `gracias!`, `muchas gracias.`, `ok!!!` se manejan igual.
+  - Garantía: peticiones legítimas posteriores ("necesito gorras", "tienen otras opciones", etc.) siguen llegando al LLM normalmente.
+  - Test de regresión: `/app/backend/tests/test_post_quote_farewell.py` (4/4 escenarios PASS).
+
+
   - **Síntoma reportado en producción**: Cliente escribe "tienen jarros?" y el bot responde "Aquí puedes ver las opciones de jarros con fotos y códigos: Revísalos..." pero la URL no aparece (queda el `:` huérfano).
   - **Causa raíz #1**: el tokenizador hacía `set(msg_lower.split())` sin limpiar puntuación → `"jarros?"` no matcheaba `"jarros"` en `PRODUCT_KEYWORDS` → `has_product_keyword = False`.
   - **Causa raíz #2**: con `has_product_keyword=False`, la heurística `is_answer_to_question` se activaba (mensaje ≤6 palabras + último msg del bot termina en `?`) → `should_search = False` → `catalog_link=""`.

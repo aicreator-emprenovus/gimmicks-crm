@@ -1519,6 +1519,49 @@ async def _process_ai_conversation_inner(
         collected_data = state.get("collected_data", {})
         msg_count = state.get("message_count", 0) + 1
 
+        # ===== POST-QUOTE FAREWELL HANDLING (no LLM call) =====
+        # Once a quote has been generated, customers often reply with a short
+        # thanks/farewell ("gracias", "ok", "listo", "perfecto", "vale", etc.).
+        # The LLM has been seen to misinterpret these as ambiguous requests and
+        # mark needs_human=true, sending the escalation phrase. Handle them
+        # deterministically here with a brief, warm closure.
+        if state.get("quote_generated"):
+            normalized = re.sub(r"[^\w\s]", " ", message_text.lower()).strip()
+            tokens = [t for t in normalized.split() if t]
+            FAREWELL_TOKENS = {
+                "gracias", "graciass", "graciasss", "muchasgracias",
+                "ok", "okay", "vale", "listo", "perfecto", "perfect",
+                "dale", "bueno", "genial", "excelente", "buenisimo",
+                "buenísimo", "chao", "adios", "adiós", "bye",
+                "hasta", "luego", "saludos", "atento", "atenta",
+                "ya", "nada", "nadamas", "nadamás",
+            }
+            FAREWELL_PHRASES = {
+                "muchas gracias", "mil gracias", "te lo agradezco",
+                "muy amable", "muy amables", "gracias a ti", "gracias a ustedes",
+                "todo bien", "esta bien", "está bien", "esta perfecto",
+                "está perfecto", "nos vemos", "hasta luego", "hasta pronto",
+                "buena tarde", "buen dia", "buen día", "buena noche",
+            }
+            is_farewell_token = bool(tokens) and len(tokens) <= 3 and all(
+                t in FAREWELL_TOKENS for t in tokens
+            )
+            is_farewell_phrase = any(p in normalized for p in FAREWELL_PHRASES)
+            if is_farewell_token or is_farewell_phrase:
+                nombre = collected_data.get("nombre", "").split()[0] if collected_data.get("nombre") else ""
+                saludo = f"¡A ti, {nombre}!" if nombre else "¡A ti!"
+                farewell_msg = f"{saludo} Quedo atento si necesitas algo más."
+                await send_message_fn(phone_number, conversation_id, farewell_msg, needs_review=False)
+                await db.conversation_states.update_one(
+                    {"phone_number": phone_number},
+                    {"$set": {
+                        "message_count": msg_count,
+                        "last_interaction": now.isoformat(),
+                    }}
+                )
+                logger.info(f"Post-quote farewell handled for {phone_number}: '{message_text}'")
+                return
+
         # ===== FULL CATALOG REQUEST → IMMEDIATE HANDOFF TO HUMAN AGENT =====
         # If the customer asks for the entire catalog, the bot acknowledges
         # politely and silently transfers the conversation to the human agent.
