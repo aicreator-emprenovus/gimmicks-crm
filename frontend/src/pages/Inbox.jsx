@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import axios from "axios";
+import imageCompression from "browser-image-compression";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -24,10 +25,17 @@ import {
   ArrowRight,
   X,
   RotateCcw,
-  AlertTriangle
+  AlertTriangle,
+  Paperclip,
+  PauseCircle,
+  PlayCircle,
+  FileText,
+  Download,
+  Image as ImageIcon,
+  Video as VideoIcon
 } from "lucide-react";
 import { toast } from "sonner";
-import { format } from "date-fns";
+import { format, formatDistanceToNowStrict } from "date-fns";
 import { es } from "date-fns/locale";
 import {
   DropdownMenu,
@@ -48,6 +56,66 @@ import {
 } from "@/components/ui/alert-dialog";
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
+
+// Lightweight renderer for attachments stored either in our object storage
+// (via /api/conversations/attachments/{id}) or referenced inline in content.
+function AttachmentRenderer({ msg, apiUrl }) {
+  const c = msg?.content || {};
+  const kind = c.media_kind;
+  if (!kind) return null;
+
+  const storagePath = c.storage_path || "";
+  // Extract attachment id from storage_path:
+  // gimmicks-crm/inbox-attachments/<uuid>.<ext>
+  const m = storagePath.match(/inbox-attachments\/([^./]+)/);
+  const attachmentId = m ? m[1] : null;
+  const url = attachmentId ? `${apiUrl}/api/conversations/attachments/${attachmentId}` : null;
+  const filename = c.filename || "archivo";
+  const sizeKb = c.size ? Math.max(1, Math.round(c.size / 1024)) : null;
+
+  if (kind === "image") {
+    return url ? (
+      <a href={url} target="_blank" rel="noreferrer" className="block mb-1" data-testid="attachment-image-link">
+        <img src={url} alt={filename} className="max-w-full max-h-72 rounded-lg" loading="lazy" />
+      </a>
+    ) : (
+      <div className="flex items-center gap-2 text-xs italic opacity-80"><ImageIcon className="w-4 h-4" /> Imagen enviada</div>
+    );
+  }
+  if (kind === "video") {
+    return url ? (
+      <video src={url} controls className="max-w-full max-h-72 rounded-lg mb-1" data-testid="attachment-video">
+        Video adjunto
+      </video>
+    ) : (
+      <div className="flex items-center gap-2 text-xs italic opacity-80"><VideoIcon className="w-4 h-4" /> Video enviado</div>
+    );
+  }
+  if (kind === "audio") {
+    return url ? (
+      <audio src={url} controls className="max-w-full mb-1" data-testid="attachment-audio" />
+    ) : (
+      <div className="text-xs italic opacity-80">Audio enviado</div>
+    );
+  }
+  // documents and any other types
+  return (
+    <a
+      href={url || "#"}
+      target="_blank"
+      rel="noreferrer"
+      className={`mb-1 inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${
+        msg.sender === "business" ? "bg-white/15 hover:bg-white/25" : "bg-gray-100 hover:bg-gray-200"
+      } ${url ? "" : "pointer-events-none opacity-70"}`}
+      data-testid="attachment-document-link"
+    >
+      <FileText className="w-4 h-4 flex-shrink-0" />
+      <span className="truncate max-w-[12rem]">{filename}</span>
+      {sizeKb ? <span className="text-xs opacity-70">· {sizeKb} KB</span> : null}
+      {url ? <Download className="w-3 h-3 ml-1 flex-shrink-0" /> : null}
+    </a>
+  );
+}
 
 const STAGE_CONFIG = {
   lead: { label: "Lead", color: "bg-blue-100 text-blue-700" },
@@ -77,7 +145,11 @@ export default function Inbox() {
   const [filterStarred, setFilterStarred] = useState(false);
   const [filterStage, setFilterStage] = useState(null);
   const [syncIndicator, setSyncIndicator] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [pausingBot, setPausingBot] = useState(false);
   const messagesEndRef = useRef(null);
+  const fileInputRef = useRef(null);
   const prevMessageCountRef = useRef(0);
 
   const fetchConversations = async () => {
@@ -139,6 +211,94 @@ export default function Inbox() {
       toast.error(error.response?.data?.detail || "Error al enviar mensaje");
     } finally {
       setSending(false);
+    }
+  };
+
+  const handleAttachmentPick = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-selecting the same file
+    if (!file || !selectedConv) return;
+    await sendAttachment(file);
+  };
+
+  const sendAttachment = async (originalFile) => {
+    if (!selectedConv) return;
+    setUploading(true);
+    setUploadProgress(0);
+
+    let fileToSend = originalFile;
+    try {
+      // Image compression: target 5MB max, max width 1920px
+      if (originalFile.type.startsWith("image/")) {
+        if (originalFile.size > 5 * 1024 * 1024) {
+          toast.info("Comprimiendo imagen...");
+          fileToSend = await imageCompression(originalFile, {
+            maxSizeMB: 4.5,
+            maxWidthOrHeight: 1920,
+            useWebWorker: true,
+            initialQuality: 0.85,
+          });
+        }
+      } else if (originalFile.type.startsWith("video/")) {
+        // Browser-side video compression is heavy; only enforce WhatsApp's 16MB cap.
+        if (originalFile.size > 16 * 1024 * 1024) {
+          toast.error("El video supera el límite de WhatsApp (16 MB). Comprime el video antes de enviarlo.");
+          setUploading(false);
+          return;
+        }
+      } else {
+        // Other file types: enforce 64MB cap (server also enforces)
+        if (originalFile.size > 64 * 1024 * 1024) {
+          toast.error("El archivo supera el límite (64 MB).");
+          setUploading(false);
+          return;
+        }
+      }
+
+      const formData = new FormData();
+      formData.append("file", fileToSend, fileToSend.name || originalFile.name);
+      if (newMessage.trim()) formData.append("caption", newMessage.trim());
+
+      const response = await axios.post(
+        `${API_URL}/api/conversations/${selectedConv.id}/messages/attachment`,
+        formData,
+        {
+          headers: { ...getAuthHeaders(), "Content-Type": "multipart/form-data" },
+          onUploadProgress: (evt) => {
+            if (evt.total) setUploadProgress(Math.round((evt.loaded * 100) / evt.total));
+          },
+        }
+      );
+      setMessages((prev) => [...prev, response.data]);
+      setNewMessage("");
+      toast.success("Adjunto enviado");
+      fetchConversations();
+    } catch (error) {
+      console.error("Send attachment error:", error.response?.data || error);
+      toast.error(error.response?.data?.detail || "Error al enviar adjunto");
+    } finally {
+      setUploading(false);
+      setUploadProgress(0);
+    }
+  };
+
+  const toggleBotControl = async () => {
+    if (!selectedConv) return;
+    setPausingBot(true);
+    const action = selectedConv.bot_paused ? "resume" : "pause";
+    try {
+      const response = await axios.post(
+        `${API_URL}/api/conversations/${selectedConv.id}/bot-control`,
+        { action },
+        { headers: getAuthHeaders() }
+      );
+      toast.success(response.data.message);
+      setSelectedConv({ ...selectedConv, bot_paused: response.data.bot_paused });
+      fetchConversations();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "No se pudo cambiar el control del bot");
+    } finally {
+      setPausingBot(false);
     }
   };
 
@@ -299,6 +459,35 @@ export default function Inbox() {
     }
   };
 
+  const formatRelativeTime = (dateStr) => {
+    if (!dateStr) return "";
+    try {
+      const d = new Date(dateStr);
+      const now = new Date();
+      const diffMs = now - d;
+      const oneDay = 24 * 60 * 60 * 1000;
+      // Today → HH:mm. Yesterday → "ayer". This week → day name. Older → dd MMM
+      if (diffMs < oneDay && d.getDate() === now.getDate()) {
+        return format(d, "HH:mm", { locale: es });
+      }
+      if (diffMs < 2 * oneDay) {
+        return "ayer";
+      }
+      if (diffMs < 7 * oneDay) {
+        return format(d, "EEE", { locale: es });
+      }
+      return format(d, "dd MMM", { locale: es });
+    } catch {
+      return "";
+    }
+  };
+
+  const formatPhoneE164 = (phone) => {
+    if (!phone) return "";
+    const cleaned = String(phone).replace(/[^\d+]/g, "");
+    return cleaned.startsWith("+") ? cleaned : `+${cleaned}`;
+  };
+
   return (
     <div className="flex h-[calc(100vh-44px)] overflow-hidden" data-testid="inbox-page">
       {/* Conversations List */}
@@ -382,29 +571,63 @@ export default function Inbox() {
                       {conv.is_starred && (
                         <Star className="absolute -top-1 -right-1 w-4 h-4 text-amber-500 fill-amber-500" />
                       )}
+                      {conv.transferred_to_human && (
+                        <span
+                          className="absolute -bottom-0.5 -right-0.5 flex h-3 w-3"
+                          title="Conversación derivada a humano"
+                          data-testid={`handoff-blink-${conv.id}`}
+                        >
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500 border border-white"></span>
+                        </span>
+                      )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between">
-                        <p className="font-medium text-gray-800 truncate">
-                          {conv.contact_name || conv.phone_number}
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="font-medium text-gray-800 truncate flex items-center gap-1.5">
+                          {conv.contact_name || formatPhoneE164(conv.phone_number)}
+                          {conv.transferred_to_human && (
+                            <span
+                              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-red-100 text-red-700 text-[10px] font-semibold animate-pulse"
+                              data-testid={`handoff-badge-${conv.id}`}
+                            >
+                              <AlertCircle className="w-2.5 h-2.5" />
+                              Humano
+                            </span>
+                          )}
+                          {conv.bot_paused && (
+                            <span
+                              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 text-[10px] font-semibold"
+                              title="Bot pausado — agente con el control"
+                              data-testid={`bot-paused-badge-${conv.id}`}
+                            >
+                              <PauseCircle className="w-2.5 h-2.5" />
+                              Pausado
+                            </span>
+                          )}
                         </p>
-                        <span className="text-xs text-gray-400">
-                          {formatDate(conv.last_message_time)}
+                        <span className="text-xs text-gray-400 flex-shrink-0">
+                          {formatRelativeTime(conv.last_message_time)}
                         </span>
                       </div>
-                      <p className="text-sm text-gray-500 mt-0.5 break-words">
-                        {conv.last_message || "Sin mensajes"}
-                      </p>
-                      {conv.unread_count > 0 && (
-                        <Badge className="mt-1 bg-[#63AC9A] text-white text-xs">
-                          {conv.unread_count} nuevos
-                        </Badge>
-                      )}
-                      {conv.funnel_stage && STAGE_CONFIG[conv.funnel_stage] && (
-                        <Badge className={`mt-1 ml-1 text-xs ${STAGE_CONFIG[conv.funnel_stage].color}`} data-testid={`stage-badge-${conv.id}`}>
-                          {STAGE_CONFIG[conv.funnel_stage].label}
-                        </Badge>
-                      )}
+                      <div className="flex items-center justify-between mt-0.5">
+                        <p className="text-xs text-gray-500 truncate flex items-center gap-1">
+                          <Phone className="w-3 h-3 flex-shrink-0" />
+                          {formatPhoneE164(conv.phone_number)}
+                        </p>
+                      </div>
+                      <div className="mt-1 flex flex-wrap gap-1">
+                        {conv.unread_count > 0 && (
+                          <Badge className="bg-[#63AC9A] text-white text-xs">
+                            {conv.unread_count} nuevos
+                          </Badge>
+                        )}
+                        {conv.funnel_stage && STAGE_CONFIG[conv.funnel_stage] && (
+                          <Badge className={`text-xs ${STAGE_CONFIG[conv.funnel_stage].color}`} data-testid={`stage-badge-${conv.id}`}>
+                            {STAGE_CONFIG[conv.funnel_stage].label}
+                          </Badge>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </button>
@@ -421,15 +644,45 @@ export default function Inbox() {
             {/* Chat Header */}
             <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-white">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#63AC9A] to-[#4F9A87] flex items-center justify-center text-white font-medium">
-                  {selectedConv.contact_name?.charAt(0)?.toUpperCase() ||
-                    selectedConv.phone_number.slice(-2)}
+                <div className="relative">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#63AC9A] to-[#4F9A87] flex items-center justify-center text-white font-medium">
+                    {selectedConv.contact_name?.charAt(0)?.toUpperCase() ||
+                      selectedConv.phone_number.slice(-2)}
+                  </div>
+                  {selectedConv.transferred_to_human && (
+                    <span
+                      className="absolute -bottom-0.5 -right-0.5 flex h-3 w-3"
+                      title="Conversación derivada a humano"
+                      data-testid="header-handoff-blink"
+                    >
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500 border border-white"></span>
+                    </span>
+                  )}
                 </div>
                 <div>
-                  <h3 className="font-semibold text-gray-800 flex items-center gap-2">
+                  <h3 className="font-semibold text-gray-800 flex items-center gap-2 flex-wrap">
                     {selectedConv.contact_name || selectedConv.phone_number}
                     {selectedConv.is_starred && (
                       <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
+                    )}
+                    {selectedConv.transferred_to_human && (
+                      <span
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-xs font-semibold animate-pulse"
+                        data-testid="header-handoff-badge"
+                      >
+                        <AlertCircle className="w-3 h-3" />
+                        Derivada a humano
+                      </span>
+                    )}
+                    {selectedConv.bot_paused && (
+                      <span
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 text-xs font-semibold"
+                        data-testid="header-bot-paused-badge"
+                      >
+                        <PauseCircle className="w-3 h-3" />
+                        Bot pausado
+                      </span>
                     )}
                   </h3>
                   <p className="text-sm text-gray-500 flex items-center gap-1">
@@ -445,6 +698,28 @@ export default function Inbox() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
+                <Button
+                  variant={selectedConv.bot_paused ? "default" : "outline"}
+                  size="sm"
+                  onClick={toggleBotControl}
+                  disabled={pausingBot}
+                  className={
+                    selectedConv.bot_paused
+                      ? "gap-2 bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-600"
+                      : "gap-2 border-amber-300 text-amber-700 hover:bg-amber-50"
+                  }
+                  data-testid="toggle-bot-control-btn"
+                  title={selectedConv.bot_paused ? "Reactivar bot — volverá a responder al cliente" : "Tomar control — el bot se detendrá"}
+                >
+                  {pausingBot ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : selectedConv.bot_paused ? (
+                    <PlayCircle className="w-4 h-4" />
+                  ) : (
+                    <PauseCircle className="w-4 h-4" />
+                  )}
+                  {selectedConv.bot_paused ? "Reactivar bot" : "Tomar control"}
+                </Button>
                 <Button
                   variant="outline"
                   size="sm"
@@ -629,7 +904,12 @@ export default function Inbox() {
                       }`}
                       style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}
                     >
-                      <p className="whitespace-pre-wrap">{msg.content?.text || JSON.stringify(msg.content)}</p>
+                      <AttachmentRenderer msg={msg} apiUrl={API_URL} authHeaders={getAuthHeaders()} />
+                      {msg.content?.text ? (
+                        <p className="whitespace-pre-wrap">{msg.content.text}</p>
+                      ) : (msg.content && !msg.content.media_kind) ? (
+                        <p className="whitespace-pre-wrap">{JSON.stringify(msg.content)}</p>
+                      ) : null}
                       <p
                         className={`text-xs mt-1 ${
                           msg.sender === "business"
@@ -655,22 +935,52 @@ export default function Inbox() {
               </div>
             </ScrollArea>
 
+            {/* Bot paused banner */}
+            {selectedConv.bot_paused && (
+              <div className="px-4 py-2 bg-amber-50 border-t border-amber-200 text-amber-800 text-xs flex items-center gap-2" data-testid="bot-paused-banner">
+                <PauseCircle className="w-4 h-4" />
+                <span>
+                  El bot está pausado. Tú tienes el control. Cuando termines, presiona "Reactivar bot" para que vuelva a responder al cliente.
+                </span>
+              </div>
+            )}
+
             {/* Message Input */}
             <form
               onSubmit={sendMessage}
-              className="p-4 border-t border-gray-200 flex gap-2 bg-white"
+              className="p-4 border-t border-gray-200 flex gap-2 bg-white items-center"
             >
+              <input
+                ref={fileInputRef}
+                type="file"
+                className="hidden"
+                onChange={handleAttachmentPick}
+                accept="image/*,video/*,audio/*,application/pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.rar"
+                data-testid="file-input"
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading || sending}
+                className="text-gray-500 hover:text-[#63AC9A] hover:bg-[#63AC9A]/10"
+                data-testid="attach-file-btn"
+                title="Adjuntar archivo"
+              >
+                {uploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Paperclip className="w-5 h-5" />}
+              </Button>
               <Input
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
-                placeholder="Escribe un mensaje..."
+                placeholder={uploading ? `Subiendo... ${uploadProgress}%` : "Escribe un mensaje..."}
                 className="flex-1 bg-gray-50 text-gray-800 border-gray-200 placeholder:text-gray-400"
-                disabled={sending}
+                disabled={sending || uploading}
                 data-testid="message-input"
               />
               <Button
                 type="submit"
-                disabled={sending || !newMessage.trim()}
+                disabled={sending || uploading || !newMessage.trim()}
                 className="bg-[#63AC9A] hover:bg-[#6A9688] text-white"
                 data-testid="send-message-btn"
               >

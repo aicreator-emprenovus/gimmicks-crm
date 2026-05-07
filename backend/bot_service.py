@@ -1519,6 +1519,25 @@ async def _process_ai_conversation_inner(
         collected_data = state.get("collected_data", {})
         msg_count = state.get("message_count", 0) + 1
 
+        # ===== HUMAN TAKEOVER: BOT PAUSED =====
+        # When a human agent takes control of the conversation from the inbox,
+        # bot_paused is set to True. We persist the customer message (already
+        # stored upstream in the messages collection) and silently return — the
+        # bot must NOT reply until the agent re-enables it.
+        if state.get("bot_paused"):
+            await db.conversation_states.update_one(
+                {"phone_number": phone_number},
+                {"$set": {
+                    "message_count": msg_count,
+                    "last_interaction": now.isoformat(),
+                }}
+            )
+            logger.info(
+                f"Bot paused for {phone_number} — human agent in control. "
+                f"Customer message stored, no auto-reply."
+            )
+            return
+
         # ===== POST-QUOTE FAREWELL HANDLING (no LLM call) =====
         # Once a quote has been generated, customers often reply with a short
         # thanks/farewell ("gracias", "ok", "listo", "perfecto", "vale", etc.).

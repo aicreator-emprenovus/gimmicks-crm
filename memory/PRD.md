@@ -141,7 +141,26 @@ CRM para ventas comerciales con WhatsApp Business que integra bot IA (GPT-5.2), 
   - Testing: 13/13 backend + frontend completo 100% (iteration_20)
 
 ## Resolved Issues (Latest)
-- [x] **P0 - Bot escalaba a humano cuando cliente decía "gracias" tras la cotización** - May 7, 2026:
+- [x] **Inbox: 4 features nuevas (alertas titilantes, teléfono+hora en sidebar, adjuntos, control humano del bot)** - May 7, 2026:
+  - **Feature 1 — Alertas titilantes (handoff a humano)**:
+    - Backend: `ConversationResponse` ahora expone `transferred_to_human`, `bot_paused`, `transfer_reason` (cargados en batch desde `conversation_states`).
+    - Frontend: Punto rojo titilante (`animate-ping`) en avatar + badge "Derivada a humano" con `animate-pulse` en sidebar y header del chat.
+  - **Feature 2 — Sidebar: teléfono + hora en lugar de último mensaje**:
+    - El preview de mensaje se reemplaza por `+593...` con icono Phone.
+    - Hora relativa: HH:mm hoy / "ayer" / día de semana / "dd MMM" (`formatRelativeTime`).
+  - **Feature 3 — Adjuntos en chat**:
+    - Backend: `POST /api/conversations/{id}/messages/attachment` (multipart, FastAPI UploadFile). Helpers `upload_whatsapp_media()` + `send_whatsapp_media_message()` para subir media a WhatsApp Cloud API y enviar con media_id.
+    - `GET /api/conversations/attachments/{id}` para re-renderizar adjuntos previamente enviados.
+    - Almacenamiento: Emergent Object Storage (`gimmicks-crm/inbox-attachments/{uuid}.{ext}`).
+    - Compresión client-side de imágenes con `browser-image-compression` (5 MB max, 1920px máx). Videos ≤16 MB (límite WhatsApp). Otros archivos ≤64 MB.
+    - Frontend: Botón Paperclip + `<AttachmentRenderer>` que muestra image/video/audio/documento inline en la burbuja del mensaje.
+  - **Feature 4 — Control humano del bot (toma/devolución)**:
+    - Backend: `POST /api/conversations/{id}/bot-control` con `{"action":"pause"|"resume"}`. Persiste `bot_paused`, `bot_paused_at`, `bot_paused_by` en `conversation_states`.
+    - `bot_service.py`: chequeo temprano `if state.get("bot_paused"): return` — guarda el mensaje del cliente en BD pero NO genera respuesta.
+    - Frontend: Botón "Tomar control" / "Reactivar bot" en header del chat. Badge "Bot pausado" + banner amarillo explicativo en cada conversación pausada.
+  - Tests de regresión: `/app/backend/tests/test_bot_pause.py` (2/2 PASS). Smoke curl: pause/resume + attachment upload + GET — todos 200 OK.
+
+
   - **Síntoma reportado en producción**: tras enviar el mensaje de cierre exitoso, el cliente respondió "gracias" y el bot replicó "Permíteme revisar eso y en un momento te atendemos." (frase reservada para `needs_human=true`).
   - **Causa raíz**: tras generar la cotización, el estado queda `quote_generated=true` y `transferred_to_human=true`. La siguiente conversación reactiva el estado y llama al LLM. El LLM clasificaba un simple "gracias" como ambiguo → `needs_human=true` → escalado.
   - **Fix**: handler determinístico ANTES del LLM en `_process_ai_conversation_inner`. Si `state.quote_generated` y el mensaje es un agradecimiento/despedida corta (`gracias`, `muchas gracias`, `ok`, `listo`, `perfecto`, `vale`, `chao`, `hasta luego`, etc., ≤3 tokens o frases en lista cerrada), responde con un cierre cordial: *"¡A ti, [nombre]! Quedo atento si necesitas algo más."* y NO llama al LLM.

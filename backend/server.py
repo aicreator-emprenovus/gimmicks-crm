@@ -1,6 +1,6 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Depends, UploadFile, File, Query, status, Request
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, UploadFile, File, Form, Query, status, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -253,6 +253,9 @@ class ConversationResponse(BaseModel):
     is_starred: Optional[bool] = False
     funnel_stage: Optional[str] = None
     created_at: datetime
+    transferred_to_human: Optional[bool] = False
+    bot_paused: Optional[bool] = False
+    transfer_reason: Optional[str] = None
 
 # Product/Inventory Models
 class ProductCreate(BaseModel):
@@ -593,6 +596,94 @@ async def send_whatsapp_document(to_phone: str, document_url: str, caption: str,
                 raise Exception(f"WhatsApp document API error: {error_msg}")
             message_id = result.get("messages", [{}])[0].get("id")
             return message_id
+
+
+async def upload_whatsapp_media(file_bytes: bytes, mime_type: str, filename: str = "file") -> str:
+    """Upload a media file to WhatsApp Cloud API. Returns media_id usable for 30 days."""
+    import aiohttp
+
+    phone_number_id = _active_phone_number_id() or os.environ.get("WHATSAPP_PHONE_NUMBER_ID")
+    access_token = os.environ.get("WHATSAPP_ACCESS_TOKEN")
+    if not phone_number_id or not access_token:
+        raise Exception("WhatsApp credentials not configured")
+
+    url = f"https://graph.facebook.com/v18.0/{phone_number_id}/media"
+    headers = {"Authorization": f"Bearer {access_token}"}
+
+    form = aiohttp.FormData()
+    form.add_field("messaging_product", "whatsapp")
+    form.add_field("type", mime_type)
+    form.add_field("file", file_bytes, filename=filename, content_type=mime_type)
+
+    async with aiohttp.ClientSession() as session:
+        async with session.post(url, headers=headers, data=form, timeout=aiohttp.ClientTimeout(total=120)) as resp:
+            result = await resp.json()
+            if resp.status != 200:
+                error_msg = result.get("error", {}).get("message", "Unknown error")
+                logger.error(f"WhatsApp media upload error: {result}")
+                raise Exception(f"WhatsApp media upload error: {error_msg}")
+            media_id = result.get("id")
+            if not media_id:
+                raise Exception("No media id returned by WhatsApp")
+            return media_id
+
+
+async def send_whatsapp_media_message(
+    to_phone: str,
+    media_id: str,
+    media_kind: str,  # "image" | "video" | "audio" | "document"
+    caption: str = "",
+    filename: str = ""
+) -> str:
+    """Send a media message using a previously uploaded media_id."""
+    import aiohttp
+
+    phone_number_id = _active_phone_number_id() or os.environ.get("WHATSAPP_PHONE_NUMBER_ID")
+    access_token = os.environ.get("WHATSAPP_ACCESS_TOKEN")
+    if not phone_number_id or not access_token:
+        raise Exception("WhatsApp credentials not configured")
+
+    clean_phone = ''.join(c for c in to_phone if c.isdigit())
+    url = f"https://graph.facebook.com/v18.0/{phone_number_id}/messages"
+    headers = {
+        "Authorization": f"Bearer {access_token}",
+        "Content-Type": "application/json",
+    }
+
+    media_obj = {"id": media_id}
+    if caption and media_kind in ("image", "video", "document"):
+        media_obj["caption"] = caption
+    if media_kind == "document" and filename:
+        media_obj["filename"] = filename
+
+    payload = {
+        "messaging_product": "whatsapp",
+        "recipient_type": "individual",
+        "to": clean_phone,
+        "type": media_kind,
+        media_kind: media_obj,
+    }
+
+    async with aiohttp.ClientSession() as session:
+        async with session.post(url, headers=headers, json=payload) as resp:
+            result = await resp.json()
+            if resp.status != 200:
+                error_msg = result.get("error", {}).get("message", "Unknown error")
+                logger.error(f"WhatsApp media message error: {result}")
+                raise Exception(f"WhatsApp media message error: {error_msg}")
+            return result.get("messages", [{}])[0].get("id")
+
+
+def _whatsapp_media_kind(mime_type: str) -> str:
+    """Map a MIME type to WhatsApp's media category. Defaults to 'document'."""
+    mt = (mime_type or "").lower()
+    if mt.startswith("image/"):
+        return "image"
+    if mt.startswith("video/"):
+        return "video"
+    if mt.startswith("audio/"):
+        return "audio"
+    return "document"
 
 
 # ============== ACTIVITY LOG ROUTES ==============
@@ -1184,7 +1275,21 @@ async def get_conversations(
     phone_numbers = [c["phone_number"] for c in conversations]
     leads_cursor = db.leads.find({"phone_number": {"$in": phone_numbers}}, {"_id": 0, "phone_number": 1, "funnel_stage": 1})
     stage_map = {l["phone_number"]: l.get("funnel_stage", "lead") async for l in leads_cursor}
-    
+
+    # Batch-load conversation_states (transferred_to_human / bot_paused) for all phones
+    states_cursor = db.conversation_states.find(
+        {"phone_number": {"$in": phone_numbers}},
+        {"_id": 0, "phone_number": 1, "transferred_to_human": 1, "bot_paused": 1, "transfer_reason": 1}
+    )
+    state_map = {
+        s["phone_number"]: {
+            "transferred_to_human": s.get("transferred_to_human", False),
+            "bot_paused": s.get("bot_paused", False),
+            "transfer_reason": s.get("transfer_reason"),
+        }
+        async for s in states_cursor
+    }
+
     result = []
     for conv in conversations:
         created_at = conv.get("created_at")
@@ -1200,7 +1305,9 @@ async def get_conversations(
         # Apply funnel_stage filter if provided
         if funnel_stage and conv_stage != funnel_stage:
             continue
-        
+
+        st = state_map.get(conv["phone_number"], {})
+
         result.append(ConversationResponse(
             id=conv["id"],
             phone_number=conv["phone_number"],
@@ -1212,7 +1319,10 @@ async def get_conversations(
             lead_id=conv.get("lead_id"),
             is_starred=conv.get("is_starred", False),
             funnel_stage=conv_stage,
-            created_at=created_at
+            created_at=created_at,
+            transferred_to_human=st.get("transferred_to_human", False),
+            bot_paused=st.get("bot_paused", False),
+            transfer_reason=st.get("transfer_reason"),
         ))
     
     return result
@@ -1327,6 +1437,58 @@ async def reset_bot_conversation(
                        "conversation_reset", f"Conversacion reseteada: {conv.get('contact_name', phone_number)}")
     return {"message": "Conversación reseteada. El bot iniciará desde cero."}
 
+
+class BotControlRequest(BaseModel):
+    action: str  # "pause" or "resume"
+
+
+@api_router.post("/conversations/{conversation_id}/bot-control")
+async def bot_control(
+    conversation_id: str,
+    body: BotControlRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    """Pause or resume the AI bot for a specific conversation.
+    While paused: incoming customer messages are saved but the bot does NOT reply
+    (the human agent has taken over). Resume re-enables the bot.
+    """
+    if body.action not in ("pause", "resume"):
+        raise HTTPException(status_code=400, detail="action must be 'pause' or 'resume'")
+    conv = await db.conversations.find_one({"id": conversation_id}, {"_id": 0})
+    if not conv:
+        raise HTTPException(status_code=404, detail="Conversación no encontrada")
+    phone_number = conv.get("phone_number")
+    if not phone_number:
+        raise HTTPException(status_code=400, detail="Conversación sin teléfono")
+
+    paused = body.action == "pause"
+    now_iso = datetime.now(timezone.utc).isoformat()
+    update = {
+        "bot_paused": paused,
+        "bot_paused_at": now_iso if paused else None,
+        "bot_paused_by": (current_user.get("email") if paused else None),
+        "last_interaction": now_iso,
+    }
+    await db.conversation_states.update_one(
+        {"phone_number": phone_number},
+        {"$set": update, "$setOnInsert": {"phone_number": phone_number, "current_step": "greeting"}},
+        upsert=True
+    )
+
+    await log_activity(
+        current_user.get("email", ""), current_user.get("name", ""),
+        "bot_pause" if paused else "bot_resume",
+        f"Bot {'pausado' if paused else 'reactivado'} para {conv.get('contact_name', phone_number)}"
+    )
+    return {
+        "bot_paused": paused,
+        "message": (
+            "Bot pausado. Tomaste el control de la conversación; el bot no responderá hasta que lo reactives."
+            if paused else
+            "Bot reactivado. Volverá a responder los próximos mensajes del cliente."
+        ),
+    }
+
 @api_router.get("/conversations/{conversation_id}/messages", response_model=List[MessageResponse])
 async def get_conversation_messages(
     conversation_id: str,
@@ -1428,6 +1590,150 @@ async def send_message(
         status="sent",
         timestamp=now
     )
+
+
+@api_router.post("/conversations/{conversation_id}/messages/attachment", response_model=MessageResponse)
+async def send_attachment(
+    conversation_id: str,
+    file: UploadFile = File(...),
+    caption: Optional[str] = Form(""),
+    current_user: dict = Depends(get_current_user),
+):
+    """Send a file (image, video, audio or any document) via WhatsApp.
+    The file is uploaded to WhatsApp Cloud API and stored in Object Storage
+    so the agent can re-render it in the inbox."""
+    conv = await db.conversations.find_one({"id": conversation_id}, {"_id": 0})
+    if not conv:
+        raise HTTPException(status_code=404, detail="Conversación no encontrada")
+
+    # Hard size cap: 64 MB. WhatsApp limits images to 5MB, video/audio to 16MB,
+    # documents to 100MB. Anything bigger we reject; the frontend should compress.
+    raw_bytes = await file.read()
+    size_bytes = len(raw_bytes)
+    if size_bytes <= 0:
+        raise HTTPException(status_code=400, detail="Archivo vacío")
+    if size_bytes > 64 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="Archivo demasiado grande (max 64MB)")
+
+    mime_type = file.content_type or "application/octet-stream"
+    media_kind = _whatsapp_media_kind(mime_type)
+
+    # Per-kind WhatsApp limits (bytes)
+    limits = {"image": 5 * 1024 * 1024, "video": 16 * 1024 * 1024, "audio": 16 * 1024 * 1024, "document": 100 * 1024 * 1024}
+    max_bytes = limits.get(media_kind, 16 * 1024 * 1024)
+    if size_bytes > max_bytes:
+        kind_label = {"image": "imagen", "video": "video", "audio": "audio", "document": "documento"}.get(media_kind, "archivo")
+        max_mb = max_bytes // (1024 * 1024)
+        raise HTTPException(
+            status_code=413,
+            detail=f"El {kind_label} excede el límite de WhatsApp ({max_mb} MB). Comprime antes de enviar."
+        )
+
+    # Persist to Object Storage so the message can be re-rendered later
+    storage_path = ""
+    try:
+        from services.object_storage import build_path, put_object
+        ext = (file.filename or "file").rsplit(".", 1)[-1].lower() if "." in (file.filename or "") else "bin"
+        attachment_id = str(uuid.uuid4())
+        storage_path = f"gimmicks-crm/inbox-attachments/{attachment_id}.{ext}"
+        await asyncio.to_thread(put_object, storage_path, raw_bytes, mime_type)
+    except Exception as e:
+        logger.warning(f"Object storage upload failed for attachment: {e}")
+
+    # Upload media to WhatsApp + send the message with the resulting media_id
+    whatsapp_message_id = None
+    send_status = "sent"
+    try:
+        media_id = await upload_whatsapp_media(raw_bytes, mime_type, file.filename or "file")
+        whatsapp_message_id = await send_whatsapp_media_message(
+            conv["phone_number"], media_id, media_kind, caption or "",
+            file.filename or ""
+        )
+        send_status = "delivered"
+    except Exception as e:
+        logger.error(f"Failed to send WhatsApp attachment: {e}")
+        send_status = "failed"
+
+    now = datetime.now(timezone.utc)
+    message_id = str(uuid.uuid4())
+    content = {
+        "text": caption or "",
+        "media_kind": media_kind,
+        "mime_type": mime_type,
+        "filename": file.filename or "",
+        "size": size_bytes,
+        "storage_path": storage_path,
+    }
+    message_doc = {
+        "id": message_id,
+        "conversation_id": conversation_id,
+        "phone_number": conv["phone_number"],
+        "sender": "business",
+        "message_type": media_kind,
+        "content": content,
+        "status": send_status,
+        "whatsapp_message_id": whatsapp_message_id,
+        "timestamp": now.isoformat(),
+    }
+    await db.messages.insert_one(message_doc)
+
+    await log_activity(
+        current_user.get("email", ""), current_user.get("name", ""),
+        "attachment_send",
+        f"Adjunto {media_kind} ({file.filename}, {size_bytes // 1024} KB) enviado a {conv.get('contact_name', conv['phone_number'])}"
+    )
+
+    last_msg_preview = caption or f"[{media_kind}] {file.filename or ''}".strip()
+    await db.conversations.update_one(
+        {"id": conversation_id},
+        {"$set": {
+            "last_message": last_msg_preview[:100],
+            "last_message_time": now.isoformat(),
+        }}
+    )
+
+    return MessageResponse(
+        id=message_id,
+        conversation_id=conversation_id,
+        phone_number=conv["phone_number"],
+        sender="business",
+        message_type=media_kind,
+        content=content,
+        status=send_status,
+        timestamp=now,
+    )
+
+
+@api_router.get("/conversations/attachments/{attachment_id}")
+async def get_attachment(
+    attachment_id: str,
+    current_user: dict = Depends(get_current_user),
+):
+    """Stream a previously stored attachment by its ID (id without extension)."""
+    # Match prefix in storage path: attachment IDs are uuids; we search messages
+    # for the exact storage_path that contains this id.
+    doc = await db.messages.find_one(
+        {"content.storage_path": {"$regex": f"/{attachment_id}\\."}},
+        {"_id": 0, "content": 1}
+    )
+    if not doc or not doc.get("content", {}).get("storage_path"):
+        raise HTTPException(status_code=404, detail="Adjunto no encontrado")
+    storage_path = doc["content"]["storage_path"]
+    mime_type = doc["content"].get("mime_type", "application/octet-stream")
+
+    try:
+        from services.object_storage import get_object
+        data, ct = await asyncio.to_thread(get_object, storage_path)
+    except Exception as e:
+        logger.error(f"Failed to fetch attachment {storage_path}: {e}")
+        raise HTTPException(status_code=404, detail="Adjunto no disponible")
+
+    return Response(
+        content=data,
+        media_type=ct or mime_type,
+        headers={"Cache-Control": "private, max-age=86400"}
+    )
+
 
 # ============== PRODUCTS/INVENTORY ROUTES ==============
 
@@ -1957,8 +2263,7 @@ async def get_dashboard_metrics(current_user: dict = Depends(get_current_user)):
 
 # ============== WHATSAPP WEBHOOK ==============
 
-from fastapi.responses import PlainTextResponse, Response
-from fastapi import Request
+from fastapi.responses import PlainTextResponse
 
 @api_router.get("/webhook/whatsapp")
 async def verify_whatsapp_webhook(request: Request):
