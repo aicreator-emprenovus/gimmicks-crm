@@ -1208,7 +1208,8 @@ async def _build_conversation_context(db, phone_number, collected_data, message_
         'gafas', 'lentes', 'reloj', 'relojes', 'pulsera', 'pulseras',
         'memoria', 'memorias',
     }
-    msg_lower_words = set(msg_lower.split())
+    msg_lower_words = {w.strip(",.;:!?¿¡()\"'") for w in msg_lower.split()}
+    msg_lower_words.discard("")
     has_product_keyword = bool(msg_lower_words & PRODUCT_KEYWORDS)
 
     # Detect if the user is REPLYING to a previous bot question (e.g. "un color",
@@ -1257,6 +1258,11 @@ async def _build_conversation_context(db, phone_number, collected_data, message_
         and not is_vague_query
         and not is_answer_to_question
     )
+    # Hard guarantee: if the message contains a product keyword (e.g. "tienen jarros?"),
+    # we ALWAYS run the catalog search. Other heuristics must never block it.
+    if has_product_keyword and not is_data_input and not has_code_pattern:
+        should_search = True
+
     if should_search:
         products_found = await search_products_by_keyword(db, message_text.strip(), limit=8)
 
@@ -1277,6 +1283,11 @@ async def _build_conversation_context(db, phone_number, collected_data, message_
                             break
             except Exception:
                 pass
+        # Final fallback: hardcoded production domain so the catalog link is
+        # NEVER empty (otherwise the URL the AI drafts gets stripped and the
+        # customer receives a message with the URL missing).
+        if not base_url:
+            base_url = "https://cotizador.gimmicks.com.ec"
         from urllib.parse import quote as url_quote
         # Use only meaningful search terms (no stopwords) for the catalog link
         LINK_STOPWORDS = {
@@ -1294,7 +1305,11 @@ async def _build_conversation_context(db, phone_number, collected_data, message_
             "todo", "todos", "toda", "todas", "mostrar", "muestrame",
             "ofrecen", "ofreces", "vende", "venden", "vendes",
         }
-        clean_terms = [w for w in message_text.strip().split() if w.lower() not in LINK_STOPWORDS and len(w) > 2]
+        clean_terms = [
+            w.strip(",.;:!?¿¡()\"'")
+            for w in message_text.strip().split()
+        ]
+        clean_terms = [w for w in clean_terms if w.lower() not in LINK_STOPWORDS and len(w) > 2]
         search_term = " ".join(clean_terms) if clean_terms else message_text.strip()
         catalog_link = f"{base_url}/catalog?q={url_quote(search_term)}" if base_url else ""
 
@@ -1698,7 +1713,10 @@ MENSAJE ACTUAL DEL CLIENTE: {message_text}"""
             if response_text and catalog_link:
                 response_text = re.sub(r'\[LINK\]|\[link\]|\[Link\]|\(LINK\)|\(link\)|\{LINK\}|\{link\}', catalog_link, response_text)
 
-            # Remove any external/invented URLs (keep only our catalog link)
+            # Remove any external/invented URLs (keep only our catalog link).
+            # If catalog_link is empty (rare edge case), only strip URLs that
+            # are clearly NOT pointing to our domain — preserve any *.gimmicks.com.ec
+            # link the AI drafted as a last-resort safety net.
             if response_text:
                 if catalog_link:
                     # Temporarily replace our link to preserve it
@@ -1707,7 +1725,10 @@ MENSAJE ACTUAL DEL CLIENTE: {message_text}"""
                     response_text = re.sub(r'https?://\S+', '', response_text)
                     response_text = response_text.replace(placeholder, catalog_link)
                 else:
-                    response_text = re.sub(r'https?://\S+', '', response_text)
+                    # Strip URLs except those pointing to gimmicks.com.ec
+                    response_text = re.sub(
+                        r'https?://(?!\S*gimmicks\.com\.ec)\S+', '', response_text
+                    )
                 response_text = re.sub(r'\s{2,}', ' ', response_text).strip()
 
             # Append catalog link if AI didn't include it

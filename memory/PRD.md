@@ -141,6 +141,18 @@ CRM para ventas comerciales con WhatsApp Business que integra bot IA (GPT-5.2), 
   - Testing: 13/13 backend + frontend completo 100% (iteration_20)
 
 ## Resolved Issues (Latest)
+- [x] **P0 - Bot no enviaba link cuando cliente preguntaba con signo `?` pegado** - May 6, 2026:
+  - **Síntoma reportado en producción**: Cliente escribe "tienen jarros?" y el bot responde "Aquí puedes ver las opciones de jarros con fotos y códigos: Revísalos..." pero la URL no aparece (queda el `:` huérfano).
+  - **Causa raíz #1**: el tokenizador hacía `set(msg_lower.split())` sin limpiar puntuación → `"jarros?"` no matcheaba `"jarros"` en `PRODUCT_KEYWORDS` → `has_product_keyword = False`.
+  - **Causa raíz #2**: con `has_product_keyword=False`, la heurística `is_answer_to_question` se activaba (mensaje ≤6 palabras + último msg del bot termina en `?`) → `should_search = False` → `catalog_link=""`.
+  - **Causa raíz #3**: la IA inventaba una URL pero el regex `re.sub(r'https?://\S+', '')` la borraba porque `catalog_link` estaba vacío → quedaba "Aquí puedes ver las opciones... : Revísalos".
+  - **Fix #1**: tokenización ahora limpia puntuación: `{w.strip(",.;:!?¿¡()\"'") for w in msg_lower.split()}`. Lo mismo para los `clean_terms` que arman el query del link.
+  - **Fix #2**: red de seguridad post-heurísticas: si `has_product_keyword` es True, se fuerza `should_search=True` ignorando todo lo demás (excepto data input / código).
+  - **Fix #3**: fallback hardcoded de URL de producción (`https://cotizador.gimmicks.com.ec`) cuando ninguna env var produce un base_url válido — el link nunca queda vacío.
+  - **Fix #4**: regex final más conservadora: si `catalog_link` ya está vacío en algún edge case, NO se borran URLs `*.gimmicks.com.ec` que la IA haya incluido.
+  - Verificado en 3 escenarios: producto existe (`jarros` → link filtrado), puntuación múltiple (`quiero termos!!!` → link filtrado), producto inexistente (`helicópteros teledirigidos` → link con query, sin escalado prematuro).
+  - Test de regresión: `/app/backend/tests/test_jarros_link_bug.py` (3/3 escenarios PASS).
+
 - [x] **Bot rules update + OBJETIVO_GENERAL_BOT panel rule** - May 6, 2026:
   - Nuevo bloque "OBJETIVO GENERAL DEL AGENTE" en `SYSTEM_PROMPT` como primera fuente de intención
   - Mensaje de cierre de cotización actualizado: "Nuestro equipo se pondrá en contacto contigo para los siguientes pasos" (antes: "la revisará pronto"). Aplicado tanto en prompt como en cadena hardcoded `confirm_msg`.
