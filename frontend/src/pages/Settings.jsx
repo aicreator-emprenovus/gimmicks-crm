@@ -78,6 +78,8 @@ export default function Settings() {
   const [waInfo, setWaInfo] = useState({ webhook_url: "", verify_token: "", phone_number_id: "" });
   const [waDiag, setWaDiag] = useState(null);
   const [waDiagLoading, setWaDiagLoading] = useState(false);
+  const [waOverride, setWaOverride] = useState("");
+  const [waOverrideSaving, setWaOverrideSaving] = useState(false);
 
   const fetchWaDiag = async () => {
     setWaDiagLoading(true);
@@ -88,6 +90,33 @@ export default function Settings() {
       setWaDiag({ error: e.response?.data?.detail || "No se pudo cargar el diagnóstico" });
     } finally {
       setWaDiagLoading(false);
+    }
+  };
+
+  const fetchSystemConfig = async () => {
+    try {
+      const r = await axios.get(`${API_URL}/api/admin/system-config`, { headers: getAuthHeaders() });
+      const phone = (r.data || []).find((d) => d.key === "whatsapp_phone_number_id");
+      if (phone) setWaOverride(phone.value || "");
+    } catch (e) {
+      // endpoint may not be deployed yet — ignore silently
+    }
+  };
+
+  const saveWaOverride = async () => {
+    setWaOverrideSaving(true);
+    try {
+      const r = await axios.put(
+        `${API_URL}/api/admin/system-config/whatsapp_phone_number_id`,
+        { value: waOverride.trim() },
+        { headers: getAuthHeaders() }
+      );
+      toast.success(r.data?.message || "Configuración guardada");
+      fetchWaDiag();
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Error al guardar");
+    } finally {
+      setWaOverrideSaving(false);
     }
   };
 
@@ -110,7 +139,7 @@ export default function Settings() {
       });
     }
   };
-  useEffect(() => { fetchWaInfo(); fetchWaDiag(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { fetchWaInfo(); fetchWaDiag(); fetchSystemConfig(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchRules = async () => {
     try {
@@ -711,6 +740,50 @@ export default function Settings() {
                   >
                     Refrescar diagnóstico
                   </Button>
+
+                  {/* Override editable desde la UI (sin redeploy) */}
+                  <div className="mt-4 p-3 rounded-lg border border-zinc-200 bg-zinc-50 space-y-2" data-testid="wa-override-block">
+                    <Label className="text-xs font-semibold text-zinc-700">
+                      Override del Phone Number ID (sin redeploy)
+                    </Label>
+                    <p className="text-xs text-zinc-500">
+                      Si producción tiene una variable de entorno desactualizada, escribe aquí el ID correcto
+                      del número actual (+593 96 356 0326) y guarda. Toma efecto inmediatamente sin necesidad
+                      de redesplegar. Para volver al env var, deja el campo vacío y guarda.
+                    </p>
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <Input
+                        value={waOverride}
+                        onChange={(e) => setWaOverride(e.target.value.replace(/[^\d]/g, ""))}
+                        placeholder="965777766626628"
+                        className="font-mono text-sm bg-white"
+                        data-testid="wa-override-input"
+                      />
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={saveWaOverride}
+                        disabled={waOverrideSaving}
+                        className="bg-[#63AC9A] hover:bg-[#6A9688] text-white whitespace-nowrap"
+                        data-testid="wa-override-save-btn"
+                      >
+                        {waOverrideSaving ? "Guardando..." : "Guardar override"}
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setWaOverride("965777766626628");
+                          setTimeout(saveWaOverride, 0);
+                        }}
+                        disabled={waOverrideSaving}
+                        data-testid="wa-override-quick-btn"
+                      >
+                        Forzar ID actual
+                      </Button>
+                    </div>
+                  </div>
                 </>
               )}
             </CardContent>

@@ -464,18 +464,26 @@ def _active_phone_number_id() -> str:
 
 def _resolve_phone_number_id() -> str:
     """Return the phone_number_id WhatsApp send helpers must use.
-    Priority: contextvar → env var → hardcoded current production ID.
+    Priority: contextvar → DB runtime override → env var → hardcoded current ID.
     Any retired ID is filtered out at every layer so retired numbers can never
     leak into outgoing requests, regardless of stale env config.
     """
     pid = _active_phone_number_id()
+    # DB runtime override (editable from admin panel without redeploy)
+    if not pid:
+        try:
+            cfg = SYSTEM_CONFIG_CACHE.get("whatsapp_phone_number_id", "")
+            if cfg and cfg not in RETIRED_PHONE_NUMBER_IDS:
+                pid = cfg
+        except Exception:
+            pass
     if not pid:
         env_pid = (os.environ.get("WHATSAPP_PHONE_NUMBER_ID") or "").strip()
         if env_pid in RETIRED_PHONE_NUMBER_IDS:
             logger.error(
                 f"WHATSAPP_PHONE_NUMBER_ID env var points to a RETIRED ID ({env_pid}). "
                 f"Using hardcoded current ID ({CURRENT_WHATSAPP_PHONE_NUMBER_ID}) instead. "
-                f"Update the env var to silence this warning."
+                f"Update the env var (or the panel override) to silence this warning."
             )
             env_pid = ""
         pid = env_pid
@@ -495,6 +503,26 @@ def _resolve_phone_number_id() -> str:
             "Revisa CURRENT_WHATSAPP_PHONE_NUMBER_ID y RETIRED_PHONE_NUMBER_IDS."
         )
     return pid
+
+
+# In-memory cache of system config so the resolver doesn't hit MongoDB on every
+# message send. Refreshed on startup and whenever the admin updates a value.
+SYSTEM_CONFIG_CACHE: dict = {}
+
+
+async def load_system_config_cache():
+    """Populate SYSTEM_CONFIG_CACHE from the system_config collection."""
+    try:
+        cur = db.system_config.find({}, {"_id": 0, "key": 1, "value": 1})
+        cache = {}
+        async for doc in cur:
+            if doc.get("key"):
+                cache[doc["key"]] = doc.get("value", "")
+        SYSTEM_CONFIG_CACHE.clear()
+        SYSTEM_CONFIG_CACHE.update(cache)
+        logger.info(f"Loaded system_config cache with {len(cache)} entries")
+    except Exception as e:
+        logger.warning(f"Could not load system_config: {e}")
 
 
 async def send_whatsapp_message(to_phone: str, message_text: str) -> str:
@@ -1540,6 +1568,77 @@ async def bot_control(
             if paused else
             "Bot reactivado. Volverá a responder los próximos mensajes del cliente."
         ),
+    }
+
+
+# ============== SYSTEM CONFIG (admin runtime overrides) ==============
+class SystemConfigUpdate(BaseModel):
+    value: str
+
+
+@api_router.get("/admin/system-config")
+async def list_system_config(current_user: dict = Depends(get_current_user)):
+    """Return all runtime system_config entries (admin only)."""
+    if current_user.get("role") not in ("admin", "desarrollador"):
+        raise HTTPException(status_code=403, detail="Solo admins")
+    docs = await db.system_config.find({}, {"_id": 0, "key": 1, "value": 1, "updated_at": 1, "updated_by": 1}).to_list(100)
+    return docs
+
+
+@api_router.put("/admin/system-config/{key}")
+async def update_system_config(
+    key: str,
+    body: SystemConfigUpdate,
+    current_user: dict = Depends(get_current_user)
+):
+    """Set a runtime config value (admin only). The change is persisted in
+    MongoDB and the in-memory cache is refreshed immediately so it takes effect
+    without a redeploy.
+    """
+    if current_user.get("role") not in ("admin", "desarrollador"):
+        raise HTTPException(status_code=403, detail="Solo admins")
+    allowed_keys = {"whatsapp_phone_number_id"}
+    if key not in allowed_keys:
+        raise HTTPException(status_code=400, detail=f"Clave no permitida. Usa una de: {sorted(allowed_keys)}")
+
+    value = (body.value or "").strip()
+    if key == "whatsapp_phone_number_id":
+        if value and value in RETIRED_PHONE_NUMBER_IDS:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"El ID {value} está marcado como RETIRADO en el código. "
+                    f"Usa el ID actual del número +593 96 356 0326 ({CURRENT_WHATSAPP_PHONE_NUMBER_ID}) "
+                    f"o cualquier otro ID válido distinto del retirado."
+                )
+            )
+        if value and not value.isdigit():
+            raise HTTPException(status_code=400, detail="El Phone Number ID debe ser numérico")
+
+    now_iso = datetime.now(timezone.utc).isoformat()
+    await db.system_config.update_one(
+        {"key": key},
+        {"$set": {
+            "key": key,
+            "value": value,
+            "updated_at": now_iso,
+            "updated_by": current_user.get("email", ""),
+        }},
+        upsert=True
+    )
+    # Refresh in-memory cache so the resolver picks up the new value immediately.
+    await load_system_config_cache()
+
+    await log_activity(
+        current_user.get("email", ""), current_user.get("name", ""),
+        "system_config_update",
+        f"Config '{key}' actualizada a '{value or '(vacío → fallback)'}'"
+    )
+    return {
+        "key": key,
+        "value": value,
+        "effective_phone_id": _resolve_phone_number_id() if key == "whatsapp_phone_number_id" else None,
+        "message": "Configuración actualizada — se aplica inmediatamente, sin redeploy.",
     }
 
 @api_router.get("/conversations/{conversation_id}/messages", response_model=List[MessageResponse])
@@ -4564,6 +4663,8 @@ async def start_followup_task():
     await ensure_indexes()
     # Migrate any conversation/state still pointing to a retired phone_number_id
     await migrate_retired_phone_number_ids()
+    # Load system_config cache (for runtime overrides editable from panel)
+    await load_system_config_cache()
     # Initialize Emergent Object Storage (secure image storage)
     try:
         from services.object_storage import init_storage

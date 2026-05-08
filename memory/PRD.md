@@ -141,7 +141,17 @@ CRM para ventas comerciales con WhatsApp Business que integra bot IA (GPT-5.2), 
   - Testing: 13/13 backend + frontend completo 100% (iteration_20)
 
 ## Resolved Issues (Latest)
-- [x] **P0 — Fallback hardcoded del Phone Number ID actual + tarjeta de diagnóstico en panel** - May 8, 2026:
+- [x] **P0 — Override editable de Phone Number ID desde el panel (sin redeploy ni env vars)** - May 8, 2026:
+  - **Problema**: el usuario no puede actualizar `WHATSAPP_PHONE_NUMBER_ID` en producción y reportó que aún tras el redeploy el sistema fallaba (screenshot mostró "Reglas activas: 12" en producción vs 13 en preview, confirmando que producción tenía código viejo).
+  - **Solución estructural**: nueva colección `system_config` en MongoDB y endpoint `PUT /api/admin/system-config/whatsapp_phone_number_id` que persiste un override editable desde la UI.
+  - **Resolver actualizado** (`_resolve_phone_number_id`): nueva prioridad: contextvar → DB override (`SYSTEM_CONFIG_CACHE`) → env var → hardcoded `CURRENT_WHATSAPP_PHONE_NUMBER_ID`. El cache se carga en startup vía `load_system_config_cache()` y se refresca inmediatamente al guardar desde la UI — toma efecto sin redeploy.
+  - **Validación**: el endpoint rechaza con 400 cualquier intento de guardar un ID que esté en `RETIRED_PHONE_NUMBER_IDS` y exige formato numérico.
+  - **UI**: tarjeta "Diagnóstico de WhatsApp" en `Configuración → tab WhatsApp` ampliada con bloque "Override del Phone Number ID (sin redeploy)" — input + botones "Guardar override" y "Forzar ID actual" (preset al ID `965777766626628` del número +593 96 356 0326).
+  - **Acceso**: la sección Configuración ahora es visible para roles `admin` y `desarrollador` (antes solo desarrollador).
+  - **Activity log**: cada cambio de configuración queda auditado con `system_config_update`.
+  - Tests: smoke curl con login admin → set/get/list/reject-retired (4/4 PASS).
+
+
   - **Problema reportado**: el env var `WHATSAPP_PHONE_NUMBER_ID` en producción apunta al ID retirado `994356967089829` y el usuario no puede actualizarlo. Necesitaba que el sistema funcionara sin tocar producción.
   - **Fix**: agregada constante `CURRENT_WHATSAPP_PHONE_NUMBER_ID = "965777766626628"` (corresponde al número actual +593 96 356 0326). El helper `_resolve_phone_number_id()` ahora cae a este valor por defecto cuando contextvar y env var están vacíos o retirados. Resultado: los envíos siempre salen del número correcto, sin importar la configuración del entorno.
   - El env var sigue ganando si tiene un ID válido no-retirado, así que migrar a un nuevo número en el futuro solo requiere actualizar el env var.
