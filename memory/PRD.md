@@ -141,6 +141,15 @@ CRM para ventas comerciales con WhatsApp Business que integra bot IA (GPT-5.2), 
   - Testing: 13/13 backend + frontend completo 100% (iteration_20)
 
 ## Resolved Issues (Latest)
+- [x] **P0 — Fallback hardcoded del Phone Number ID actual + tarjeta de diagnóstico en panel** - May 8, 2026:
+  - **Problema reportado**: el env var `WHATSAPP_PHONE_NUMBER_ID` en producción apunta al ID retirado `994356967089829` y el usuario no puede actualizarlo. Necesitaba que el sistema funcionara sin tocar producción.
+  - **Fix**: agregada constante `CURRENT_WHATSAPP_PHONE_NUMBER_ID = "965777766626628"` (corresponde al número actual +593 96 356 0326). El helper `_resolve_phone_number_id()` ahora cae a este valor por defecto cuando contextvar y env var están vacíos o retirados. Resultado: los envíos siempre salen del número correcto, sin importar la configuración del entorno.
+  - El env var sigue ganando si tiene un ID válido no-retirado, así que migrar a un nuevo número en el futuro solo requiere actualizar el env var.
+  - **Diagnóstico en CRM**: nueva tarjeta "Diagnóstico de WhatsApp" en `Configuración → tab WhatsApp` que muestra estado en verde/amarillo/rojo, expone `effective_phone_id` (lo que realmente se usa) vs `whatsapp_phone_id` (lo que dice el env), y un botón "Refrescar diagnóstico". No requiere curl ni token manual.
+  - El endpoint `/api/webhook/whatsapp/diagnostics` ahora retorna ambos campos: `whatsapp_phone_id` (lo configurado) y `effective_phone_id` (lo resuelto).
+  - Mensaje de toast del Inbox `"WhatsApp rechazó el mensaje: WhatsApp phone_number_id no configurado o ID retirado."` ya no debería aparecer porque el resolver nunca lanza por config retirada.
+  - Tests: `/app/backend/tests/test_retired_phone_safety.py` actualizado con 5/5 escenarios PASS (contextvar retirado, env retirado + contextvar retirado → fallback hardcoded, env vacío → fallback hardcoded, env válido → usa env, migración limpia BD).
+
 - [x] **P0 — Adjuntos enviados desde número WhatsApp retirado + agente envía mensajes que no llegan** - May 8, 2026:
   - **Causa raíz común**: el ID retirado `994356967089829` aparece como `WHATSAPP_PHONE_NUMBER_ID` env var en producción. Todas las llamadas a la WhatsApp Cloud API (texto del agente, adjuntos, media upload) usaban ese ID y el envío fallaba silenciosamente.
   - **Bug 2 secundario**: el endpoint `POST /api/conversations/{id}/messages` retornaba `status: "sent"` aunque la API de WhatsApp rechazara el mensaje. El agente creía que se había enviado.

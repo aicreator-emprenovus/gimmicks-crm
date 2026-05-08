@@ -40,21 +40,28 @@ async def main():
         f"Retired contextvar should fall back to env var. got={resolved!r}"
     print(f"[OK] Retired contextvar ignored → fallback to env var: {resolved}")
 
-    # 2b. Both contextvar and env var retired → must raise
+    # 2b. Both contextvar and env var retired → must fall back to hardcoded
     server._ACTIVE_WA_PHONE_ID.set("994356967089829")
     saved_env = os.environ.get("WHATSAPP_PHONE_NUMBER_ID", "")
     os.environ["WHATSAPP_PHONE_NUMBER_ID"] = "994356967089829"
-    try:
-        server._resolve_phone_number_id()
-        raised = False
-    except Exception as e:
-        raised = True
-        msg = str(e)
+    resolved = server._resolve_phone_number_id()
     os.environ["WHATSAPP_PHONE_NUMBER_ID"] = saved_env
     server._ACTIVE_WA_PHONE_ID.set("")
-    assert raised, "Must raise when no valid ID available"
-    assert "WhatsApp" in msg or "phone_number_id" in msg, f"Error msg unhelpful: {msg!r}"
-    print("[OK] Resolves to error when contextvar+env both retired")
+    assert resolved == server.CURRENT_WHATSAPP_PHONE_NUMBER_ID, \
+        f"Both retired → must fall back to hardcoded current ID. got={resolved!r}"
+    assert resolved not in server.RETIRED_PHONE_NUMBER_IDS, \
+        f"Resolved ID must NEVER be a retired ID. got={resolved!r}"
+    print(f"[OK] Both retired → fallback to hardcoded current: {resolved}")
+
+    # 2d. Env empty, contextvar empty → fallback to hardcoded
+    server._ACTIVE_WA_PHONE_ID.set("")
+    saved_env = os.environ.get("WHATSAPP_PHONE_NUMBER_ID", "")
+    os.environ.pop("WHATSAPP_PHONE_NUMBER_ID", None)
+    resolved = server._resolve_phone_number_id()
+    os.environ["WHATSAPP_PHONE_NUMBER_ID"] = saved_env
+    assert resolved == server.CURRENT_WHATSAPP_PHONE_NUMBER_ID, \
+        f"Empty env → must fall back to hardcoded current. got={resolved!r}"
+    print(f"[OK] Empty env → fallback to hardcoded current: {resolved}")
 
     # 2c. Env var has the correct ID → resolves to it
     server._ACTIVE_WA_PHONE_ID.set("")

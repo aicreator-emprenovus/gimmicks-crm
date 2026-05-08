@@ -443,6 +443,14 @@ _ACTIVE_WA_PHONE_ID = _ctxvars.ContextVar("active_wa_phone_id", default="")
 # fall through to the next safe option.
 RETIRED_PHONE_NUMBER_IDS = {"994356967089829"}
 
+# Hardcoded production Phone Number ID for +593 96 356 0326 (Gimmicks Marketing
+# Services current WhatsApp Business number). Used as a final defensive fallback
+# when both the contextvar and the env var are unset or retired (e.g. when the
+# production env var still points to the decommissioned number). The env var
+# always wins if it holds a valid (non-retired) ID, so this constant does NOT
+# lock us in — if we migrate to a new number again, just update the env var.
+CURRENT_WHATSAPP_PHONE_NUMBER_ID = "965777766626628"
+
 
 def _active_phone_number_id() -> str:
     try:
@@ -456,8 +464,9 @@ def _active_phone_number_id() -> str:
 
 def _resolve_phone_number_id() -> str:
     """Return the phone_number_id WhatsApp send helpers must use.
-    Order: contextvar → env var. Any retired ID is filtered out.
-    Raises a clear error if no valid ID is available.
+    Priority: contextvar → env var → hardcoded current production ID.
+    Any retired ID is filtered out at every layer so retired numbers can never
+    leak into outgoing requests, regardless of stale env config.
     """
     pid = _active_phone_number_id()
     if not pid:
@@ -465,14 +474,25 @@ def _resolve_phone_number_id() -> str:
         if env_pid in RETIRED_PHONE_NUMBER_IDS:
             logger.error(
                 f"WHATSAPP_PHONE_NUMBER_ID env var points to a RETIRED ID ({env_pid}). "
-                f"Update production env to the current number ID."
+                f"Using hardcoded current ID ({CURRENT_WHATSAPP_PHONE_NUMBER_ID}) instead. "
+                f"Update the env var to silence this warning."
             )
             env_pid = ""
         pid = env_pid
     if not pid:
+        # Final defensive fallback. Logged at warning level so it shows up in
+        # supervisor logs but does NOT raise — the agent can still send.
+        logger.warning(
+            f"WHATSAPP_PHONE_NUMBER_ID not configured; falling back to hardcoded "
+            f"current ID ({CURRENT_WHATSAPP_PHONE_NUMBER_ID})."
+        )
+        pid = CURRENT_WHATSAPP_PHONE_NUMBER_ID
+    if pid in RETIRED_PHONE_NUMBER_IDS:
+        # Should be unreachable, but guard against accidental misconfiguration
+        # of the constants themselves.
         raise Exception(
-            "WhatsApp phone_number_id no configurado o ID retirado. "
-            "Verifica la variable de entorno WHATSAPP_PHONE_NUMBER_ID."
+            "Configuración inválida: el ID actual coincide con un ID retirado. "
+            "Revisa CURRENT_WHATSAPP_PHONE_NUMBER_ID y RETIRED_PHONE_NUMBER_IDS."
         )
     return pid
 
@@ -2387,14 +2407,18 @@ async def whatsapp_diagnostics(current_user: dict = Depends(get_current_user)):
     wa_phone_id = os.environ.get("WHATSAPP_PHONE_NUMBER_ID", "")
     results["whatsapp_token"] = "configured" if len(wa_token) > 10 else "MISSING"
     if not wa_phone_id:
-        results["whatsapp_phone_id"] = "MISSING"
+        results["whatsapp_phone_id"] = (
+            f"MISSING (using hardcoded fallback {CURRENT_WHATSAPP_PHONE_NUMBER_ID})"
+        )
     elif wa_phone_id in RETIRED_PHONE_NUMBER_IDS:
         results["whatsapp_phone_id"] = (
-            f"RETIRED ({wa_phone_id}) — actualiza la variable WHATSAPP_PHONE_NUMBER_ID "
-            f"en producción al ID actual del número +593 96 356 0326"
+            f"RETIRED ({wa_phone_id}) — usando fallback hardcoded "
+            f"{CURRENT_WHATSAPP_PHONE_NUMBER_ID} (envíos funcionando). "
+            f"Para limpiar este warning, actualiza la variable WHATSAPP_PHONE_NUMBER_ID."
         )
     else:
         results["whatsapp_phone_id"] = wa_phone_id
+    results["effective_phone_id"] = _resolve_phone_number_id()
     
     # 2. Check LLM key
     llm_key = os.environ.get("EMERGENT_LLM_KEY", "")

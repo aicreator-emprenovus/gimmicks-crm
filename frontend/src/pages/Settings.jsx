@@ -647,32 +647,44 @@ export default function Settings() {
                 <>
                   {(() => {
                     const pid = String(waDiag.whatsapp_phone_id || "");
-                    const isRetired = pid.startsWith("RETIRED");
-                    const isMissing = pid === "MISSING";
-                    const ok = !isRetired && !isMissing;
+                    const effective = String(waDiag.effective_phone_id || "");
+                    const isRetiredEnv = pid.startsWith("RETIRED");
+                    const isMissingEnv = pid.startsWith("MISSING");
+                    // The system is OPERATIONAL whenever effective_phone_id is a real ID
+                    // (the code-level fallback covers retired/missing env vars).
+                    const operational = !!effective && !effective.startsWith("RETIRED") && !effective.startsWith("MISSING");
                     return (
                       <div
                         className={`p-3 rounded-lg border text-sm flex items-start gap-2 ${
-                          ok
+                          operational && !isRetiredEnv && !isMissingEnv
                             ? "bg-emerald-50 border-emerald-200 text-emerald-800"
-                            : "bg-red-50 border-red-200 text-red-800"
+                            : operational
+                              ? "bg-amber-50 border-amber-200 text-amber-800"
+                              : "bg-red-50 border-red-200 text-red-800"
                         }`}
                         data-testid="wa-diag-phoneid-status"
                       >
-                        {ok ? (
+                        {operational ? (
                           <CheckCircle2 className="w-4 h-4 mt-0.5 flex-shrink-0" />
                         ) : (
                           <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
                         )}
-                        <div>
+                        <div className="space-y-1">
                           <p className="font-semibold">
-                            Phone Number ID: <span className="font-mono">{pid || "(vacío)"}</span>
+                            ID en uso (envíos): <span className="font-mono">{effective || "(error)"}</span>
                           </p>
-                          {!ok && (
-                            <p className="mt-1">
-                              {isRetired
-                                ? "Este ID está retirado. Los envíos a clientes están bloqueados. Actualiza la variable de entorno WHATSAPP_PHONE_NUMBER_ID en producción al ID actual del número +593 96 356 0326 (965777766626628) y rediplega."
-                                : "No hay Phone Number ID configurado. Define la variable de entorno WHATSAPP_PHONE_NUMBER_ID y rediplega."}
+                          {operational && !isRetiredEnv && !isMissingEnv && (
+                            <p>El sistema envía mensajes y adjuntos correctamente desde el número actual.</p>
+                          )}
+                          {operational && (isRetiredEnv || isMissingEnv) && (
+                            <p>
+                              Envíos funcionando con un ID alternativo. La variable de entorno aparece como
+                              <span className="font-mono"> {pid}</span>; el código está usando el ID correcto del número actual como fallback.
+                            </p>
+                          )}
+                          {!operational && (
+                            <p>
+                              No se pueden enviar mensajes. Estado: <span className="font-mono">{pid}</span>.
                             </p>
                           )}
                         </div>
