@@ -25,6 +25,11 @@ warnings if any of these break. The full regression suite lives at
    - `fix_spanish_accents` (≈80 word dictionary) corrects LLM tilde failures.
    - `strip_forbidden_personalization` removes any banned terms the LLM leaks.
    - The catalog link is appended automatically when the LLM forgets it.
+   - **JSON leak protection (3 tiers)** — `_repair_json`, `_extract_response_field`,
+     `_looks_like_json` together GUARANTEE a raw JSON dump never reaches the
+     customer, even when the LLM returns invalid JSON (trailing commas, smart
+     quotes, etc.). The final guard before `send_message_fn` re-checks and
+     replaces with a safe fallback.
 
 3. Routing safety:
    - server.RETIRED_PHONE_NUMBER_IDS contains 994356967089829 (decommissioned).
@@ -570,6 +575,62 @@ async def load_known_client_data(db: AsyncIOMotorDatabase, phone_number: str) ->
     return known
 
 
+# ---------------------------------------------------------------------------
+# JSON repair / safety net
+# Critical: the LLM occasionally produces invalid JSON (trailing commas, single
+# quotes, etc.). Without these helpers, the raw JSON would leak to the customer.
+# ---------------------------------------------------------------------------
+def _repair_json(s: str) -> str:
+    """Fix common LLM JSON mistakes so json.loads can succeed.
+    Idempotent and safe — only normalizes obvious mistakes, never changes
+    semantics. Add cases here when you see new LLM patterns in the wild."""
+    if not s:
+        return s
+    # Remove trailing commas before } or ]: {"a":1,} → {"a":1}
+    s = re.sub(r",(\s*[}\]])", r"\1", s)
+    # Replace ASCII smart quotes that some models emit
+    s = s.replace("\u201c", '"').replace("\u201d", '"').replace("\u2018", "'").replace("\u2019", "'")
+    # Strip leading/trailing whitespace and BOM-like artifacts
+    return s.strip().lstrip("\ufeff")
+
+
+_RESPONSE_FIELD_RE = re.compile(
+    r'"response"\s*:\s*"((?:[^"\\]|\\.)*)"',
+    re.DOTALL,
+)
+
+
+def _extract_response_field(text: str) -> str:
+    """Last-resort extraction of the customer-facing message from a broken JSON.
+    If the LLM emitted "response": "Hola..." but the rest of the JSON is invalid,
+    we fish out just that field via regex so the customer never sees raw JSON.
+    Returns empty string when the field can't be located.
+    """
+    if not text:
+        return ""
+    m = _RESPONSE_FIELD_RE.search(text)
+    if not m:
+        return ""
+    raw = m.group(1)
+    try:
+        # Decode JSON escape sequences (\n, \", \uXXXX, etc.)
+        return json.loads(f'"{raw}"')
+    except Exception:
+        # Fallback: replace the most common escapes manually
+        return raw.replace('\\n', '\n').replace('\\"', '"').replace("\\\\", "\\")
+
+
+def _looks_like_json(text: str) -> bool:
+    """Heuristic: returns True when the text looks like a serialized JSON object
+    that should never reach the customer (it leaked from the LLM)."""
+    if not text:
+        return False
+    t = text.strip()
+    if not (t.startswith("{") or t.startswith("```")):
+        return False
+    return ('"response"' in t) or ('"extracted_data"' in t) or ('"intent"' in t)
+
+
 async def call_llm(system_msg: str, user_msg: str, phone_number: str = "") -> Optional[Dict]:
     """Call LLM and parse JSON response. Falls back to gpt-4o if gpt-5.2 fails."""
     from emergentintegrations.llm.chat import LlmChat, UserMessage
@@ -593,15 +654,25 @@ async def call_llm(system_msg: str, user_msg: str, phone_number: str = "") -> Op
             cleaned = re.sub(r'```json\s*', '', response_text)
             cleaned = re.sub(r'```\s*', '', cleaned).strip()
 
+            # First attempt: strict JSON parse
             json_match = re.search(r'\{[\s\S]*\}', cleaned)
             if json_match:
+                json_str = json_match.group()
                 try:
-                    return json.loads(json_match.group())
+                    return json.loads(json_str)
                 except json.JSONDecodeError:
-                    pass
+                    # Second attempt: repair common LLM mistakes before reparse
+                    repaired = _repair_json(json_str)
+                    try:
+                        return json.loads(repaired)
+                    except json.JSONDecodeError:
+                        pass
 
+            # Third attempt: fish the "response" field via regex even from
+            # broken JSON so the customer NEVER sees a raw JSON dump.
+            text_only = _extract_response_field(cleaned) or cleaned
             return {
-                "response": response_text,
+                "response": text_only,
                 "extracted_data": {},
                 "catalog_search": None,
                 "intent": "otra",
@@ -1786,12 +1857,35 @@ MENSAJE ACTUAL DEL CLIENTE: {message_text}"""
         if response_text:
             response_text = re.sub(r'```json\s*', '', response_text)
             response_text = re.sub(r'```\s*', '', response_text)
+            # Tier 1: well-formed JSON inside response field (rare but possible).
             if response_text.strip().startswith('{') and '"response"' in response_text:
                 try:
-                    parsed = json.loads(re.search(r'\{[\s\S]*\}', response_text).group())
+                    json_str = re.search(r'\{[\s\S]*\}', response_text).group()
+                    parsed = json.loads(_repair_json(json_str))
                     response_text = parsed.get("response", response_text)
                 except Exception:
                     pass
+            # Tier 2: response_text STILL looks like a JSON dump (broken JSON or
+            # chunks bleeding through). Fish out just the "response" field via
+            # regex; if that fails, blank it so a generic fallback is used and
+            # the customer NEVER sees raw JSON.
+            if _looks_like_json(response_text):
+                fished = _extract_response_field(response_text)
+                if fished:
+                    logger.warning(
+                        f"Recovered response field via regex from JSON-like leak "
+                        f"(phone={phone_number}, len={len(response_text)})"
+                    )
+                    response_text = fished
+                else:
+                    logger.error(
+                        f"LLM returned unrecoverable JSON-like text and no response "
+                        f"field could be extracted (phone={phone_number}). "
+                        f"Replacing with safe fallback."
+                    )
+                    response_text = (
+                        "Permíteme un momento, estoy revisando tu requerimiento."
+                    )
             response_text = response_text.strip()
 
         # Remove redundant greetings in follow-up messages
@@ -1870,6 +1964,27 @@ MENSAJE ACTUAL DEL CLIENTE: {message_text}"""
             if not (collected_data.get("cantidades_por_producto") or collected_data.get("cantidad")):
                 still_missing.append("cantidad")
             response_text = strip_forbidden_personalization(response_text, still_missing)
+
+            # FINAL SAFETY NET: under no circumstances may a JSON-looking blob
+            # reach the customer (e.g., if some upstream layer regressed). If
+            # we still detect a leak here, replace with a safe fallback and
+            # log loudly so we can debug the upstream cause.
+            if _looks_like_json(response_text):
+                fished = _extract_response_field(response_text)
+                if fished:
+                    logger.error(
+                        f"FINAL GUARD: JSON leak still present after all "
+                        f"sanitizers — recovering response field for {phone_number}."
+                    )
+                    response_text = fished
+                else:
+                    logger.error(
+                        f"FINAL GUARD: unrecoverable JSON leak — using safe fallback "
+                        f"for {phone_number}. Original len={len(response_text)}."
+                    )
+                    response_text = (
+                        "Permíteme un momento, estoy revisando tu requerimiento."
+                    )
 
             await send_message_fn(phone_number, conversation_id, fix_spanish_accents(response_text), needs_review=needs_human)
             message_sent = True

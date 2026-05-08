@@ -152,6 +152,38 @@ def test_forbidden_personalization():
         record("strip_forbidden_personalization removes serigrafía/bordado/sublimación/etc.", True)
 
 
+def test_json_leak_safety():
+    """Bug May 8 2026: LLM emitted malformed JSON with trailing comma; raw dump
+    leaked to customer. Verify the 3-tier defense is alive."""
+    import json as _json
+    from bot_service import _repair_json, _extract_response_field, _looks_like_json
+    leaked = (
+        '{ "response": "Hola Patricia, ¿tu empresa?", "extracted_data": {}, '
+        '"intent": "saludo", "needs_quote": false, "needs_human": false, '
+        '"conversation_summary": "...",\n}'
+    )
+    # Reproduces the original failure
+    failed_strict = False
+    try:
+        _json.loads(leaked)
+    except _json.JSONDecodeError:
+        failed_strict = True
+    record("Bug premise: leaked JSON fails strict parse", failed_strict)
+    # Tier 1: repair
+    try:
+        parsed = _json.loads(_repair_json(leaked))
+        record("JSON Tier 1: _repair_json fixes trailing comma", parsed.get("response", "").startswith("Hola Patricia"))
+    except Exception as e:
+        record("JSON Tier 1: _repair_json", False, str(e))
+    # Tier 2: extract via regex
+    fished = _extract_response_field(leaked)
+    record("JSON Tier 2: _extract_response_field recovers field", fished.startswith("Hola Patricia"))
+    # Tier 3: detector
+    record("JSON Tier 3: _looks_like_json flags leak", _looks_like_json(leaked))
+    record("JSON Tier 3: _looks_like_json does NOT false-positive on legit reply",
+           not _looks_like_json("¡Claro! Aquí tienes el catálogo: https://x.com"))
+
+
 # ---------------------------------------------------------------------------
 # 5. End-to-end bot invariants (uses real LLM but with fake WhatsApp send)
 # ---------------------------------------------------------------------------
@@ -260,6 +292,7 @@ async def main():
         ("Resolver phone-id behavior", test_resolver_cases),
         ("Accent post-processor", test_accent_postprocessor),
         ("Forbidden-personalization stripper", test_forbidden_personalization),
+        ("JSON leak safety net", test_json_leak_safety),
     ]
     for name, fn in suites:
         print(f"\n— {name} —")

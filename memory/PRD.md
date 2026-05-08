@@ -141,7 +141,25 @@ CRM para ventas comerciales con WhatsApp Business que integra bot IA (GPT-5.2), 
   - Testing: 13/13 backend + frontend completo 100% (iteration_20)
 
 ## Resolved Issues (Latest)
-- [x] **Preview de imágenes en chat + Bot blindado** - May 8, 2026:
+- [x] **P0 GRAVE — Bot enviaba JSON crudo al cliente cuando el LLM emitía JSON malformado** - May 8, 2026:
+  - **Síntoma reportado**: en la conversación de Patricia Tito, tras dar su correo, el bot respondió con el dump JSON completo de la respuesta del LLM (incluyendo `extracted_data`, `intent`, `lead_quality`, `conversation_summary`, etc.) en vez del campo `response`.
+  - **Causa raíz**: el LLM emitió JSON con coma final inválida (`"...", \n}`), `json.loads()` falló, y el fallback en `call_llm` retornaba `{"response": response_text, ...}` con el TEXTO CRUDO completo. Luego se enviaba al cliente sin sanear.
+  - **Fix (3 capas de defensa)** en `bot_service.py`:
+    1. **Tier 1 — `_repair_json()`**: repara errores comunes (trailing commas antes de `}`/`]`, smart quotes Unicode) antes del segundo intento de `json.loads`.
+    2. **Tier 2 — `_extract_response_field()`**: regex que pesca solo el valor del campo `response` aún de JSON irrecuperable, decodifica escapes `\n`, `\"`, `\uXXXX`.
+    3. **Tier 3 — `_looks_like_json()` + final guard**: detector heurístico que se ejecuta DOS veces (después del parsing y justo antes del `send_message_fn`). Si detecta un dump JSON, intenta extraer el campo `response`; si falla, reemplaza por mensaje seguro: *"Permíteme un momento, estoy revisando tu requerimiento."*
+  - **Tests** (`/app/backend/tests/test_json_leak_safety.py`, 8/8 PASS):
+    - Reproducción exacta del JSON malformado de Patricia Tito → recuperado correctamente
+    - Smart quotes Unicode → reparadas
+    - Texto legítimo en español → NO false positive
+    - JSON irrecuperable → fallback seguro
+  - **Blindaje permanente**:
+    - `run_bot_regression.py` ampliada: 22 → **27 invariantes** (5 nuevas para JSON leak).
+    - Self-check al startup: 11 → **14 invariantes** (3 nuevas: leak detector, repair, extract).
+    - Docstring crítico de `bot_service.py` actualizado con la regla de las 3 capas.
+  - Verificado: producción reciente vio el bug; preview ya no puede reproducirlo bajo ningún escenario testeado.
+
+
   - **Bug del preview**: `<img src="...attachments/{id}">` fallaba con `{"detail":"Token requerido"}` porque el browser no envía el JWT en el Authorization header. Fix: nuevo hook `useAuthenticatedAttachment` en `Inbox.jsx` que hace `axios.get(... { responseType: 'blob' })` con el JWT y crea blob URLs. Aplica para imágenes, videos, audios y documentos. Blob URLs cacheadas en memoria por `attachmentId`.
   - **Botón de descarga**: clic en imagen/documento ahora descarga el archivo (manteniendo el filename original).
   - **Bot blindado** (a prueba de regresiones futuras):

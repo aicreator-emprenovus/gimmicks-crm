@@ -4706,7 +4706,14 @@ def _verify_bot_invariants():
     """
     failures = []
     try:
-        from bot_service import SYSTEM_PROMPT, fix_spanish_accents, strip_forbidden_personalization
+        from bot_service import (
+            SYSTEM_PROMPT,
+            fix_spanish_accents,
+            strip_forbidden_personalization,
+            _repair_json,
+            _extract_response_field,
+            _looks_like_json,
+        )
     except Exception as e:
         logger.critical(f"BOT INVARIANTS — could not import bot_service: {e}")
         return
@@ -4734,6 +4741,12 @@ def _verify_bot_invariants():
          "Cotización" in fix_spanish_accents("Cotizacion lista")),
         ("strip_forbidden_personalization removes 'serigrafía'",
          "serigrafía" not in strip_forbidden_personalization("Te ofrecemos serigrafía").lower()),
+        ("JSON leak detector flags raw LLM dump",
+         _looks_like_json('{"response":"x","intent":"y"}')),
+        ("JSON repair fixes trailing comma",
+         '{"a":1}' == _repair_json('{"a":1,}')),
+        ("Response-field extractor recovers from broken JSON",
+         _extract_response_field('{"response":"Hola Patricia",bad}') == "Hola Patricia"),
     ]
     for name, ok in invariants:
         if not ok:
