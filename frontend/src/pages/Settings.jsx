@@ -34,6 +34,7 @@ import {
   Webhook,
   Key,
   AlertTriangle,
+  CheckCircle2,
   Pencil,
   Download,
   Upload,
@@ -75,6 +76,20 @@ export default function Settings() {
   const [editingRule, setEditingRule] = useState(null);
   const [formData, setFormData] = useState({ ...EMPTY_FORM });
   const [waInfo, setWaInfo] = useState({ webhook_url: "", verify_token: "", phone_number_id: "" });
+  const [waDiag, setWaDiag] = useState(null);
+  const [waDiagLoading, setWaDiagLoading] = useState(false);
+
+  const fetchWaDiag = async () => {
+    setWaDiagLoading(true);
+    try {
+      const r = await axios.get(`${API_URL}/api/webhook/whatsapp/diagnostics`, { headers: getAuthHeaders() });
+      setWaDiag(r.data);
+    } catch (e) {
+      setWaDiag({ error: e.response?.data?.detail || "No se pudo cargar el diagnóstico" });
+    } finally {
+      setWaDiagLoading(false);
+    }
+  };
 
   const fetchWaInfo = async () => {
     try {
@@ -95,7 +110,7 @@ export default function Settings() {
       });
     }
   };
-  useEffect(() => { fetchWaInfo(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { fetchWaInfo(); fetchWaDiag(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchRules = async () => {
     try {
@@ -605,6 +620,87 @@ export default function Settings() {
               <p className="text-sm text-zinc-500">
                 Usa esta URL y token de verificación al configurar el webhook en Meta for Developers.
               </p>
+            </CardContent>
+          </Card>
+
+          {/* Diagnóstico en tiempo real */}
+          <Card className="border border-zinc-200" data-testid="wa-diagnostics-card">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 font-['Manrope']">
+                <AlertTriangle className="w-5 h-5" />
+                Diagnóstico de WhatsApp
+              </CardTitle>
+              <CardDescription>
+                Estado actual de la conexión con WhatsApp Business API. Si ves un ID retirado, los mensajes y adjuntos no se enviarán al cliente.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {waDiagLoading && (
+                <p className="text-sm text-zinc-500">Cargando diagnóstico...</p>
+              )}
+              {waDiag && waDiag.error && (
+                <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-700" data-testid="wa-diag-error">
+                  {waDiag.error}
+                </div>
+              )}
+              {waDiag && !waDiag.error && (
+                <>
+                  {(() => {
+                    const pid = String(waDiag.whatsapp_phone_id || "");
+                    const isRetired = pid.startsWith("RETIRED");
+                    const isMissing = pid === "MISSING";
+                    const ok = !isRetired && !isMissing;
+                    return (
+                      <div
+                        className={`p-3 rounded-lg border text-sm flex items-start gap-2 ${
+                          ok
+                            ? "bg-emerald-50 border-emerald-200 text-emerald-800"
+                            : "bg-red-50 border-red-200 text-red-800"
+                        }`}
+                        data-testid="wa-diag-phoneid-status"
+                      >
+                        {ok ? (
+                          <CheckCircle2 className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                        ) : (
+                          <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                        )}
+                        <div>
+                          <p className="font-semibold">
+                            Phone Number ID: <span className="font-mono">{pid || "(vacío)"}</span>
+                          </p>
+                          {!ok && (
+                            <p className="mt-1">
+                              {isRetired
+                                ? "Este ID está retirado. Los envíos a clientes están bloqueados. Actualiza la variable de entorno WHATSAPP_PHONE_NUMBER_ID en producción al ID actual del número +593 96 356 0326 (965777766626628) y rediplega."
+                                : "No hay Phone Number ID configurado. Define la variable de entorno WHATSAPP_PHONE_NUMBER_ID y rediplega."}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })()}
+                  <div className="grid grid-cols-2 gap-2 text-xs text-zinc-600 font-mono">
+                    <div>Token WhatsApp: <span className={waDiag.whatsapp_token === "configured" ? "text-emerald-700" : "text-red-700"}>{waDiag.whatsapp_token}</span></div>
+                    <div>Emergent LLM: <span className={waDiag.emergent_llm_key === "configured" ? "text-emerald-700" : "text-red-700"}>{waDiag.emergent_llm_key}</span></div>
+                    <div>LLM test: <span className="text-zinc-700">{waDiag.llm_test}</span></div>
+                    <div>Bot import: <span className="text-zinc-700">{waDiag.bot_import}</span></div>
+                    <div>Reglas activas: <span className="text-zinc-700">{waDiag.active_rules}</span></div>
+                    <div>Conversaciones: <span className="text-zinc-700">{waDiag.db_conversations}</span></div>
+                    <div>Productos: <span className="text-zinc-700">{waDiag.db_products}</span></div>
+                    <div>Imágenes producto: <span className="text-zinc-700">{waDiag.db_product_images}</span></div>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={fetchWaDiag}
+                    disabled={waDiagLoading}
+                    data-testid="wa-diag-refresh-btn"
+                  >
+                    Refrescar diagnóstico
+                  </Button>
+                </>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
