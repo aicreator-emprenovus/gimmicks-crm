@@ -141,7 +141,19 @@ CRM para ventas comerciales con WhatsApp Business que integra bot IA (GPT-5.2), 
   - Testing: 13/13 backend + frontend completo 100% (iteration_20)
 
 ## Resolved Issues (Latest)
-- [x] **Inbox: 4 features nuevas (alertas titilantes, teléfono+hora en sidebar, adjuntos, control humano del bot)** - May 7, 2026:
+- [x] **P0 — Adjuntos enviados desde número WhatsApp retirado + agente envía mensajes que no llegan** - May 8, 2026:
+  - **Causa raíz común**: el ID retirado `994356967089829` aparece como `WHATSAPP_PHONE_NUMBER_ID` env var en producción. Todas las llamadas a la WhatsApp Cloud API (texto del agente, adjuntos, media upload) usaban ese ID y el envío fallaba silenciosamente.
+  - **Bug 2 secundario**: el endpoint `POST /api/conversations/{id}/messages` retornaba `status: "sent"` aunque la API de WhatsApp rechazara el mensaje. El agente creía que se había enviado.
+  - **Fix #1 (defensivo, código)**: nuevo set `RETIRED_PHONE_NUMBER_IDS = {"994356967089829"}` y helper `_resolve_phone_number_id()` que filtra cualquier ID retirado tanto del contextvar como del env var. Si ambos son retirados o vacíos, lanza excepción clara con instrucciones.
+  - **Fix #2**: los 5 helpers de envío (`send_whatsapp_message`, `send_whatsapp_template`, `send_whatsapp_document`, `upload_whatsapp_media`, `send_whatsapp_media_message`) ahora usan `_resolve_phone_number_id()` — bloquea a nivel de código cualquier intento de usar el ID retirado.
+  - **Fix #3**: `POST /api/conversations/{id}/messages` y `POST /api/conversations/{id}/messages/attachment` ahora retornan **502 con detalle del error** cuando WhatsApp falla (antes retornaban 200 con `status: "sent"` engañoso). El frontend ya muestra `error.response.data.detail` en el toast → el agente ve el error real.
+  - **Fix #4**: la conversación NO se marca con `last_message` actualizado cuando el envío falla (antes se actualizaba aunque el cliente no recibiera nada).
+  - **Fix #5 (migración idempotente)**: nueva función `migrate_retired_phone_number_ids()` que se ejecuta en startup y limpia `wa_phone_number_id` de cualquier conversación que aún apunte a un ID retirado.
+  - **Fix #6 (diagnóstico)**: el endpoint `/api/webhook/whatsapp/diagnostics` ahora marca explícitamente `RETIRED (...)` si el env var apunta a un ID retirado, con instrucciones de actualización.
+  - **Acción requerida del usuario**: en producción, abrir `https://cotizador.gimmicks.com.ec/api/webhook/whatsapp/diagnostics` (autenticado). Si `whatsapp_phone_id` muestra `RETIRED`, actualizar la variable de entorno de producción al ID actual de +593 96 356 0326 y rediplegar.
+  - Tests: `/app/backend/tests/test_retired_phone_safety.py` (4/4 PASS).
+
+
   - **Feature 1 — Alertas titilantes (handoff a humano)**:
     - Backend: `ConversationResponse` ahora expone `transferred_to_human`, `bot_paused`, `transfer_reason` (cargados en batch desde `conversation_states`).
     - Frontend: Punto rojo titilante (`animate-ping`) en avatar + badge "Derivada a humano" con `animate-pulse` en sidebar y header del chat.

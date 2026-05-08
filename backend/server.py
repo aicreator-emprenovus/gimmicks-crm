@@ -437,21 +437,54 @@ import contextvars as _ctxvars
 _ACTIVE_WA_PHONE_ID = _ctxvars.ContextVar("active_wa_phone_id", default="")
 
 
+# Phone Number IDs that have been DECOMMISSIONED. They must never be used to
+# SEND or RECEIVE messages, no matter where they appear (env var, contextvar,
+# conversation doc). If any of these is encountered we silently skip it and
+# fall through to the next safe option.
+RETIRED_PHONE_NUMBER_IDS = {"994356967089829"}
+
+
 def _active_phone_number_id() -> str:
     try:
-        return _ACTIVE_WA_PHONE_ID.get() or ""
+        pid = _ACTIVE_WA_PHONE_ID.get() or ""
     except Exception:
+        pid = ""
+    if pid in RETIRED_PHONE_NUMBER_IDS:
         return ""
+    return pid
+
+
+def _resolve_phone_number_id() -> str:
+    """Return the phone_number_id WhatsApp send helpers must use.
+    Order: contextvar → env var. Any retired ID is filtered out.
+    Raises a clear error if no valid ID is available.
+    """
+    pid = _active_phone_number_id()
+    if not pid:
+        env_pid = (os.environ.get("WHATSAPP_PHONE_NUMBER_ID") or "").strip()
+        if env_pid in RETIRED_PHONE_NUMBER_IDS:
+            logger.error(
+                f"WHATSAPP_PHONE_NUMBER_ID env var points to a RETIRED ID ({env_pid}). "
+                f"Update production env to the current number ID."
+            )
+            env_pid = ""
+        pid = env_pid
+    if not pid:
+        raise Exception(
+            "WhatsApp phone_number_id no configurado o ID retirado. "
+            "Verifica la variable de entorno WHATSAPP_PHONE_NUMBER_ID."
+        )
+    return pid
 
 
 async def send_whatsapp_message(to_phone: str, message_text: str) -> str:
     """Send a text message via WhatsApp Business API"""
     import aiohttp
-    
-    phone_number_id = _active_phone_number_id() or os.environ.get("WHATSAPP_PHONE_NUMBER_ID")
+
+    phone_number_id = _resolve_phone_number_id()
     access_token = os.environ.get("WHATSAPP_ACCESS_TOKEN")
-    
-    if not phone_number_id or not access_token:
+
+    if not access_token:
         raise Exception("WhatsApp credentials not configured")
     
     # Remove any non-numeric characters except +
@@ -493,10 +526,10 @@ async def send_whatsapp_template(to_phone: str, template_name: str, language_cod
     """Send a template message via WhatsApp Business API (works outside 24h window)."""
     import aiohttp
 
-    phone_number_id = _active_phone_number_id() or os.environ.get("WHATSAPP_PHONE_NUMBER_ID")
+    phone_number_id = _resolve_phone_number_id()
     access_token = os.environ.get("WHATSAPP_ACCESS_TOKEN")
 
-    if not phone_number_id or not access_token:
+    if not access_token:
         raise Exception("WhatsApp credentials not configured")
 
     clean_phone = ''.join(c for c in to_phone if c.isdigit())
@@ -561,10 +594,10 @@ async def send_whatsapp_document(to_phone: str, document_url: str, caption: str,
     """Send a document (PDF) via WhatsApp Business API"""
     import aiohttp
 
-    phone_number_id = _active_phone_number_id() or os.environ.get("WHATSAPP_PHONE_NUMBER_ID")
+    phone_number_id = _resolve_phone_number_id()
     access_token = os.environ.get("WHATSAPP_ACCESS_TOKEN")
 
-    if not phone_number_id or not access_token:
+    if not access_token:
         raise Exception("WhatsApp credentials not configured")
 
     clean_phone = ''.join(c for c in to_phone if c.isdigit())
@@ -602,9 +635,9 @@ async def upload_whatsapp_media(file_bytes: bytes, mime_type: str, filename: str
     """Upload a media file to WhatsApp Cloud API. Returns media_id usable for 30 days."""
     import aiohttp
 
-    phone_number_id = _active_phone_number_id() or os.environ.get("WHATSAPP_PHONE_NUMBER_ID")
+    phone_number_id = _resolve_phone_number_id()
     access_token = os.environ.get("WHATSAPP_ACCESS_TOKEN")
-    if not phone_number_id or not access_token:
+    if not access_token:
         raise Exception("WhatsApp credentials not configured")
 
     url = f"https://graph.facebook.com/v18.0/{phone_number_id}/media"
@@ -638,9 +671,9 @@ async def send_whatsapp_media_message(
     """Send a media message using a previously uploaded media_id."""
     import aiohttp
 
-    phone_number_id = _active_phone_number_id() or os.environ.get("WHATSAPP_PHONE_NUMBER_ID")
+    phone_number_id = _resolve_phone_number_id()
     access_token = os.environ.get("WHATSAPP_ACCESS_TOKEN")
-    if not phone_number_id or not access_token:
+    if not access_token:
         raise Exception("WhatsApp credentials not configured")
 
     clean_phone = ''.join(c for c in to_phone if c.isdigit())
@@ -1542,6 +1575,7 @@ async def send_message(
     # Send message via WhatsApp API
     whatsapp_message_id = None
     send_status = "sent"
+    send_error = None
     
     try:
         whatsapp_message_id = await send_whatsapp_message(
@@ -1551,6 +1585,7 @@ async def send_message(
         send_status = "delivered"
         logger.info(f"WhatsApp message sent: {whatsapp_message_id}")
     except Exception as e:
+        send_error = str(e)
         logger.error(f"Failed to send WhatsApp message: {e}")
         send_status = "failed"
     
@@ -1565,21 +1600,42 @@ async def send_message(
         "whatsapp_message_id": whatsapp_message_id,
         "timestamp": now.isoformat()
     }
+    if send_error:
+        message_doc["error"] = send_error[:500]
     
     await db.messages.insert_one(message_doc)
 
     await log_activity(current_user.get("email", ""), current_user.get("name", ""),
-                       "message_send", f"Mensaje enviado a {conv.get('contact_name', conv['phone_number'])}")
+                       "message_send",
+                       f"Mensaje {'enviado' if send_status == 'delivered' else 'FALLÓ'} a {conv.get('contact_name', conv['phone_number'])}"
+                       + (f" — {send_error[:120]}" if send_error else ""))
 
-    # Update conversation
-    await db.conversations.update_one(
-        {"id": conversation_id},
-        {"$set": {
-            "last_message": message_data.content[:100],
-            "last_message_time": now.isoformat()
-        }}
-    )
-    
+    # Update conversation only if the message was actually delivered.
+    # A failed send must NOT mark the conversation as having a recent agent
+    # message (otherwise the agent thinks the customer received it).
+    if send_status == "delivered":
+        await db.conversations.update_one(
+            {"id": conversation_id},
+            {"$set": {
+                "last_message": message_data.content[:100],
+                "last_message_time": now.isoformat()
+            }}
+        )
+
+    # If the WhatsApp send actually failed, surface a 502 to the agent so
+    # they see the toast error instead of believing the message went through.
+    if send_status == "failed":
+        # Compose a clear hint for the agent so they know what to do.
+        hint = ""
+        if send_error and ("131047" in send_error or "131026" in send_error or "24 hour" in send_error.lower() or "re-engagement" in send_error.lower()):
+            hint = " (la ventana de 24h con el cliente caducó — pídele que escriba primero o usa una plantilla)"
+        elif send_error and ("phone_number_id" in send_error.lower() or "retired" in send_error.lower()):
+            hint = " (revisa la variable WHATSAPP_PHONE_NUMBER_ID en producción)"
+        raise HTTPException(
+            status_code=502,
+            detail=f"WhatsApp rechazó el mensaje: {send_error or 'error desconocido'}{hint}"
+        )
+
     return MessageResponse(
         id=message_id,
         conversation_id=conversation_id,
@@ -1587,7 +1643,7 @@ async def send_message(
         sender="business",
         message_type=message_data.message_type,
         content={"text": message_data.content},
-        status="sent",
+        status=send_status,
         timestamp=now
     )
 
@@ -1643,6 +1699,7 @@ async def send_attachment(
     # Upload media to WhatsApp + send the message with the resulting media_id
     whatsapp_message_id = None
     send_status = "sent"
+    send_error = None
     try:
         media_id = await upload_whatsapp_media(raw_bytes, mime_type, file.filename or "file")
         whatsapp_message_id = await send_whatsapp_media_message(
@@ -1651,6 +1708,7 @@ async def send_attachment(
         )
         send_status = "delivered"
     except Exception as e:
+        send_error = str(e)
         logger.error(f"Failed to send WhatsApp attachment: {e}")
         send_status = "failed"
 
@@ -1675,22 +1733,38 @@ async def send_attachment(
         "whatsapp_message_id": whatsapp_message_id,
         "timestamp": now.isoformat(),
     }
+    if send_error:
+        message_doc["error"] = send_error[:500]
     await db.messages.insert_one(message_doc)
 
     await log_activity(
         current_user.get("email", ""), current_user.get("name", ""),
         "attachment_send",
-        f"Adjunto {media_kind} ({file.filename}, {size_bytes // 1024} KB) enviado a {conv.get('contact_name', conv['phone_number'])}"
+        f"Adjunto {media_kind} ({file.filename}, {size_bytes // 1024} KB) "
+        f"{'enviado' if send_status == 'delivered' else 'FALLÓ'} a {conv.get('contact_name', conv['phone_number'])}"
+        + (f" — {send_error[:120]}" if send_error else "")
     )
 
     last_msg_preview = caption or f"[{media_kind}] {file.filename or ''}".strip()
-    await db.conversations.update_one(
-        {"id": conversation_id},
-        {"$set": {
-            "last_message": last_msg_preview[:100],
-            "last_message_time": now.isoformat(),
-        }}
-    )
+    if send_status == "delivered":
+        await db.conversations.update_one(
+            {"id": conversation_id},
+            {"$set": {
+                "last_message": last_msg_preview[:100],
+                "last_message_time": now.isoformat(),
+            }}
+        )
+
+    if send_status == "failed":
+        hint = ""
+        if send_error and ("131047" in send_error or "131026" in send_error or "24 hour" in send_error.lower() or "re-engagement" in send_error.lower()):
+            hint = " (la ventana de 24h con el cliente caducó — pídele que escriba primero)"
+        elif send_error and ("phone_number_id" in send_error.lower() or "retired" in send_error.lower()):
+            hint = " (revisa la variable WHATSAPP_PHONE_NUMBER_ID en producción)"
+        raise HTTPException(
+            status_code=502,
+            detail=f"WhatsApp rechazó el adjunto: {send_error or 'error desconocido'}{hint}"
+        )
 
     return MessageResponse(
         id=message_id,
@@ -2312,7 +2386,15 @@ async def whatsapp_diagnostics(current_user: dict = Depends(get_current_user)):
     wa_token = os.environ.get("WHATSAPP_ACCESS_TOKEN", "")
     wa_phone_id = os.environ.get("WHATSAPP_PHONE_NUMBER_ID", "")
     results["whatsapp_token"] = "configured" if len(wa_token) > 10 else "MISSING"
-    results["whatsapp_phone_id"] = wa_phone_id if wa_phone_id else "MISSING"
+    if not wa_phone_id:
+        results["whatsapp_phone_id"] = "MISSING"
+    elif wa_phone_id in RETIRED_PHONE_NUMBER_IDS:
+        results["whatsapp_phone_id"] = (
+            f"RETIRED ({wa_phone_id}) — actualiza la variable WHATSAPP_PHONE_NUMBER_ID "
+            f"en producción al ID actual del número +593 96 356 0326"
+        )
+    else:
+        results["whatsapp_phone_id"] = wa_phone_id
     
     # 2. Check LLM key
     llm_key = os.environ.get("EMERGENT_LLM_KEY", "")
@@ -4456,12 +4538,36 @@ async def start_followup_task():
     await fix_old_image_urls()
     # Ensure MongoDB indexes for performance
     await ensure_indexes()
+    # Migrate any conversation/state still pointing to a retired phone_number_id
+    await migrate_retired_phone_number_ids()
     # Initialize Emergent Object Storage (secure image storage)
     try:
         from services.object_storage import init_storage
         await asyncio.to_thread(init_storage)
     except Exception as e:
         logger.warning(f"Object Storage init failed (images will fall back to MongoDB): {e}")
+
+
+async def migrate_retired_phone_number_ids():
+    """Idempotent: clear `wa_phone_number_id` from any conversation that still
+    references a retired ID. Without this, future webhook→reply chains could
+    reuse the retired ID via the contextvar set by the webhook handler.
+    """
+    if not RETIRED_PHONE_NUMBER_IDS:
+        return
+    try:
+        retired_list = list(RETIRED_PHONE_NUMBER_IDS)
+        result = await db.conversations.update_many(
+            {"wa_phone_number_id": {"$in": retired_list}},
+            {"$unset": {"wa_phone_number_id": ""}}
+        )
+        if result.modified_count:
+            logger.info(
+                f"Cleaned up wa_phone_number_id on {result.modified_count} conversations "
+                f"(retired IDs: {retired_list})"
+            )
+    except Exception as e:
+        logger.warning(f"migrate_retired_phone_number_ids skipped: {e}")
 
 
 async def ensure_indexes():
