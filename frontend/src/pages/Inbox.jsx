@@ -57,63 +57,136 @@ import {
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
+// Custom hook: fetch a protected attachment URL with JWT auth and expose it as
+// a blob URL so it can be used as <img src=...>. The server requires JWT in the
+// Authorization header, but a plain <img> tag can't send headers — hence this.
+const attachmentBlobCache = new Map(); // attachmentId -> { url, ts }
+
+function useAuthenticatedAttachment(attachmentId, authHeaders) {
+  const [blobUrl, setBlobUrl] = useState(null);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    if (!attachmentId) {
+      setBlobUrl(null);
+      return;
+    }
+    let cancelled = false;
+    const cached = attachmentBlobCache.get(attachmentId);
+    if (cached) {
+      setBlobUrl(cached.url);
+      return;
+    }
+    (async () => {
+      try {
+        const res = await axios.get(
+          `${API_URL}/api/conversations/attachments/${attachmentId}`,
+          { headers: authHeaders, responseType: "blob" }
+        );
+        if (cancelled) return;
+        const url = URL.createObjectURL(res.data);
+        attachmentBlobCache.set(attachmentId, { url, ts: Date.now() });
+        setBlobUrl(url);
+      } catch (e) {
+        if (!cancelled) setError(e?.response?.status || "load_error");
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [attachmentId, authHeaders]);
+
+  return { blobUrl, error };
+}
+
 // Lightweight renderer for attachments stored either in our object storage
 // (via /api/conversations/attachments/{id}) or referenced inline in content.
-function AttachmentRenderer({ msg, apiUrl }) {
+function AttachmentRenderer({ msg, apiUrl, authHeaders }) {
   const c = msg?.content || {};
   const kind = c.media_kind;
-  if (!kind) return null;
-
   const storagePath = c.storage_path || "";
-  // Extract attachment id from storage_path:
-  // gimmicks-crm/inbox-attachments/<uuid>.<ext>
   const m = storagePath.match(/inbox-attachments\/([^./]+)/);
   const attachmentId = m ? m[1] : null;
-  const url = attachmentId ? `${apiUrl}/api/conversations/attachments/${attachmentId}` : null;
+  const { blobUrl, error } = useAuthenticatedAttachment(attachmentId, authHeaders);
+  if (!kind) return null;
+
   const filename = c.filename || "archivo";
   const sizeKb = c.size ? Math.max(1, Math.round(c.size / 1024)) : null;
 
+  const handleDownload = () => {
+    if (!blobUrl) return;
+    const a = document.createElement("a");
+    a.href = blobUrl;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
   if (kind === "image") {
-    return url ? (
-      <a href={url} target="_blank" rel="noreferrer" className="block mb-1" data-testid="attachment-image-link">
-        <img src={url} alt={filename} className="max-w-full max-h-72 rounded-lg" loading="lazy" />
-      </a>
+    if (error) {
+      return (
+        <div className="flex items-center gap-2 text-xs italic opacity-80 mb-1">
+          <ImageIcon className="w-4 h-4" /> No se pudo cargar la vista previa de la imagen
+        </div>
+      );
+    }
+    return blobUrl ? (
+      <button
+        type="button"
+        onClick={handleDownload}
+        className="block mb-1 cursor-zoom-in"
+        data-testid="attachment-image-link"
+        title="Clic para descargar"
+      >
+        <img src={blobUrl} alt={filename} className="max-w-full max-h-72 rounded-lg" loading="lazy" />
+      </button>
     ) : (
-      <div className="flex items-center gap-2 text-xs italic opacity-80"><ImageIcon className="w-4 h-4" /> Imagen enviada</div>
+      <div className="flex items-center gap-2 text-xs italic opacity-80 mb-1">
+        <Loader2 className="w-3 h-3 animate-spin" /> Cargando imagen...
+      </div>
     );
   }
   if (kind === "video") {
-    return url ? (
-      <video src={url} controls className="max-w-full max-h-72 rounded-lg mb-1" data-testid="attachment-video">
+    if (error) {
+      return <div className="text-xs italic opacity-80 mb-1">No se pudo cargar el video</div>;
+    }
+    return blobUrl ? (
+      <video src={blobUrl} controls className="max-w-full max-h-72 rounded-lg mb-1" data-testid="attachment-video">
         Video adjunto
       </video>
     ) : (
-      <div className="flex items-center gap-2 text-xs italic opacity-80"><VideoIcon className="w-4 h-4" /> Video enviado</div>
+      <div className="flex items-center gap-2 text-xs italic opacity-80 mb-1">
+        <Loader2 className="w-3 h-3 animate-spin" /> Cargando video...
+      </div>
     );
   }
   if (kind === "audio") {
-    return url ? (
-      <audio src={url} controls className="max-w-full mb-1" data-testid="attachment-audio" />
+    if (error) {
+      return <div className="text-xs italic opacity-80 mb-1">No se pudo cargar el audio</div>;
+    }
+    return blobUrl ? (
+      <audio src={blobUrl} controls className="max-w-full mb-1" data-testid="attachment-audio" />
     ) : (
-      <div className="text-xs italic opacity-80">Audio enviado</div>
+      <div className="text-xs italic opacity-80 mb-1">Cargando audio...</div>
     );
   }
   // documents and any other types
   return (
-    <a
-      href={url || "#"}
-      target="_blank"
-      rel="noreferrer"
+    <button
+      type="button"
+      onClick={handleDownload}
+      disabled={!blobUrl}
       className={`mb-1 inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${
         msg.sender === "business" ? "bg-white/15 hover:bg-white/25" : "bg-gray-100 hover:bg-gray-200"
-      } ${url ? "" : "pointer-events-none opacity-70"}`}
+      } ${blobUrl ? "" : "opacity-70 cursor-not-allowed"}`}
       data-testid="attachment-document-link"
     >
       <FileText className="w-4 h-4 flex-shrink-0" />
       <span className="truncate max-w-[12rem]">{filename}</span>
       {sizeKb ? <span className="text-xs opacity-70">· {sizeKb} KB</span> : null}
-      {url ? <Download className="w-3 h-3 ml-1 flex-shrink-0" /> : null}
-    </a>
+      {blobUrl ? <Download className="w-3 h-3 ml-1 flex-shrink-0" /> : <Loader2 className="w-3 h-3 ml-1 animate-spin flex-shrink-0" />}
+    </button>
   );
 }
 

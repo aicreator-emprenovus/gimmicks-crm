@@ -4665,6 +4665,8 @@ async def start_followup_task():
     await migrate_retired_phone_number_ids()
     # Load system_config cache (for runtime overrides editable from panel)
     await load_system_config_cache()
+    # Verify critical bot invariants — log loud warnings if something was broken
+    _verify_bot_invariants()
     # Initialize Emergent Object Storage (secure image storage)
     try:
         from services.object_storage import init_storage
@@ -4693,6 +4695,61 @@ async def migrate_retired_phone_number_ids():
             )
     except Exception as e:
         logger.warning(f"migrate_retired_phone_number_ids skipped: {e}")
+
+
+def _verify_bot_invariants():
+    """Runs at startup. Verifies critical bot configuration so a regression
+    introduced during refactors fails LOUDLY in the logs instead of silently
+    misbehaving in production. Each broken invariant prints a CRITICAL log
+    line; the server still starts (we don't want to brick production over a
+    cosmetic check) but the warning is visible.
+    """
+    failures = []
+    try:
+        from bot_service import SYSTEM_PROMPT, fix_spanish_accents, strip_forbidden_personalization
+    except Exception as e:
+        logger.critical(f"BOT INVARIANTS — could not import bot_service: {e}")
+        return
+
+    invariants = [
+        ("SYSTEM_PROMPT contains OBJETIVO GENERAL block",
+         "OBJETIVO GENERAL DEL AGENTE" in SYSTEM_PROMPT),
+        ("SYSTEM_PROMPT enforces tildes",
+         "tildes" in SYSTEM_PROMPT.lower()),
+        ("SYSTEM_PROMPT bans serigrafía/bordado",
+         "serigrafía" in SYSTEM_PROMPT and "PROHIBIDO" in SYSTEM_PROMPT),
+        ("SYSTEM_PROMPT enforces single message",
+         "UN SOLO MENSAJE" in SYSTEM_PROMPT),
+        ("SYSTEM_PROMPT exposes catalog URL example",
+         "https://cotizador.gimmicks.com.ec/catalog?q=producto" in SYSTEM_PROMPT),
+        ("SYSTEM_PROMPT closure msg uses new wording",
+         "se pondrá en contacto contigo para los siguientes pasos" in SYSTEM_PROMPT),
+        ("Retired phone IDs blocklist contains 994356967089829",
+         "994356967089829" in RETIRED_PHONE_NUMBER_IDS),
+        ("Hardcoded current phone ID is set",
+         CURRENT_WHATSAPP_PHONE_NUMBER_ID == "965777766626628"),
+        ("Resolver never returns retired ID (smoke)",
+         _resolve_phone_number_id() not in RETIRED_PHONE_NUMBER_IDS),
+        ("fix_spanish_accents corrects 'cotizacion'",
+         "Cotización" in fix_spanish_accents("Cotizacion lista")),
+        ("strip_forbidden_personalization removes 'serigrafía'",
+         "serigrafía" not in strip_forbidden_personalization("Te ofrecemos serigrafía").lower()),
+    ]
+    for name, ok in invariants:
+        if not ok:
+            failures.append(name)
+
+    if failures:
+        logger.critical("=" * 60)
+        logger.critical("BOT INVARIANTS — %d FAILED. Bot may misbehave!", len(failures))
+        for name in failures:
+            logger.critical("  ❌ %s", name)
+        logger.critical("Run: cd /app/backend && python tests/run_bot_regression.py")
+        logger.critical("=" * 60)
+    else:
+        logger.info(
+            f"BOT INVARIANTS — all {len(invariants)} critical checks passed ✅"
+        )
 
 
 async def ensure_indexes():

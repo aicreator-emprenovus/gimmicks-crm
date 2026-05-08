@@ -1,6 +1,52 @@
 """
 AI-powered conversational bot for Gimmicks CRM.
 Sequential sales flow: greeting → name → product search → codes → quantities → additional data → quote.
+
+═══════════════════════════════════════════════════════════════════════════════
+🛡️  CRITICAL INVARIANTS — DO NOT BREAK
+═══════════════════════════════════════════════════════════════════════════════
+The customer paid in blood for these rules. Refactors must keep them intact.
+A startup self-check (`_verify_bot_invariants` in server.py) will log CRITICAL
+warnings if any of these break. The full regression suite lives at
+`/app/backend/tests/run_bot_regression.py` — RUN IT before any merge.
+
+1. SYSTEM_PROMPT must contain:
+   - "OBJETIVO GENERAL DEL AGENTE" block at the top (first source of intent).
+   - Explicit ban on personalization terms (serigrafía, bordado, sublimación,
+     UV, grabado láser, vinil, transfer, foil, tampografía, full color,
+     pad printing, hot stamping). The bot ONLY asks "logotipo a uno o varios
+     colores".
+   - Tildes rule (the reply MUST have correct Spanish accents).
+   - "UN SOLO MENSAJE" rule (one message per turn).
+   - Explicit catalog URL example: https://cotizador.gimmicks.com.ec/catalog?q=producto
+   - Closure message text: "se pondrá en contacto contigo para los siguientes pasos".
+
+2. Post-processing safety nets MUST stay alive:
+   - `fix_spanish_accents` (≈80 word dictionary) corrects LLM tilde failures.
+   - `strip_forbidden_personalization` removes any banned terms the LLM leaks.
+   - The catalog link is appended automatically when the LLM forgets it.
+
+3. Routing safety:
+   - server.RETIRED_PHONE_NUMBER_IDS contains 994356967089829 (decommissioned).
+   - server.CURRENT_WHATSAPP_PHONE_NUMBER_ID is the hardcoded fallback.
+   - server._resolve_phone_number_id never returns a retired ID.
+   - DB-backed override `system_config.whatsapp_phone_number_id` wins over
+     env var (admin can change without redeploy).
+
+4. State machine safety:
+   - bot_paused=True → bot stays SILENT (human took control).
+   - quote_generated=True + short farewell ("gracias", "ok", etc.) → cordial
+     closure, NEVER escalate to human.
+   - Product keywords (with/without punctuation) ALWAYS trigger catalog search,
+     bypassing every other heuristic.
+
+5. Per-phone asyncio.Lock prevents race conditions when messages arrive fast.
+
+If you must change a rule above, also update:
+- /app/backend/tests/run_bot_regression.py
+- _verify_bot_invariants() in server.py
+- This docstring.
+═══════════════════════════════════════════════════════════════════════════════
 """
 import asyncio
 import os

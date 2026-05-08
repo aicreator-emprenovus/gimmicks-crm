@@ -141,7 +141,16 @@ CRM para ventas comerciales con WhatsApp Business que integra bot IA (GPT-5.2), 
   - Testing: 13/13 backend + frontend completo 100% (iteration_20)
 
 ## Resolved Issues (Latest)
-- [x] **P0 — Override editable de Phone Number ID desde el panel (sin redeploy ni env vars)** - May 8, 2026:
+- [x] **Preview de imágenes en chat + Bot blindado** - May 8, 2026:
+  - **Bug del preview**: `<img src="...attachments/{id}">` fallaba con `{"detail":"Token requerido"}` porque el browser no envía el JWT en el Authorization header. Fix: nuevo hook `useAuthenticatedAttachment` en `Inbox.jsx` que hace `axios.get(... { responseType: 'blob' })` con el JWT y crea blob URLs. Aplica para imágenes, videos, audios y documentos. Blob URLs cacheadas en memoria por `attachmentId`.
+  - **Botón de descarga**: clic en imagen/documento ahora descarga el archivo (manteniendo el filename original).
+  - **Bot blindado** (a prueba de regresiones futuras):
+    - Master regression suite: `/app/backend/tests/run_bot_regression.py` — 22 invariantes en un solo comando (estáticas SYSTEM_PROMPT, resolver, accent post-processor, forbidden personalization stripper, e2e con LLM real para escenarios críticos).
+    - Self-check al startup: `_verify_bot_invariants()` corre en cada boot del backend y loguea CRITICAL si algo se rompió. Visible en supervisor logs.
+    - Comentario CRÍTICO al inicio de `bot_service.py` con el listado completo de invariantes y referencias al runner + self-check. Cualquier futuro agente que toque el archivo verá la advertencia primero.
+  - Tests: 22/22 PASS. Self-check al startup: 11/11 OK. Test de adjuntos blob (upload + GET sin/con auth): PASS.
+
+
   - **Problema**: el usuario no puede actualizar `WHATSAPP_PHONE_NUMBER_ID` en producción y reportó que aún tras el redeploy el sistema fallaba (screenshot mostró "Reglas activas: 12" en producción vs 13 en preview, confirmando que producción tenía código viejo).
   - **Solución estructural**: nueva colección `system_config` en MongoDB y endpoint `PUT /api/admin/system-config/whatsapp_phone_number_id` que persiste un override editable desde la UI.
   - **Resolver actualizado** (`_resolve_phone_number_id`): nueva prioridad: contextvar → DB override (`SYSTEM_CONFIG_CACHE`) → env var → hardcoded `CURRENT_WHATSAPP_PHONE_NUMBER_ID`. El cache se carga en startup vía `load_system_config_cache()` y se refresca inmediatamente al guardar desde la UI — toma efecto sin redeploy.
