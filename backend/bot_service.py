@@ -37,6 +37,10 @@ warnings if any of these break. The full regression suite lives at
    - server._resolve_phone_number_id never returns a retired ID.
    - DB-backed override `system_config.whatsapp_phone_number_id` wins over
      env var (admin can change without redeploy).
+   - **STAFF_NOTIFICATION_PHONE = "593999440910"** (the HUMAN AGENT's WhatsApp,
+     NOT the bot's own number). Quote/lead/handoff alerts go here. NEVER set
+     this to 593963560326 — that's the bot's own number and the alert would
+     never reach a human.
 
 4. State machine safety:
    - bot_paused=True → bot stays SILENT (human took control).
@@ -975,12 +979,16 @@ def _new_state(phone_number: str, now: datetime) -> dict:
     }
 
 
-STAFF_NOTIFICATION_PHONE = "593963560326"
+## ⚠️ CRITICAL PHONE NUMBERS — do NOT swap these.
+# BOT phone (from which Ana speaks):                       +593 96 356 0326
+#   → that number's Phone Number ID is in server.CURRENT_WHATSAPP_PHONE_NUMBER_ID
+#   → it must NEVER appear in STAFF_NOTIFICATION_PHONE (the bot would send
+#     notifications to itself).
+# HUMAN AGENT phone (receives quote/lead/handoff alerts): +593 99 944 0910
+STAFF_NOTIFICATION_PHONE = "593999440910"
 
-# Human agent that takes over conversations when:
-#   - Customer asks for full catalog / all products
-#   - A new quote is created or an existing one is modified
-HUMAN_AGENT_PHONE = "593999440910"
+# Alias kept for backwards compatibility with older imports across the codebase.
+HUMAN_AGENT_PHONE = STAFF_NOTIFICATION_PHONE
 
 # Patterns that indicate the customer wants the FULL catalog (handed off to agent)
 FULL_CATALOG_PATTERNS = [

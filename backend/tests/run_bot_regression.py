@@ -47,6 +47,14 @@ def test_static_invariants():
     assert server.CURRENT_WHATSAPP_PHONE_NUMBER_ID == "965777766626628"
     record("server.CURRENT_WHATSAPP_PHONE_NUMBER_ID == 965777766626628", True)
 
+    # --- Staff notification routing ---
+    assert bot_service.STAFF_NOTIFICATION_PHONE == "593999440910", \
+        f"STAFF_NOTIFICATION_PHONE must be the HUMAN AGENT (593999440910), got {bot_service.STAFF_NOTIFICATION_PHONE!r}"
+    record("STAFF_NOTIFICATION_PHONE points to human agent (593999440910)", True)
+    assert bot_service.STAFF_NOTIFICATION_PHONE != "593963560326", \
+        "The BOT's own number cannot be STAFF_NOTIFICATION_PHONE"
+    record("STAFF_NOTIFICATION_PHONE is NOT the bot's number", True)
+
     # --- SYSTEM_PROMPT critical phrases ---
     sp = bot_service.SYSTEM_PROMPT
     checks = {

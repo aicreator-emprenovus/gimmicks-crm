@@ -141,7 +141,18 @@ CRM para ventas comerciales con WhatsApp Business que integra bot IA (GPT-5.2), 
   - Testing: 13/13 backend + frontend completo 100% (iteration_20)
 
 ## Resolved Issues (Latest)
-- [x] **P0 GRAVE — Bot enviaba JSON crudo al cliente cuando el LLM emitía JSON malformado** - May 8, 2026:
+- [x] **P0 — STAFF_NOTIFICATION_PHONE apuntaba al BOT en vez del agente humano** - May 13, 2026:
+  - **Síntoma reportado**: las notificaciones de nuevas cotizaciones/leads no llegaban al agente humano.
+  - **Causa raíz**: en una iteración anterior (test_iteration36) un agente cambió `STAFF_NOTIFICATION_PHONE` de `593999440910` (correcto, agente humano) a `593963560326` (incorrecto, el propio número del bot). El bot intentaba auto-notificarse → ningún humano recibía nada.
+  - **Fix**: corregido a `STAFF_NOTIFICATION_PHONE = "593999440910"` (WhatsApp del agente humano +593 99 944 0910). El bot sigue usando su propio número +593 96 356 0326 sin cambios.
+  - **Blindaje permanente**:
+    - Comentario crítico en línea del constante explicando los 2 números y el por qué del routing.
+    - `run_bot_regression.py` ampliada: 27 → **29 invariantes** (2 nuevas para validar el routing).
+    - Self-check startup: 14 → **16 invariantes** (2 nuevas).
+    - Docstring crítico de `bot_service.py` actualizado.
+    - Test `test_iteration36_strengthened_prompts.py` corregido — tenía la aserción equivocada que permitió el error original.
+
+
   - **Síntoma reportado**: en la conversación de Patricia Tito, tras dar su correo, el bot respondió con el dump JSON completo de la respuesta del LLM (incluyendo `extracted_data`, `intent`, `lead_quality`, `conversation_summary`, etc.) en vez del campo `response`.
   - **Causa raíz**: el LLM emitió JSON con coma final inválida (`"...", \n}`), `json.loads()` falló, y el fallback en `call_llm` retornaba `{"response": response_text, ...}` con el TEXTO CRUDO completo. Luego se enviaba al cliente sin sanear.
   - **Fix (3 capas de defensa)** en `bot_service.py`:

@@ -4,9 +4,14 @@ Key changes verified:
 1. PASO 1: 'UNICAMENTE saludo cordial', 'NO pidas codigos, NO menciones cotizaciones pendientes'
 2. PASO 2: 'De manera INMEDIATA busca', example response, 'NUNCA digas agente te enviara catalogo si sistema encontro productos'
 3. catalog_availability when products found: 'PROHIBIDO decir un agente te enviara el catalogo'
-4. STAFF_NOTIFICATION_PHONE updated to 593963560326
+4. STAFF_NOTIFICATION_PHONE = 593999440910 (HUMAN AGENT — not the bot)
 5. user_prompt reinforces all rules including greeting behavior
 6. Greeting detection prevents product search on 'hola'
+
+NOTE (2026-05-08): This iteration originally set STAFF_NOTIFICATION_PHONE to the
+BOT's own number (593963560326) by mistake — that caused the bot to attempt to
+notify itself, so no agent alerts were delivered. Corrected to the real human
+agent's WhatsApp 593999440910.
 """
 import pytest
 import requests
@@ -156,25 +161,25 @@ class TestCatalogAvailabilityProhibido:
 
 
 class TestStaffNotificationPhone:
-    """Test STAFF_NOTIFICATION_PHONE is updated"""
-    
-    def test_staff_phone_updated(self):
-        """STAFF_NOTIFICATION_PHONE should be 593963560326"""
-        # Check for the exact phone number
-        assert 'STAFF_NOTIFICATION_PHONE = "593963560326"' in BOT_SERVICE_CODE or \
-               "STAFF_NOTIFICATION_PHONE = '593963560326'" in BOT_SERVICE_CODE, \
-               "STAFF_NOTIFICATION_PHONE should be 593963560326"
-        print("✓ STAFF_NOTIFICATION_PHONE = '593963560326' (updated from old number)")
-    
-    def test_old_phone_not_present(self):
-        """Old phone number 593999440910 should NOT be in STAFF_NOTIFICATION_PHONE"""
-        # Make sure old number is not the staff notification phone
+    """STAFF_NOTIFICATION_PHONE must point to the HUMAN AGENT, never the bot."""
+
+    def test_staff_phone_is_human_agent(self):
+        """STAFF_NOTIFICATION_PHONE should be 593999440910 (the human agent)."""
+        assert 'STAFF_NOTIFICATION_PHONE = "593999440910"' in BOT_SERVICE_CODE or \
+               "STAFF_NOTIFICATION_PHONE = '593999440910'" in BOT_SERVICE_CODE, \
+               "STAFF_NOTIFICATION_PHONE must be 593999440910 (the human agent's WhatsApp)"
+        print("✓ STAFF_NOTIFICATION_PHONE = '593999440910' (human agent)")
+
+    def test_bot_phone_not_used_as_staff(self):
+        """The bot's own number 593963560326 must NEVER be STAFF_NOTIFICATION_PHONE
+        (would cause the bot to notify itself and the alert never reaches the agent)."""
         match = re.search(r'STAFF_NOTIFICATION_PHONE\s*=\s*["\'](\d+)["\']', BOT_SERVICE_CODE)
         assert match, "STAFF_NOTIFICATION_PHONE should be defined"
         phone = match.group(1)
-        assert phone != "593999440910", "Old phone number should not be used"
-        assert phone == "593963560326", f"Phone should be 593963560326, got {phone}"
-        print("✓ Old phone number 593999440910 is NOT used for STAFF_NOTIFICATION_PHONE")
+        assert phone != "593963560326", \
+            "The BOT's own number (593963560326) cannot be STAFF_NOTIFICATION_PHONE"
+        assert phone == "593999440910", f"Phone should be 593999440910, got {phone}"
+        print("✓ Bot's own number 593963560326 is NOT used for STAFF_NOTIFICATION_PHONE")
 
 
 class TestUserPromptReinforcement:

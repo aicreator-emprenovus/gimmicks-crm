@@ -4713,6 +4713,7 @@ def _verify_bot_invariants():
             _repair_json,
             _extract_response_field,
             _looks_like_json,
+            STAFF_NOTIFICATION_PHONE,
         )
     except Exception as e:
         logger.critical(f"BOT INVARIANTS — could not import bot_service: {e}")
@@ -4747,6 +4748,10 @@ def _verify_bot_invariants():
          '{"a":1}' == _repair_json('{"a":1,}')),
         ("Response-field extractor recovers from broken JSON",
          _extract_response_field('{"response":"Hola Patricia",bad}') == "Hola Patricia"),
+        ("STAFF_NOTIFICATION_PHONE points to HUMAN AGENT (593999440910)",
+         STAFF_NOTIFICATION_PHONE == "593999440910"),
+        ("STAFF_NOTIFICATION_PHONE is NOT the bot's own number",
+         STAFF_NOTIFICATION_PHONE != "593963560326"),
     ]
     for name, ok in invariants:
         if not ok:
