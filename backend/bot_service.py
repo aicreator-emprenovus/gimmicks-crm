@@ -1018,23 +1018,34 @@ def detect_full_catalog_request(message_text: str) -> bool:
     return False
 
 
-async def _send_to_human_agent(notification_text: str, template_params: list, db: AsyncIOMotorDatabase):
+async def _send_to_human_agent(notification_text: str, template_params: list, db: AsyncIOMotorDatabase, alert_kind: str = "generic"):
     """Send a notification to the human agent (HUMAN_AGENT_PHONE).
 
     Tries a normal text message first; if Meta refuses due to the 24h
     re-engagement window, falls back to a Meta-approved template.
+    If BOTH fail (e.g. the template is not yet approved in Meta Business Manager),
+    the alert is persisted to db.pending_agent_alerts so it can be inspected from
+    the CRM. This guarantees no quote/lead/escalation is ever silently lost.
 
     template_params is a list of strings used to fill the template variables
     (in order) when the fallback is needed.
     """
     from server import send_whatsapp_message, send_whatsapp_template
+    delivered_via = None
+    last_error = ""
     try:
         await send_whatsapp_message(HUMAN_AGENT_PHONE, notification_text)
+        delivered_via = "text"
         logger.info(f"Human agent notified (text): {HUMAN_AGENT_PHONE}")
-        return True
     except Exception as send_err:
-        error_str = str(send_err).lower()
-        if "131047" in error_str or "131026" in error_str or "24 hour" in error_str or "re-engagement" in error_str:
+        last_error = str(send_err)
+        error_str = last_error.lower()
+        re_engagement = (
+            "131047" in error_str or "131026" in error_str
+            or "24 hour" in error_str or "re-engagement" in error_str
+            or "outside" in error_str and "window" in error_str
+        )
+        if re_engagement:
             logger.info(f"24h window expired for agent {HUMAN_AGENT_PHONE}, using template fallback")
             try:
                 await send_whatsapp_template(
@@ -1043,13 +1054,32 @@ async def _send_to_human_agent(notification_text: str, template_params: list, db
                     "es",
                     template_params,
                 )
+                delivered_via = "template"
                 logger.info(f"Human agent notified (template): {HUMAN_AGENT_PHONE}")
-                return True
             except Exception as tmpl_err:
-                logger.error(f"Template send to agent failed: {tmpl_err}")
-                return False
-        logger.error(f"Failed to notify human agent: {send_err}")
-        return False
+                last_error = f"text: {send_err} | template: {tmpl_err}"
+                logger.error(f"Both text and template failed for agent: {last_error}")
+        else:
+            logger.error(f"Failed to notify human agent: {send_err}")
+
+    # Always persist for the audit/inbox so the agent never loses an alert,
+    # regardless of delivery success.
+    try:
+        await db.pending_agent_alerts.insert_one({
+            "id": str(uuid.uuid4()),
+            "kind": alert_kind,
+            "agent_phone": HUMAN_AGENT_PHONE,
+            "body": notification_text,
+            "template_params": template_params,
+            "delivered_via": delivered_via or "none",
+            "error": last_error[:500] if (last_error and not delivered_via) else None,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "read": False,
+        })
+    except Exception as persist_err:
+        logger.warning(f"Could not persist pending_agent_alert: {persist_err}")
+
+    return bool(delivered_via)
 
 
 async def notify_agent_full_catalog(db: AsyncIOMotorDatabase, phone_number: str, collected_data: Dict):
@@ -1129,10 +1159,20 @@ async def notify_staff_new_quote(db: AsyncIOMotorDatabase, phone_number: str, co
             f"Revisar en CRM."
         )
 
-        staff_conv = await db.conversations.find_one({"phone_number": STAFF_NOTIFICATION_PHONE}, {"_id": 0, "id": 1})
-        staff_conv_id = staff_conv["id"] if staff_conv else "notification"
-        await send_message_fn(STAFF_NOTIFICATION_PHONE, staff_conv_id, notification)
-        logger.info(f"Staff notification sent for {phone_number} quote: {action}")
+        # Use the shared helper so we get the template fallback + persistent
+        # audit trail. Template params fit "alerta_agente_humano":
+        #   {{1}} = title, {{2}} = client+phone, {{3}} = next-step hint.
+        await _send_to_human_agent(
+            notification,
+            [
+                f"{action} DESDE WHATSAPP",
+                f"{client_name} ({phone_number}) - {empresa}",
+                f"Productos: {codigos} | Revisar en CRM.",
+            ],
+            db,
+            alert_kind="new_quote_update" if is_update else "new_quote",
+        )
+        logger.info(f"Staff notification dispatched for {phone_number} quote: {action}")
     except Exception as e:
         logger.error(f"Failed to send staff notification: {e}")
 
@@ -1161,17 +1201,25 @@ async def send_escalation_summary(db: AsyncIOMotorDatabase, phone_number: str, c
             f"Revisar en CRM."
         )
 
-        staff_conv = await db.conversations.find_one({"phone_number": STAFF_NOTIFICATION_PHONE}, {"_id": 0, "id": 1})
-        staff_conv_id = staff_conv["id"] if staff_conv else "notification"
-        await send_message_fn(STAFF_NOTIFICATION_PHONE, staff_conv_id, summary)
-        logger.info(f"Escalation summary sent for {phone_number}: {reason}")
+        await _send_to_human_agent(
+            summary,
+            [
+                "ESCALAMIENTO A ASESOR HUMANO",
+                f"{client_name} ({phone_number})",
+                f"Motivo: {reason} | Revisar en CRM.",
+            ],
+            db,
+            alert_kind="escalation",
+        )
+        logger.info(f"Escalation summary dispatched for {phone_number}: {reason}")
     except Exception as e:
         logger.error(f"Failed to send escalation summary: {e}")
 
 
 async def notify_staff_catalog_request(db: AsyncIOMotorDatabase, phone_number: str, collected_data: Dict, product_request: str, send_message_fn):
     """Send immediate WhatsApp alert to staff when product search returns no results.
-    Falls back to template message if 24h window has expired."""
+    Uses the shared helper which handles 24h-window fallback to template + persists
+    the alert in pending_agent_alerts so it can be reviewed from the CRM."""
     try:
         client_name = collected_data.get("nombre", "Cliente sin nombre")
 
@@ -1182,27 +1230,16 @@ async def notify_staff_catalog_request(db: AsyncIOMotorDatabase, phone_number: s
             f"Busqueda: {product_request}\n\n"
             f"Enviar link del catalogo al cliente por WhatsApp."
         )
-
-        staff_conv = await db.conversations.find_one({"phone_number": STAFF_NOTIFICATION_PHONE}, {"_id": 0, "id": 1})
-        staff_conv_id = staff_conv["id"] if staff_conv else "notification"
-        
-        try:
-            await send_message_fn(STAFF_NOTIFICATION_PHONE, staff_conv_id, notification)
-        except Exception as send_err:
-            # If regular message fails (24h window), try template
-            error_str = str(send_err).lower()
-            if "131047" in error_str or "131026" in error_str or "24 hour" in error_str or "re-engagement" in error_str:
-                logger.info(f"24h window expired for staff {STAFF_NOTIFICATION_PHONE}, using template")
-                from server import send_whatsapp_template
-                await send_whatsapp_template(
-                    STAFF_NOTIFICATION_PHONE,
-                    "alerta_producto_no_encontrado",
-                    "es",
-                    [client_name, phone_number, product_request]
-                )
-            else:
-                raise
-        
+        await _send_to_human_agent(
+            notification,
+            [
+                "PRODUCTO NO ENCONTRADO",
+                f"{client_name} ({phone_number})",
+                f"Busqueda: {product_request} | Enviar link manual.",
+            ],
+            db,
+            alert_kind="product_not_found",
+        )
         logger.info(f"Staff notified about missing product for {phone_number}")
     except Exception as e:
         logger.error(f"Failed to send catalog request notification: {e}")
@@ -1228,11 +1265,17 @@ async def notify_staff_bot_confused(db: AsyncIOMotorDatabase, phone_number: str,
             f"Ultimo mensaje: {message_text[:200]}\n\n"
             f"El bot no pudo procesar la solicitud. Revisar conversacion en CRM."
         )
-
-        staff_conv = await db.conversations.find_one({"phone_number": STAFF_NOTIFICATION_PHONE}, {"_id": 0, "id": 1})
-        staff_conv_id = staff_conv["id"] if staff_conv else "notification"
-        await send_message_fn(STAFF_NOTIFICATION_PHONE, staff_conv_id, notification)
-        logger.info(f"Bot-confused notification sent for {phone_number}")
+        await _send_to_human_agent(
+            notification,
+            [
+                "BOT NO PUEDE CONTINUAR",
+                f"{client_name} ({phone_number})",
+                f"Ultimo mensaje: {message_text[:120]}",
+            ],
+            db,
+            alert_kind="bot_confused",
+        )
+        logger.info(f"Bot-confused notification dispatched for {phone_number}")
     except Exception as e:
         logger.error(f"Failed to send bot-confused notification: {e}")
 

@@ -1682,6 +1682,46 @@ async def bot_control(
     }
 
 
+# ============== AGENT ALERTS INBOX ==============
+@api_router.get("/agent-alerts")
+async def list_agent_alerts(
+    only_unread: bool = False,
+    limit: int = 50,
+    current_user: dict = Depends(get_current_user)
+):
+    """Return the pending_agent_alerts queue. The bot persists every staff
+    notification here so the agent never loses an alert, even if Meta refused
+    to deliver it (24h window, template not approved, etc.).
+    """
+    query = {}
+    if only_unread:
+        query["read"] = False
+    docs = await db.pending_agent_alerts.find(query, {"_id": 0}).sort("created_at", -1).limit(limit).to_list(limit)
+    return docs
+
+
+@api_router.post("/agent-alerts/{alert_id}/read")
+async def mark_agent_alert_read(
+    alert_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    result = await db.pending_agent_alerts.update_one(
+        {"id": alert_id}, {"$set": {"read": True, "read_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Alerta no encontrada")
+    return {"ok": True}
+
+
+@api_router.post("/agent-alerts/read-all")
+async def mark_all_agent_alerts_read(current_user: dict = Depends(get_current_user)):
+    now_iso = datetime.now(timezone.utc).isoformat()
+    result = await db.pending_agent_alerts.update_many(
+        {"read": False}, {"$set": {"read": True, "read_at": now_iso}}
+    )
+    return {"marked": result.modified_count}
+
+
 # ============== SYSTEM CONFIG (admin runtime overrides) ==============
 class SystemConfigUpdate(BaseModel):
     value: str

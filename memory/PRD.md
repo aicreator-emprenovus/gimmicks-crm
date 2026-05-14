@@ -141,7 +141,25 @@ CRM para ventas comerciales con WhatsApp Business que integra bot IA (GPT-5.2), 
   - Testing: 13/13 backend + frontend completo 100% (iteration_20)
 
 ## Resolved Issues (Latest)
-- [x] **Imágenes/videos/audios entrantes del cliente ahora se muestran en el chat (antes: JSON crudo)** - May 14, 2026:
+- [x] **P0 — Agente humano no recibía alertas (ventana 24h de WhatsApp + plantilla inexistente)** - May 14, 2026:
+  - **Causa raíz**: el agente +593 99 944 0910 nunca escribe primero al business → la ventana de 24h SIEMPRE está cerrada → WhatsApp rechaza cualquier mensaje libre con error `131047`. Las funciones `notify_staff_new_quote`, `send_escalation_summary`, `notify_staff_bot_confused` enviaban texto libre directo sin fallback a template.
+  - **Fix**: las 4 funciones de notificación (`notify_staff_new_quote`, `send_escalation_summary`, `notify_staff_catalog_request`, `notify_staff_bot_confused`) ahora usan el helper compartido `_send_to_human_agent()` que:
+    1. Intenta texto libre primero
+    2. Si Meta rechaza con error 131047/131026/24-hour → fallback automático a template `alerta_agente_humano`
+    3. **Siempre** persiste la alerta en `db.pending_agent_alerts` con `delivered_via` = `"text" | "template" | "none"` → ninguna alerta se pierde aunque ambos envíos fallen.
+  - **Endpoints nuevos** para el CRM:
+    - `GET /api/agent-alerts?only_unread=true&limit=50` lista alertas
+    - `POST /api/agent-alerts/{id}/read` marca leída
+    - `POST /api/agent-alerts/read-all` marca todas leídas
+  - **Plantilla requerida en Meta Business Manager** (formato propuesto):
+    - Nombre: `alerta_agente_humano`
+    - Categoría: `UTILITY`
+    - Idioma: `es`
+    - Body: `🔔 {{1}}\n\n{{2}}\n\n{{3}}`
+    - Variables: 3 (título, datos del cliente, próximo paso)
+  - **Tests**: `/app/backend/tests/test_agent_alerts_fallback.py` con 3 escenarios PASS (text OK, template fallback, full failure → still persisted).
+
+
   - **Síntoma**: cuando el cliente enviaba una imagen por WhatsApp, en el chat aparecía el dump completo del webhook (`{"raw":{"from":"...","type":"image","image":{...}}}`) en vez de la imagen.
   - **Causa**: el webhook handler guardaba `content = {"raw": message}` para cualquier tipo de mensaje que no fuera "text", sin descargar la media.
   - **Fix**: nuevo helper `persist_inbound_media()` en `server.py` que cuando el webhook recibe `image / video / audio / document / sticker / voice`:
