@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import axios from "axios";
-import { Loader2, Search, Package, Copy, Check, FilterX } from "lucide-react";
+import { Loader2, Search, Package, Copy, Check, FilterX, Info } from "lucide-react";
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 const LOGO_URL = "https://customer-assets.emergentagent.com/job_quote-crafter-1/artifacts/ee7e6zy2_logo-gimmicks.png";
@@ -149,6 +149,19 @@ export default function PublicCatalog() {
               </button>
             )}
           </form>
+        </div>
+
+        {/* Disclaimer: pricing reference */}
+        <div
+          className="flex items-start gap-2 bg-amber-50 border border-amber-200 text-amber-900 rounded-lg px-3 py-2 mb-4 text-xs sm:text-sm"
+          data-testid="catalog-price-disclaimer"
+        >
+          <Info className="w-4 h-4 mt-0.5 flex-shrink-0 text-amber-600" />
+          <p>
+            <span className="font-semibold">Importante:</span> los precios mostrados
+            corresponden a una <span className="font-semibold">cantidad referencial de 100 unidades</span>.
+            Para volúmenes mayores o menores, consulta el precio final con tu asesor.
+          </p>
         </div>
 
         {hasFilters && (
