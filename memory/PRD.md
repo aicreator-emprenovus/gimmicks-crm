@@ -31,6 +31,16 @@ CRM para ventas comerciales con WhatsApp Business que integra bot IA (GPT-5.2), 
 - Credenciales: aicreator@emprenovus.com / Jlsb*1082
 
 ## Completed Tasks
+- [x] **6 features de fortalecimiento del CRM** — May 14, 2026:
+  - F1: Promoción Interesado→Cliente con detección de duplicados (HTTP 409 con mensaje claro indicando si choca por correo o teléfono).
+  - F2: Tarjetas de leads ahora muestran `codigos_producto` (códigos exactos del catálogo).
+  - F3: Tarjetas de leads ahora muestran badge `Cot. #N` cuando el bot ya generó cotización.
+  - F4: Numeración consecutiva de cotizaciones **blindada** mediante contador atómico en `counters._id="quote_number"`, sembrado con MAX(quote_number) actual (101725 → continúa 101726+). Bug grave detectado: el método anterior (`count + 4698`) generaba colisiones masivas con cotizaciones existentes.
+  - F5: Mensajes del agente humano persisten `attended_by_name`/`attended_by_email`. Inbox muestra "Atendido por …" debajo de cada burbuja humana; los mensajes del bot no llevan esta etiqueta.
+  - F6: Acceso a "Configuración" oculto del menú para admin y asesor — visible solo para desarrollador. Route guard ya bloqueaba la URL directa.
+  - Testing: 12/12 nuevos tests pytest + 29/29 invariantes del bot pasan. Sin regresiones.
+
+
 - [x] Core system merge (Project A + B)
 - [x] WhatsApp Bot multi-step flow
 - [x] Interesados/Clientes separation
