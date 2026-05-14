@@ -767,6 +767,117 @@ def _whatsapp_media_kind(mime_type: str) -> str:
     return "document"
 
 
+async def download_whatsapp_media(media_id: str) -> tuple:
+    """Download a media file received via webhook.
+    Returns (bytes, mime_type, filename). Raises on any failure.
+
+    The webhook payload includes a temporary `url` (`lookaside.fbsbx.com/...`)
+    that expires quickly, so we re-resolve via the Graph API which is more
+    robust. Both steps require the WHATSAPP_ACCESS_TOKEN.
+    """
+    import aiohttp
+
+    access_token = os.environ.get("WHATSAPP_ACCESS_TOKEN")
+    if not access_token:
+        raise Exception("WHATSAPP_ACCESS_TOKEN not configured")
+    if not media_id:
+        raise Exception("No media id provided")
+
+    headers = {"Authorization": f"Bearer {access_token}"}
+
+    # Step 1: resolve media URL + metadata
+    meta_url = f"https://graph.facebook.com/v18.0/{media_id}"
+    timeout = aiohttp.ClientTimeout(total=60)
+    async with aiohttp.ClientSession(timeout=timeout) as session:
+        async with session.get(meta_url, headers=headers) as resp:
+            meta = await resp.json()
+            if resp.status != 200 or "url" not in meta:
+                raise Exception(f"Could not resolve media metadata: {meta}")
+        # Step 2: fetch the actual binary
+        async with session.get(meta["url"], headers=headers) as bin_resp:
+            if bin_resp.status != 200:
+                raise Exception(f"Could not download media bytes ({bin_resp.status})")
+            data = await bin_resp.read()
+            mime_type = (
+                bin_resp.headers.get("Content-Type")
+                or meta.get("mime_type")
+                or "application/octet-stream"
+            ).split(";")[0].strip()
+            filename = meta.get("sha256", media_id) + _ext_from_mime(mime_type)
+    return data, mime_type, filename
+
+
+def _ext_from_mime(mime_type: str) -> str:
+    mt = (mime_type or "").lower()
+    table = {
+        "image/jpeg": ".jpg", "image/jpg": ".jpg", "image/png": ".png",
+        "image/webp": ".webp", "image/gif": ".gif",
+        "video/mp4": ".mp4", "video/3gpp": ".3gp", "video/quicktime": ".mov",
+        "audio/ogg": ".ogg", "audio/mp4": ".m4a", "audio/mpeg": ".mp3",
+        "audio/aac": ".aac", "audio/amr": ".amr",
+        "application/pdf": ".pdf",
+        "application/msword": ".doc",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx",
+        "application/vnd.ms-excel": ".xls",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": ".xlsx",
+    }
+    return table.get(mt, "")
+
+
+async def persist_inbound_media(message: dict) -> Optional[dict]:
+    """If the webhook message is media (image/video/audio/document/sticker),
+    download it from WhatsApp, store it in Object Storage and return a content
+    dict in the SAME shape as outgoing attachments so the same AttachmentRenderer
+    on the frontend can display them.
+    Returns None when the message type is not media or when the download fails.
+    """
+    mtype = message.get("type", "")
+    if mtype not in ("image", "video", "audio", "document", "sticker", "voice"):
+        return None
+
+    # WhatsApp puts the metadata under the same key as the message type
+    media = message.get(mtype) or message.get("voice") or {}
+    media_id = media.get("id")
+    if not media_id:
+        return None
+
+    caption = media.get("caption") or ""
+    declared_mime = media.get("mime_type") or ""
+    filename_hint = media.get("filename") or ""
+
+    try:
+        data, mime_type, default_filename = await download_whatsapp_media(media_id)
+    except Exception as e:
+        logger.error(f"Could not download inbound media {media_id}: {e}")
+        return None
+
+    mime_type = mime_type or declared_mime or "application/octet-stream"
+    filename = filename_hint or default_filename or f"{media_id}{_ext_from_mime(mime_type)}"
+    media_kind = "image" if mtype == "sticker" else _whatsapp_media_kind(mime_type)
+    if mtype == "voice":
+        media_kind = "audio"
+
+    storage_path = ""
+    try:
+        from services.object_storage import build_path, put_object
+        attachment_id = str(uuid.uuid4())
+        ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else "bin"
+        storage_path = f"gimmicks-crm/inbox-attachments/{attachment_id}.{ext}"
+        await asyncio.to_thread(put_object, storage_path, data, mime_type)
+    except Exception as e:
+        logger.warning(f"Object storage upload failed for inbound media: {e}")
+        return None
+
+    return {
+        "text": caption,
+        "media_kind": media_kind,
+        "mime_type": mime_type,
+        "filename": filename,
+        "size": len(data),
+        "storage_path": storage_path,
+    }
+
+
 # ============== ACTIVITY LOG ROUTES ==============
 
 @api_router.get("/activity-log")
@@ -2608,12 +2719,48 @@ async def process_incoming_message(message: dict, metadata: dict):
                 return
         
         now = datetime.now(timezone.utc)
-        
+
         # Extract content based on message type
         if message_type == "text":
             content = {"text": message.get("text", {}).get("body", "")}
         else:
-            content = {"raw": message}
+            # Media (image / video / audio / document / sticker / voice):
+            # download from WhatsApp + store in Object Storage so the chat panel
+            # can render it via the existing AttachmentRenderer. Falls back to
+            # storing the raw payload + caption if the download fails — that way
+            # the conversation history is never lost even if a transient WA API
+            # error happens.
+            media_content = await persist_inbound_media(message)
+            if media_content:
+                content = media_content
+            else:
+                caption = ""
+                media = message.get(message_type) or message.get("voice") or {}
+                if isinstance(media, dict):
+                    caption = media.get("caption") or ""
+                content = {
+                    # Empty text when no caption → bot does NOT trigger on placeholder
+                    "text": caption,
+                    "media_kind": _whatsapp_media_kind(media.get("mime_type", "")) if isinstance(media, dict) else None,
+                    "raw": message,
+                    "_download_failed": True,
+                }
+
+        # Compose a human-friendly preview for the sidebar (never the raw JSON)
+        if content.get("media_kind"):
+            preview_label = {
+                "image": "🖼️ Imagen",
+                "video": "🎥 Video",
+                "audio": "🎵 Audio",
+                "document": "📄 Documento",
+            }.get(content["media_kind"], "📎 Adjunto")
+            caption = content.get("text") or ""
+            last_message_preview = (
+                f"{preview_label} · {caption}" if caption and not caption.startswith("[Cliente")
+                else preview_label
+            )
+        else:
+            last_message_preview = (content.get("text") or "")[:100]
 
         # Capture the phone_number_id that received this message so the bot
         # can reply from the SAME number (in case multiple numbers are linked).
@@ -2628,7 +2775,7 @@ async def process_incoming_message(message: dict, metadata: dict):
                 "id": conv_id,
                 "phone_number": phone_number,
                 "contact_name": None,
-                "last_message": content.get("text", ""),
+                "last_message": last_message_preview,
                 "last_message_time": now.isoformat(),
                 "status": "active",
                 "unread_count": 1,
@@ -2661,7 +2808,7 @@ async def process_incoming_message(message: dict, metadata: dict):
                 {"id": conversation["id"]},
                 {
                     "$set": {
-                        "last_message": content.get("text", "")[:100],
+                        "last_message": last_message_preview[:100],
                         "last_message_time": now.isoformat()
                     },
                     "$inc": {"unread_count": 1}

@@ -141,7 +141,21 @@ CRM para ventas comerciales con WhatsApp Business que integra bot IA (GPT-5.2), 
   - Testing: 13/13 backend + frontend completo 100% (iteration_20)
 
 ## Resolved Issues (Latest)
-- [x] **P0 — STAFF_NOTIFICATION_PHONE apuntaba al BOT en vez del agente humano** - May 13, 2026:
+- [x] **Imágenes/videos/audios entrantes del cliente ahora se muestran en el chat (antes: JSON crudo)** - May 14, 2026:
+  - **Síntoma**: cuando el cliente enviaba una imagen por WhatsApp, en el chat aparecía el dump completo del webhook (`{"raw":{"from":"...","type":"image","image":{...}}}`) en vez de la imagen.
+  - **Causa**: el webhook handler guardaba `content = {"raw": message}` para cualquier tipo de mensaje que no fuera "text", sin descargar la media.
+  - **Fix**: nuevo helper `persist_inbound_media()` en `server.py` que cuando el webhook recibe `image / video / audio / document / sticker / voice`:
+    1. Resuelve el `url` real vía Graph API (`GET /v18.0/{media_id}`)
+    2. Descarga los bytes con el `WHATSAPP_ACCESS_TOKEN`
+    3. Los persiste en Object Storage en `gimmicks-crm/inbox-attachments/{uuid}.{ext}`
+    4. Guarda el mensaje con el MISMO formato que los attachments salientes (`media_kind`, `storage_path`, `mime_type`, `filename`, `size`) → el `<AttachmentRenderer>` existente los pinta sin cambios en el frontend.
+  - El caption (si existe) se preserva en `content.text` para que el bot lo procese como texto (un cliente puede subir foto con "necesito cotizar 8 de estos" y el bot busca producto).
+  - **Sidebar preview** ahora muestra `🖼️ Imagen · caption` / `🎥 Video` / `📄 Documento` en lugar del JSON.
+  - **Fallback robusto**: si la descarga falla (token expirado, Meta caído, etc.), guarda el caption + `_download_failed: true` y NO bloquea el flujo. El mensaje queda en BD para revisión.
+  - **Imagen sin caption** → bot NO responde (antes: con placeholder podría dispararse erróneamente).
+  - Test `/app/backend/tests/test_inbound_media_flow.py` con 3 escenarios PASS.
+
+
   - **Síntoma reportado**: las notificaciones de nuevas cotizaciones/leads no llegaban al agente humano.
   - **Causa raíz**: en una iteración anterior (test_iteration36) un agente cambió `STAFF_NOTIFICATION_PHONE` de `593999440910` (correcto, agente humano) a `593963560326` (incorrecto, el propio número del bot). El bot intentaba auto-notificarse → ningún humano recibía nada.
   - **Fix**: corregido a `STAFF_NOTIFICATION_PHONE = "593999440910"` (WhatsApp del agente humano +593 99 944 0910). El bot sigue usando su propio número +593 96 356 0326 sin cambios.
