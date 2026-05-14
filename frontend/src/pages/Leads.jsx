@@ -39,6 +39,7 @@ import {
   DollarSign,
   Eye,
   MessageSquare,
+  FileText,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -380,12 +381,29 @@ export default function Leads() {
                             )}
 
                             {/* Key data */}
-                            {(lead.empresa || lead.ciudad || lead.producto_interes) && (
+                            {(lead.empresa || lead.ciudad || lead.producto_interes || lead.codigos_producto) && (
                               <div className="text-xs text-zinc-500 space-y-0.5">
                                 {lead.empresa && <p className="truncate">{lead.empresa}</p>}
                                 {lead.ciudad && <p className="truncate">{lead.ciudad}</p>}
                                 {lead.producto_interes && <p className="truncate">{lead.producto_interes}</p>}
+                                {lead.codigos_producto && (
+                                  <p className="truncate flex items-center gap-1 text-emerald-700 font-medium" data-testid={`lead-codes-${lead.id}`}>
+                                    <Package className="w-3 h-3" />
+                                    {lead.codigos_producto}
+                                  </p>
+                                )}
                               </div>
+                            )}
+
+                            {/* Quote number badge */}
+                            {lead.quote_number && (
+                              <span
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-purple-50 text-purple-700 border border-purple-200"
+                                data-testid={`lead-quote-${lead.id}`}
+                              >
+                                <FileText className="w-3 h-3" />
+                                Cot. #{lead.quote_number}
+                              </span>
                             )}
 
                             {/* Date + Actions row */}
@@ -469,6 +487,14 @@ export default function Leads() {
                 <div className="space-y-1">
                   <span className="text-zinc-400 text-xs flex items-center gap-1"><Package className="w-3 h-3" />Producto</span>
                   <p className="text-zinc-800 font-medium">{detailLead.producto_interes || "-"}</p>
+                </div>
+                <div className="space-y-1">
+                  <span className="text-zinc-400 text-xs flex items-center gap-1"><Package className="w-3 h-3" />Códigos</span>
+                  <p className="text-zinc-800 font-medium" data-testid="detail-lead-codes">{detailLead.codigos_producto || "-"}</p>
+                </div>
+                <div className="space-y-1">
+                  <span className="text-zinc-400 text-xs flex items-center gap-1"><FileText className="w-3 h-3" />Cotización</span>
+                  <p className="text-zinc-800 font-medium" data-testid="detail-lead-quote">{detailLead.quote_number ? `#${detailLead.quote_number}` : "-"}</p>
                 </div>
                 <div className="space-y-1">
                   <span className="text-zinc-400 text-xs flex items-center gap-1">#Cantidad</span>

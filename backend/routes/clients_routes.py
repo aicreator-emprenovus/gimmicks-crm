@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException, Body, Header, Request
 from typing import List, Any, Dict
 from models_b import Client, ClientActivity
 from datetime import datetime, timezone
+import re
 import uuid
 
 router = APIRouter()
@@ -115,6 +116,36 @@ async def promote_to_client(id: str, request: Request, authorization: str = Head
         raise HTTPException(status_code=404, detail="Interesado no encontrado")
     if existing.get("source") != "whatsapp":
         raise HTTPException(status_code=400, detail="Este registro ya es un cliente")
+
+    # Duplicate-detection: refuse promotion if another non-WhatsApp record already
+    # exists with the same email or phone. This prevents accidental duplicates in
+    # the Clientes section when an interesado matches an existing cliente.
+    duplicate_query_or = []
+    email = (existing.get("email") or "").strip().lower()
+    phone = (existing.get("phone") or "").strip()
+    if email:
+        duplicate_query_or.append({"email": {"$regex": f"^{re.escape(email)}$", "$options": "i"}})
+    if phone:
+        duplicate_query_or.append({"phone": phone})
+
+    if duplicate_query_or:
+        duplicate = await db.clients.find_one({
+            "id": {"$ne": id},
+            "source": {"$ne": "whatsapp"},
+            "is_deleted": False,
+            "$or": duplicate_query_or,
+        }, {"_id": 0, "id": 1, "name": 1, "email": 1, "phone": 1})
+        if duplicate:
+            matched_field = "correo" if email and duplicate.get("email", "").lower() == email else "teléfono"
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    f"No se puede promover: ya existe un cliente registrado con el mismo {matched_field} "
+                    f"({duplicate.get('name') or duplicate.get('email') or duplicate.get('phone')}). "
+                    f"Revisa la sección Clientes antes de continuar."
+                ),
+            )
+
     await db.clients.update_one(
         {"id": id},
         {"$set": {"source": "manual"}}

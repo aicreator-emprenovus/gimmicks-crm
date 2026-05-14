@@ -36,7 +36,7 @@ const navItems = [
   { to: "/quotes/new", icon: FilePlus, label: "Nueva Cotización", roles: ["admin", "asesor"], accent: true },
   { to: "/purchase-orders/new", icon: PackagePlus, label: "Nueva Orden", roles: ["admin", "asesor"], accent: true },
   { to: "/activity-log", icon: History, label: "Historial", roles: ["admin"] },
-  { to: "/settings", icon: Settings, label: "Configuración", roles: ["admin", "desarrollador"] },
+  { to: "/settings", icon: Settings, label: "Configuración", roles: ["desarrollador"] },
 ];
 
 export default function Layout() {

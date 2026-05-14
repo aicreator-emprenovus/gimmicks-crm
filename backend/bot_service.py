@@ -909,10 +909,13 @@ async def upsert_quote(db: AsyncIOMotorDatabase, phone_number: str, collected_da
             {"id": existing["id"]},
             {"$set": {**quote_data, "updated_at": now}}
         )
-        return "updated"
+        return {"action": "updated", "quote_number": existing.get("quote_number", "")}
     else:
-        count = await db.quotes_v2.count_documents({})
-        quote_number = str(4698 + count)
+        # Use the SAME atomic counter as routes/quotes_routes.py so the bot's
+        # quote numbers continue the consecutive sequence and NEVER collide
+        # with manually-created quotes.
+        from routes.quotes_routes import get_next_quote_number
+        quote_number = await get_next_quote_number()
         quote_data["id"] = str(uuid.uuid4())
         quote_data["quote_number"] = quote_number
         quote_data["created_at"] = now
@@ -937,7 +940,7 @@ async def upsert_quote(db: AsyncIOMotorDatabase, phone_number: str, collected_da
                 "details": f"Cotizacion creada automaticamente para {client_name} desde WhatsApp",
                 "timestamp": now
             })
-        return "created"
+        return {"action": "created", "quote_number": quote_number}
 
 
 # ============== PIPELINE STAGES ==============
@@ -2046,8 +2049,15 @@ MENSAJE ACTUAL DEL CLIENTE: {message_text}"""
                 {"phone_number": phone_number, "status": "pending", "is_deleted": False},
                 {"_id": 0, "items": 1, "client_name": 1, "quote_number": 1}
             )
-            await upsert_quote(db, phone_number, collected_data, conversation_id)
+            upsert_result = await upsert_quote(db, phone_number, collected_data, conversation_id)
+            # Backwards-compat: upsert_quote used to return a plain string.
+            if isinstance(upsert_result, dict):
+                upserted_quote_number = upsert_result.get("quote_number", "")
+            else:
+                upserted_quote_number = (existing_quote or {}).get("quote_number", "")
             state_quote = True
+            # Stash for downstream lead update
+            collected_data["__quote_number__"] = upserted_quote_number
 
             await notify_staff_new_quote(db, phone_number, collected_data, existing_quote is not None, send_message_fn)
             # Also notify the human agent so they can take over
@@ -2055,7 +2065,7 @@ MENSAJE ACTUAL DEL CLIENTE: {message_text}"""
                 await notify_agent_quote_event(
                     db, phone_number, collected_data,
                     is_update=existing_quote is not None,
-                    quote_number=(existing_quote or {}).get("quote_number", ""),
+                    quote_number=upserted_quote_number,
                 )
             except Exception as e:
                 logger.error(f"notify_agent_quote_event failed: {e}")
@@ -2169,5 +2179,12 @@ async def update_lead_from_ai(
     for src, dst in field_map.items():
         if collected_data.get(src):
             update_fields[dst] = collected_data[src]
+
+    # When a quote was just generated, persist its number on the lead so the
+    # Leads kanban card can surface it ("Cot. #4712"). The bot stashes this
+    # value into collected_data["__quote_number__"] before calling us.
+    quote_number_from_bot = (collected_data or {}).get("__quote_number__", "")
+    if quote_number_from_bot:
+        update_fields["quote_number"] = str(quote_number_from_bot)
 
     await db.leads.update_one({"phone_number": phone_number}, {"$set": update_fields})

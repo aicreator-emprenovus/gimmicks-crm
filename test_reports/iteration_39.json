@@ -1,0 +1,45 @@
+{
+  "summary": "Backend-only regression for 6 new features in iteration 39. All 12 new pytest cases PASS and the existing 29-invariant bot regression suite (run_bot_regression.py) still passes. No backend issues found.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration39_new_features.py",
+    "/app/test_reports/pytest/iteration39_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "server.py is 5252 lines — should be split into smaller modules (models, auth, conversations, leads, messages, users). File size guideline (>700 lines) is heavily exceeded.",
+    "Duplicate-detection matched_field logic in clients_routes.py line 139 uses duplicate.get('email','').lower() == email; if a duplicate matches only by PHONE (e.g. interesado has no email or different email), the label could incorrectly read 'teléfono' which is OK — but if email is empty string AND phone matches, the ternary 'correo if email and ...' correctly falls back to 'teléfono'. Logic is correct, just brittle; consider adding an explicit branch.",
+    "send_message inserts message_doc into db.messages BEFORE WhatsApp send result, then raises 502 on failure (line 1916). The agent sees a toast error but a 'failed' message is silently persisted with attended_by_* — by design but verify UI surfaces the 'failed' status badge.",
+    "get_next_quote_number seeds counter from max(quote_number) but doc_type filter is {'$ne': 'PO'} — older docs that lack doc_type field will be included (good). Already correctly handled.",
+    "Quote model in models_b.py has all fields defaulted, allowing creation with empty client_id / blank items. Consider Pydantic validators to reject blank client_id in production paths."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration39_new_features.py (new)"
+  ],
+  "success_rate": {
+    "backend": "100% (12/12 new + 29/29 bot regression)",
+    "frontend": "not tested (skipped per request)"
+  },
+  "test_credentials": "admin@gimmicks.com / admin123456 (from /app/memory/test_credentials.md)",
+  "seed_data_creation": "Test fixtures seed and auto-cleanup TEST_ prefixed clients, leads, quotes, conversations and messages via per-class teardown. counters collection is intentionally NOT cleaned up (production sequence preserved).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Endpoints are mounted under /api/quotes-v2/ (NOT /api/quotes/ as the review request stated). The send_message endpoint raises 502 when WhatsApp send fails (no real number), but the message doc IS persisted before — agent message test handles both 200 and 502 status codes. counters._id='quote_number' was already seeded by prior test runs; subsequent runs increment from there. Frontend testing was explicitly skipped per main agent's instruction.",
+  "feature_coverage": {
+    "F1_promote_duplicate_detection": "5 cases — 409 (email), 409 (phone), 200 happy path with source flip to manual, 404 missing, 400 wrong source. ALL PASS.",
+    "F2_codigos_producto_in_leads": "verified in both GET /api/leads (list) and GET /api/leads/{id} (detail). PASS.",
+    "F3_quote_number_in_leads": "verified in both list and detail endpoints. PASS.",
+    "F4_atomic_quote_counter": "two consecutive POSTs return N and N+1; counters._id='quote_number' doc exists with seq>=4698; PO counter (po_number) independently advances by 1 unaffected. PASS.",
+    "F5_attended_by_attribution": "agent POST persists attended_by_email=admin@gimmicks.com and attended_by_name; bot-seeded msg has neither field; GET /messages returns both fields. PASS.",
+    "F6_backend_acl_unchanged": "Smoke check — admin can still GET /api/users. No backend ACL change for /settings (frontend-only)."
+  },
+  "rca_of_the_issue": "N/A — no issues found."
+}

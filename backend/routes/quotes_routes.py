@@ -110,13 +110,48 @@ async def get_next_po_number():
     )
     return str(result["seq"])
 
+
+async def get_next_quote_number():
+    """Get next QUOTE number from an atomic counter that NEVER reuses numbers,
+    even when quotes are soft- or hard-deleted.
+
+    On first run, the counter is seeded with the current maximum quote_number
+    across all (non-PO) quotes in db.quotes_v2 (or 4698 if none exist) so the
+    sequence continues exactly where the old `count_documents + 4698` logic
+    left off, preserving full continuity with historic numbers.
+    """
+    existing = await db.counters.find_one({"_id": "quote_number"})
+    if not existing:
+        # Seed with max existing quote_number (string in DB → coerce to int).
+        max_num = 4698
+        async for q in db.quotes_v2.find(
+            {"doc_type": {"$ne": "PO"}},
+            {"_id": 0, "quote_number": 1},
+        ):
+            qn = q.get("quote_number")
+            if not qn:
+                continue
+            try:
+                n = int(re.sub(r"\D+", "", str(qn)) or "0")
+            except Exception:
+                continue
+            if n > max_num:
+                max_num = n
+        await db.counters.insert_one({"_id": "quote_number", "seq": max_num})
+
+    result = await db.counters.find_one_and_update(
+        {"_id": "quote_number"},
+        {"$inc": {"seq": 1}},
+        return_document=True
+    )
+    return str(result["seq"])
+
 @router.post("/", response_model=Quote)
 async def create_quote(request: Request, quote: Quote, authorization: str = Header(None)):
     if quote.doc_type == "PO":
         quote.quote_number = await get_next_po_number()
     else:
-        count = await db.quotes_v2.count_documents({"doc_type": {"$ne": "PO"}})
-        quote.quote_number = str(4698 + count)
+        quote.quote_number = await get_next_quote_number()
     if not quote.doc_type:
         quote.doc_type = "QUOTE"
     user = await get_user_from_token(authorization, request)

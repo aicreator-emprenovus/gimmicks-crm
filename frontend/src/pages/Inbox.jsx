@@ -992,6 +992,15 @@ export default function Inbox() {
                       >
                         {formatTime(msg.timestamp)}
                       </p>
+                      {msg.sender === "business" && msg.attended_by_name && (
+                        <p
+                          className="text-[10px] mt-0.5 italic text-white/80 flex items-center gap-1"
+                          data-testid={`msg-attended-by-${msg.id}`}
+                          title={msg.attended_by_email || ""}
+                        >
+                          Atendido por {msg.attended_by_name}
+                        </p>
+                      )}
                     </div>
                     {msg.needs_review && (
                       <div

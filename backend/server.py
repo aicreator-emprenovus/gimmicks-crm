@@ -217,6 +217,8 @@ class LeadResponse(BaseModel):
     ciudad: Optional[str] = None
     correo: Optional[str] = None
     producto_interes: Optional[str] = None
+    codigos_producto: Optional[str] = None
+    quote_number: Optional[str] = None
     cantidad_estimada: Optional[str] = None
     presupuesto: Optional[str] = None
     created_at: datetime
@@ -239,6 +241,8 @@ class MessageResponse(BaseModel):
     status: str
     timestamp: datetime
     needs_review: Optional[bool] = False
+    attended_by_name: Optional[str] = None
+    attended_by_email: Optional[str] = None
 
 # Conversation Models
 class ConversationResponse(BaseModel):
@@ -1267,6 +1271,8 @@ def build_lead_response(lead: dict) -> LeadResponse:
         ciudad=lead.get("ciudad"),
         correo=lead.get("correo"),
         producto_interes=lead.get("producto_interes"),
+        codigos_producto=lead.get("codigos_producto"),
+        quote_number=lead.get("quote_number"),
         cantidad_estimada=lead.get("cantidad_estimada"),
         presupuesto=lead.get("presupuesto"),
         created_at=created_at,
@@ -1823,7 +1829,9 @@ async def get_conversation_messages(
             content=msg.get("content", {}),
             status=msg.get("status", "sent"),
             timestamp=timestamp,
-            needs_review=bool(msg.get("needs_review", False))
+            needs_review=bool(msg.get("needs_review", False)),
+            attended_by_name=msg.get("attended_by_name"),
+            attended_by_email=msg.get("attended_by_email"),
         ))
     
     return result
@@ -1868,7 +1876,11 @@ async def send_message(
         "content": {"text": message_data.content},
         "status": send_status,
         "whatsapp_message_id": whatsapp_message_id,
-        "timestamp": now.isoformat()
+        "timestamp": now.isoformat(),
+        # "Atendido por …" attribution. Bot-sent messages do NOT set these
+        # fields, so the inbox can distinguish bot vs human bubbles.
+        "attended_by_name": current_user.get("name") or current_user.get("email", ""),
+        "attended_by_email": current_user.get("email", ""),
     }
     if send_error:
         message_doc["error"] = send_error[:500]
@@ -1914,7 +1926,9 @@ async def send_message(
         message_type=message_data.message_type,
         content={"text": message_data.content},
         status=send_status,
-        timestamp=now
+        timestamp=now,
+        attended_by_name=current_user.get("name") or current_user.get("email", ""),
+        attended_by_email=current_user.get("email", ""),
     )
 
 
@@ -2002,6 +2016,8 @@ async def send_attachment(
         "status": send_status,
         "whatsapp_message_id": whatsapp_message_id,
         "timestamp": now.isoformat(),
+        "attended_by_name": current_user.get("name") or current_user.get("email", ""),
+        "attended_by_email": current_user.get("email", ""),
     }
     if send_error:
         message_doc["error"] = send_error[:500]
@@ -2045,6 +2061,8 @@ async def send_attachment(
         content=content,
         status=send_status,
         timestamp=now,
+        attended_by_name=current_user.get("name") or current_user.get("email", ""),
+        attended_by_email=current_user.get("email", ""),
     )
 
 
