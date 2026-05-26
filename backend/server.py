@@ -4350,9 +4350,17 @@ async def run_followup_check():
     """Check for inactive conversations and send reminders or mark as lost"""
     now = datetime.now(timezone.utc)
     results = {"reminders_sent": 0, "marked_lost": 0, "reactivated": 0}
-    
+
+    # Skip any conversation that the human agent has explicitly taken over,
+    # either via `transferred_to_human` (auto-escalation) OR via `bot_paused`
+    # (manual pause from the Inbox). In both cases the bot MUST stay silent —
+    # sending an automated reminder while the human is mid-conversation would
+    # confuse the customer and undermine the agent.
     states = await db.conversation_states.find(
-        {"transferred_to_human": {"$ne": True}},
+        {
+            "transferred_to_human": {"$ne": True},
+            "bot_paused": {"$ne": True},
+        },
         {"_id": 0}
     ).to_list(500)
     
