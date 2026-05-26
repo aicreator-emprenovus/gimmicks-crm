@@ -259,6 +259,7 @@ class ConversationResponse(BaseModel):
     created_at: datetime
     transferred_to_human: Optional[bool] = False
     bot_paused: Optional[bool] = False
+    bot_paused_at: Optional[datetime] = None
     transfer_reason: Optional[str] = None
 
 # Product/Inventory Models
@@ -1477,12 +1478,13 @@ async def get_conversations(
     # Batch-load conversation_states (transferred_to_human / bot_paused) for all phones
     states_cursor = db.conversation_states.find(
         {"phone_number": {"$in": phone_numbers}},
-        {"_id": 0, "phone_number": 1, "transferred_to_human": 1, "bot_paused": 1, "transfer_reason": 1}
+        {"_id": 0, "phone_number": 1, "transferred_to_human": 1, "bot_paused": 1, "bot_paused_at": 1, "transfer_reason": 1}
     )
     state_map = {
         s["phone_number"]: {
             "transferred_to_human": s.get("transferred_to_human", False),
             "bot_paused": s.get("bot_paused", False),
+            "bot_paused_at": s.get("bot_paused_at"),
             "transfer_reason": s.get("transfer_reason"),
         }
         async for s in states_cursor
@@ -1506,6 +1508,17 @@ async def get_conversations(
 
         st = state_map.get(conv["phone_number"], {})
 
+        # Parse bot_paused_at (stored as ISO string) into a datetime for the response.
+        paused_at_raw = st.get("bot_paused_at")
+        paused_at_dt = None
+        if isinstance(paused_at_raw, str):
+            try:
+                paused_at_dt = datetime.fromisoformat(paused_at_raw.replace('Z', '+00:00'))
+            except Exception:
+                paused_at_dt = None
+        elif isinstance(paused_at_raw, datetime):
+            paused_at_dt = paused_at_raw
+
         result.append(ConversationResponse(
             id=conv["id"],
             phone_number=conv["phone_number"],
@@ -1520,6 +1533,7 @@ async def get_conversations(
             created_at=created_at,
             transferred_to_human=st.get("transferred_to_human", False),
             bot_paused=st.get("bot_paused", False),
+            bot_paused_at=paused_at_dt,
             transfer_reason=st.get("transfer_reason"),
         ))
     
@@ -1680,6 +1694,7 @@ async def bot_control(
     )
     return {
         "bot_paused": paused,
+        "bot_paused_at": now_iso if paused else None,
         "message": (
             "Bot pausado. Tomaste el control de la conversación; el bot no responderá hasta que lo reactives."
             if paused else

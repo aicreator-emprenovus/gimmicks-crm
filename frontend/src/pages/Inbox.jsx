@@ -366,7 +366,11 @@ export default function Inbox() {
         { headers: getAuthHeaders() }
       );
       toast.success(response.data.message);
-      setSelectedConv({ ...selectedConv, bot_paused: response.data.bot_paused });
+      setSelectedConv({
+        ...selectedConv,
+        bot_paused: response.data.bot_paused,
+        bot_paused_at: response.data.bot_paused_at || null,
+      });
       fetchConversations();
     } catch (error) {
       toast.error(error.response?.data?.detail || "No se pudo cambiar el control del bot");
@@ -517,7 +521,9 @@ export default function Inbox() {
   const formatTime = (dateStr) => {
     if (!dateStr) return "";
     try {
-      return format(new Date(dateStr), "HH:mm", { locale: es });
+      // Show date + time on every message so the agent always has a clear
+      // chronological reference. Format: "dd MMM HH:mm" → "26 may 14:32"
+      return format(new Date(dateStr), "dd MMM HH:mm", { locale: es });
     } catch {
       return "";
     }
@@ -559,6 +565,27 @@ export default function Inbox() {
     if (!phone) return "";
     const cleaned = String(phone).replace(/[^\d+]/g, "");
     return cleaned.startsWith("+") ? cleaned : `+${cleaned}`;
+  };
+
+  // Human-readable elapsed time since the bot was paused — used in the
+  // "Pausado hace …" badge so agents notice conversations they manually
+  // took over but may have forgotten about.
+  const formatPausedDuration = (dateStr) => {
+    if (!dateStr) return "";
+    try {
+      const d = new Date(dateStr);
+      const diffMs = new Date() - d;
+      if (Number.isNaN(diffMs) || diffMs < 0) return "";
+      const mins = Math.floor(diffMs / 60000);
+      if (mins < 1) return "ahora";
+      if (mins < 60) return `${mins}m`;
+      const hours = Math.floor(mins / 60);
+      if (hours < 24) return `${hours}h`;
+      const days = Math.floor(hours / 24);
+      return `${days}d`;
+    } catch {
+      return "";
+    }
   };
 
   return (
@@ -671,11 +698,17 @@ export default function Inbox() {
                           {conv.bot_paused && (
                             <span
                               className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 text-[10px] font-semibold"
-                              title="Bot pausado — agente con el control"
+                              title={
+                                conv.bot_paused_at
+                                  ? `Bot pausado hace ${formatPausedDuration(conv.bot_paused_at)} — agente con el control`
+                                  : "Bot pausado — agente con el control"
+                              }
                               data-testid={`bot-paused-badge-${conv.id}`}
                             >
                               <PauseCircle className="w-2.5 h-2.5" />
-                              Pausado
+                              {conv.bot_paused_at
+                                ? `Pausado hace ${formatPausedDuration(conv.bot_paused_at)}`
+                                : "Pausado"}
                             </span>
                           )}
                         </p>
@@ -751,10 +784,17 @@ export default function Inbox() {
                     {selectedConv.bot_paused && (
                       <span
                         className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 text-xs font-semibold"
+                        title={
+                          selectedConv.bot_paused_at
+                            ? `Bot pausado hace ${formatPausedDuration(selectedConv.bot_paused_at)}`
+                            : "Bot pausado"
+                        }
                         data-testid="header-bot-paused-badge"
                       >
                         <PauseCircle className="w-3 h-3" />
-                        Bot pausado
+                        {selectedConv.bot_paused_at
+                          ? `Bot pausado hace ${formatPausedDuration(selectedConv.bot_paused_at)}`
+                          : "Bot pausado"}
                       </span>
                     )}
                   </h3>
